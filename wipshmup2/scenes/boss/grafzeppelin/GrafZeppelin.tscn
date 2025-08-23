@@ -1,0 +1,32 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scenes/boss/grafzeppelin/GrafZeppelin.gd" id="1"]
+[ext_resource type="Texture2D" path="res://images/boss_grafzeppelin.svg" id="2"]
+
+[sub_resource type="RectangleShape2D" id="1_1"]
+size = Vector2(72, 32)
+
+[node name="GrafZeppelin" type="Area2D"]
+script = ExtResource("1")
+monitoring = true
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.08, 0.08)
+texture = ExtResource("2")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1_1")
+
+[node name="LeftTurret" type="Marker2D" parent="."]
+position = Vector2(-20, -2)
+
+[node name="RightTurret" type="Marker2D" parent="."]
+position = Vector2(20, -2)
+
+[node name="ArmA" type="Marker2D" parent="."]
+position = Vector2(-12, 2)
+
+[node name="ArmB" type="Marker2D" parent="."]
+position = Vector2(12, 2)
+
+

@@ -1,0 +1,23 @@
+[gd_scene load_steps=2 format=3 uid="uid://btomelmxksp00"]
+
+[ext_resource type="Script" uid="uid://cv165fu5bh62p" path="res://scripts/main.gd" id="1_9m0k2"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_9m0k2")
+
+[node name="SpawnTimer" type="Timer" parent="."]
+wait_time = 1.2
+autostart = true
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="ScoreLabel" type="Label" parent="CanvasLayer"]
+offset_left = 10.0
+offset_top = 10.0
+text = "Score: 0"
+
+[node name="GameOverLabel" type="Label" parent="CanvasLayer"]
+visible = false
+offset_left = 120.0
+offset_top = 200.0
+text = "Game Over! Press Shoot to restart"

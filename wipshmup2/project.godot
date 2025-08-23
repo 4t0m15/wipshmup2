@@ -13,12 +13,29 @@ config_version=5
 config/name="wipshmup2"
 config/features=PackedStringArray("4.4", "GL Compatibility")
 config/icon="res://icon.svg"
+run/main_scene="res://scenes/main/Main.tscn"
+
+[display]
+
+window/size/viewport_width=320
+window/size/viewport_height=180
+window/size/mode="fullscreen"
+window/stretch/mode="viewport"
+window/stretch/aspect="keep"
+window/stretch/scale_mode="integer"
 
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/godot_super-wakatime/plugin.cfg")
 
+[autoload]
+
+DifficultyConfig="*res://scripts/DifficultyConfig.gd"
+RankManager="*res://scripts/RankManager.gd"
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+textures/default_texture_filter=0
+2d/snapping/use_gpu_pixel_snap=true

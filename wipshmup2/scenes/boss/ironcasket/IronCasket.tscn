@@ -1,0 +1,26 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scenes/boss/ironcasket/IronCasket.gd" id="1"]
+[ext_resource type="Texture2D" path="res://images/boss_ironcasket.svg" id="2"]
+
+[sub_resource type="RectangleShape2D" id="1_1"]
+size = Vector2(70, 30)
+
+[node name="IronCasket" type="Area2D"]
+script = ExtResource("1")
+monitoring = true
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.08, 0.08)
+texture = ExtResource("2")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1_1")
+
+[node name="TurretA" type="Marker2D" parent="."]
+position = Vector2(-18, -4)
+
+[node name="TurretB" type="Marker2D" parent="."]
+position = Vector2(18, -4)
+
+

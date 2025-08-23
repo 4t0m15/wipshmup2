@@ -1,0 +1,22 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/bullet/EnemyBullet.gd" id="1"]
+[ext_resource type="Texture2D" path="res://images/bullet_enemy.svg" id="2"]
+
+[sub_resource type="CircleShape2D" id="1_1"]
+radius = 2.0
+
+[node name="EnemyBullet" type="Area2D"]
+script = ExtResource("1")
+monitoring = true
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.03, 0.03)
+texture = ExtResource("2")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1_1")
+
+[node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="."]
+
+

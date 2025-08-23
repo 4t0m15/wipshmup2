@@ -1,0 +1,44 @@
+extends Area2D
+
+signal killed(points: int)
+signal hit_player
+
+@export var speed: float = 150.0
+@export var hp: int = 1
+@export var points: int = 100
+
+func _ready() -> void:
+	add_to_group("enemy")
+	monitoring = true
+	area_entered.connect(_on_area_entered)
+	body_entered.connect(_on_body_entered)
+	# Apply dynamic difficulty scaling from RankManager autoload if available
+	var rm := get_node_or_null("/root/RankManager")
+	if rm and rm.has_method("get_enemy_speed_multiplier"):
+		var speed_mult: float = rm.get_enemy_speed_multiplier()
+		var hp_mult: float = rm.get_enemy_hp_multiplier()
+		speed *= speed_mult
+		hp = int(ceil(float(hp) * hp_mult))
+
+func _physics_process(delta: float) -> void:
+	position.y += speed * delta
+	position = position.round()
+	var rect := get_viewport().get_visible_rect()
+	if position.y > rect.size.y + 64:
+		queue_free()
+
+func take_damage(amount: int) -> void:
+	hp -= amount
+	if hp <= 0:
+		emit_signal("killed", points)
+		queue_free()
+
+func _on_area_entered(area: Area2D) -> void:
+	if area.is_in_group("player_hurtbox"):
+		emit_signal("hit_player")
+		queue_free()
+
+func _on_body_entered(body: Node) -> void:
+	if body.is_in_group("player"):
+		emit_signal("hit_player")
+		queue_free()
