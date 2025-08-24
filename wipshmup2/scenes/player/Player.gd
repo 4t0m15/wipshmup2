@@ -4,6 +4,7 @@ signal hit
 
 @export var speed: float = 400.0
 @export var fire_cooldown_s: float = 0.15
+@export var sprite_target_height_px: float = 20.0
 
 const BULLET_SCENE: PackedScene = preload("res://scenes/bullet/Bullet.tscn")
 
@@ -15,6 +16,14 @@ func _ready() -> void:
 	if has_node("Hurtbox"):
 		$Hurtbox.add_to_group("player_hurtbox")
 		$Hurtbox.area_entered.connect(_on_hurtbox_area_entered)
+	# Normalize sprite size to target height
+	if has_node("Sprite2D"):
+		var spr: Sprite2D = $Sprite2D
+		if spr and spr.texture:
+			var tex_size: Vector2i = spr.texture.get_size()
+			if tex_size.y > 0:
+				var s: float = sprite_target_height_px / float(tex_size.y)
+				spr.scale = Vector2(s, s)
 
 func _physics_process(_delta: float) -> void:
 	if not _alive:

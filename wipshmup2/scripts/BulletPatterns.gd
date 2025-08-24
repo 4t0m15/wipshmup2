@@ -8,6 +8,11 @@ static func _get_density_multiplier() -> float:
 		return float(RankManager.get_pattern_density_multiplier())
 	return 1.0
 
+static func _get_cadence_multiplier() -> float:
+	if typeof(RankManager) != TYPE_NIL and RankManager.has_method("get_pattern_cadence_multiplier"):
+		return max(0.001, float(RankManager.get_pattern_cadence_multiplier()))
+	return 1.0
+
 static func _spawn_bullet(node: Node, position: Vector2, direction: Vector2, speed: float) -> void:
 	var bullet: Area2D = ENEMY_BULLET_SCENE.instantiate()
 	bullet.global_position = position
@@ -100,6 +105,8 @@ static func fire_sweeping_spread(
 	var start_rad: float = deg_to_rad(start_degrees)
 	var end_rad: float = deg_to_rad(end_degrees)
 	var step_time: float = duration_s / float(steps)
+	var cadence: float = _get_cadence_multiplier()
+	step_time = step_time / cadence
 	var mult: float = _get_density_multiplier()
 	var bps: int = max(1, int(round(float(bullets_per_step) * mult)))
 	for i in range(steps):
@@ -124,14 +131,16 @@ static func fire_aimed_beam(
 	if duration_s <= 0.0 or interval_s <= 0.0:
 		return
 	var elapsed: float = 0.0
+	var cadence: float = _get_cadence_multiplier()
+	var iv: float = interval_s / cadence
 	while elapsed < duration_s:
 		if not is_instance_valid(origin_node) or not is_instance_valid(target_node):
 			return
 		var origin: Vector2 = origin_node.global_position
 		var to_target: Vector2 = (target_node.global_position - origin).normalized()
 		_spawn_bullet(node, origin, to_target, speed)
-		await _await_seconds_from_some_tree(node, origin_node, interval_s)
-		elapsed += interval_s
+		await _await_seconds_from_some_tree(node, origin_node, iv)
+		elapsed += iv
 
 
 	# Cross-hatched waves: alternate diagonal fans to create a lattice
@@ -148,6 +157,8 @@ static func fire_cross_hatch(
 		return
 	var mult: float = _get_density_multiplier()
 	var bpf: int = max(1, int(round(float(bullets_per_fan) * mult)))
+	var cadence: float = _get_cadence_multiplier()
+	var iv: float = interval_s / cadence
 	for i in range(waves):
 		if not is_instance_valid(origin_node):
 			return
@@ -155,13 +166,13 @@ static func fire_cross_hatch(
 		# First diagonal (\) then opposite (/)
 		fire_fan(node, origin, bpf, spread_degrees, -45.0, speed)
 		fire_fan(node, origin, bpf, spread_degrees, 135.0, speed)
-		await _await_seconds_from_some_tree(node, origin_node, interval_s)
+		await _await_seconds_from_some_tree(node, origin_node, iv)
 		if not is_instance_valid(origin_node):
 			return
 		origin = origin_node.global_position
 		fire_fan(node, origin, bpf, spread_degrees, 45.0, speed)
 		fire_fan(node, origin, bpf, spread_degrees, -135.0, speed)
-		await _await_seconds_from_some_tree(node, origin_node, interval_s)
+		await _await_seconds_from_some_tree(node, origin_node, iv)
 
 
 	# Rotating ring bursts with incremental rotation offset per burst
@@ -177,6 +188,8 @@ static func fire_rotating_rings(
 	if bursts <= 0:
 		return
 	var angle: float = 0.0
+	var cadence: float = _get_cadence_multiplier()
+	var iv: float = interval_s / cadence
 	for i in range(bursts):
 		if not is_instance_valid(origin_node):
 			return
@@ -185,7 +198,7 @@ static func fire_rotating_rings(
 		var count: int = max(1, int(round(float(bullets_per_ring) * mult)))
 		fire_ring(node, origin, count, speed, deg_to_rad(angle))
 		angle += rotation_step_degrees
-		await _await_seconds_from_some_tree(node, origin_node, interval_s)
+		await _await_seconds_from_some_tree(node, origin_node, iv)
 
 
 	# Fixed-direction rapid "laser-like" stream by emitting fast bullets in a line
@@ -201,13 +214,15 @@ static func fire_fixed_beam(
 		return
 	var elapsed: float = 0.0
 	var dir: Vector2 = Vector2.RIGHT.rotated(deg_to_rad(angle_degrees)).normalized()
+	var cadence: float = _get_cadence_multiplier()
+	var iv: float = interval_s / cadence
 	while elapsed < duration_s:
 		if not is_instance_valid(origin_node):
 			return
 		var origin: Vector2 = origin_node.global_position
 		_spawn_bullet(node, origin, dir, speed)
-		await _await_seconds_from_some_tree(node, origin_node, interval_s)
-		elapsed += interval_s
+		await _await_seconds_from_some_tree(node, origin_node, iv)
+		elapsed += iv
 
 
 	# Two fixed beams separated by an angular offset, emitted concurrently
@@ -227,11 +242,13 @@ static func fire_dual_lasers(
 	var ang_b: float = base_angle_degrees + separation_degrees * 0.5
 	var dir_a: Vector2 = Vector2.RIGHT.rotated(deg_to_rad(ang_a)).normalized()
 	var dir_b: Vector2 = Vector2.RIGHT.rotated(deg_to_rad(ang_b)).normalized()
+	var cadence: float = _get_cadence_multiplier()
+	var iv: float = interval_s / cadence
 	while elapsed < duration_s:
 		if not is_instance_valid(origin_node):
 			return
 		var origin: Vector2 = origin_node.global_position
 		_spawn_bullet(node, origin, dir_a, speed)
 		_spawn_bullet(node, origin, dir_b, speed)
-		await _await_seconds_from_some_tree(node, origin_node, interval_s)
-		elapsed += interval_s
+		await _await_seconds_from_some_tree(node, origin_node, iv)
+		elapsed += iv

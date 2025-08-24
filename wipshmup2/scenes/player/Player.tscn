@@ -1,7 +1,7 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=5 format=3 uid="uid://dwsoi382u7q"]
 
-[ext_resource type="Script" path="res://scenes/player/Player.gd" id="1_w6q3k"]
-[ext_resource type="Texture2D" path="res://images/player.svg" id="2_5p1rh"]
+[ext_resource type="Script" uid="uid://xdlybxlv74j2" path="res://scenes/player/Player.gd" id="1_w6q3k"]
+[ext_resource type="Texture2D" uid="uid://blnwvbtmnf4u0" path="res://scenes/Sprite-0001.png" id="2_gfjak"]
 
 [sub_resource type="CircleShape2D" id="1"]
 radius = 12.0
@@ -13,7 +13,7 @@ script = ExtResource("1_w6q3k")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 scale = Vector2(0.1, 0.1)
-texture = ExtResource("2_5p1rh")
+texture = ExtResource("2_gfjak")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("1")
@@ -22,5 +22,3 @@ shape = SubResource("1")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
 shape = SubResource("2")
-
-

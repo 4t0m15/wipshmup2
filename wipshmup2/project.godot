@@ -11,9 +11,14 @@ config_version=5
 [application]
 
 config/name="wipshmup2"
+run/main_scene="res://scenes/main/Main.tscn"
 config/features=PackedStringArray("4.4", "GL Compatibility")
 config/icon="res://icon.svg"
-run/main_scene="res://scenes/main/Main.tscn"
+
+[autoload]
+
+DifficultyConfig="*res://scripts/DifficultyConfig.gd"
+RankManager="*res://scripts/RankManager.gd"
 
 [display]
 
@@ -21,17 +26,11 @@ window/size/viewport_width=320
 window/size/viewport_height=180
 window/size/mode="fullscreen"
 window/stretch/mode="viewport"
-window/stretch/aspect="keep"
 window/stretch/scale_mode="integer"
 
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/godot_super-wakatime/plugin.cfg")
-
-[autoload]
-
-DifficultyConfig="*res://scripts/DifficultyConfig.gd"
-RankManager="*res://scripts/RankManager.gd"
 
 [rendering]
 

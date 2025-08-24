@@ -10,7 +10,6 @@ extends Node
 var _cfg: ConfigFile = ConfigFile.new()
 var _loaded: bool = false
 var _current: String = "normal"
-
 func _ready() -> void:
 	_load()
 
@@ -57,5 +56,6 @@ func get_multiplier_caps() -> Dictionary:
 		"enemy_speed_max_mult": float(_get_value_for_current("enemy_speed_max_mult", 1.8)),
 		"enemy_hp_max_mult": float(_get_value_for_current("enemy_hp_max_mult", 2.0)),
 		"bullet_speed_max_mult": float(_get_value_for_current("bullet_speed_max_mult", 1.7)),
-		"pattern_density_max_mult": float(_get_value_for_current("pattern_density_max_mult", 2.0))
+		"pattern_density_max_mult": float(_get_value_for_current("pattern_density_max_mult", 2.0)),
+		"pattern_cadence_max_mult": float(_get_value_for_current("pattern_cadence_max_mult", 1.0))
 	}

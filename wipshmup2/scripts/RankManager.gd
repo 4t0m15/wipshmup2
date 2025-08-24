@@ -13,6 +13,7 @@ var enemy_speed_max_mult: float = 1.8
 var enemy_hp_max_mult: float = 2.0
 var bullet_speed_max_mult: float = 1.7
 var pattern_density_max_mult: float = 2.0
+var pattern_cadence_max_mult: float = 1.0
 
 func _ready() -> void:
 	# Load tuning from DifficultyConfig if available
@@ -29,6 +30,7 @@ func _ready() -> void:
 		enemy_hp_max_mult = float(caps.get("enemy_hp_max_mult", enemy_hp_max_mult))
 		bullet_speed_max_mult = float(caps.get("bullet_speed_max_mult", bullet_speed_max_mult))
 		pattern_density_max_mult = float(caps.get("pattern_density_max_mult", pattern_density_max_mult))
+		pattern_cadence_max_mult = float(caps.get("pattern_cadence_max_mult", pattern_cadence_max_mult))
 	rank = min_rank
 
 func _process(delta: float) -> void:
@@ -55,6 +57,9 @@ func get_bullet_speed_multiplier() -> float:
 
 func get_pattern_density_multiplier() -> float:
 	return lerp(1.0, pattern_density_max_mult, _normalized_rank())
+
+func get_pattern_cadence_multiplier() -> float:
+	return lerp(1.0, pattern_cadence_max_mult, _normalized_rank())
 
 func _normalized_rank() -> float:
 	if max_rank <= min_rank:

@@ -1,6 +1,7 @@
 extends Area2D
 
 @export var speed: float = 800.0
+@export var sprite_target_height_px: float = 8.0
 
 var direction: Vector2 = Vector2.UP
 
@@ -11,6 +12,14 @@ func _ready() -> void:
 		$VisibleOnScreenNotifier2D.screen_exited.connect(_on_screen_exited)
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
+	# Normalize sprite size to target height
+	if has_node("Sprite2D"):
+		var spr: Sprite2D = $Sprite2D
+		if spr and spr.texture:
+			var tex_size: Vector2i = spr.texture.get_size()
+			if tex_size.y > 0:
+				var s: float = sprite_target_height_px / float(tex_size.y)
+				spr.scale = Vector2(s, s)
 
 func _physics_process(delta: float) -> void:
 	position += direction * speed * delta

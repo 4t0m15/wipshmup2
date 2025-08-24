@@ -6,6 +6,7 @@ signal hit_player
 @export var speed: float = 150.0
 @export var hp: int = 1
 @export var points: int = 100
+@export var sprite_target_height_px: float = 18.0
 
 func _ready() -> void:
 	add_to_group("enemy")
@@ -19,6 +20,14 @@ func _ready() -> void:
 		var hp_mult: float = rm.get_enemy_hp_multiplier()
 		speed *= speed_mult
 		hp = int(ceil(float(hp) * hp_mult))
+	# Normalize sprite size to target height
+	if has_node("Sprite2D"):
+		var spr: Sprite2D = $Sprite2D
+		if spr and spr.texture:
+			var tex_size: Vector2i = spr.texture.get_size()
+			if tex_size.y > 0:
+				var s: float = sprite_target_height_px / float(tex_size.y)
+				spr.scale = Vector2(s, s)
 
 func _physics_process(delta: float) -> void:
 	position.y += speed * delta
