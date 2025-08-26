@@ -8,6 +8,14 @@ signal hit_player
 @export var points: int = 100
 @export var sprite_target_height_px: float = 18.0
 
+# Scoring and damage-source behavior
+@export var bomb_points_override: int = -1
+@export var bomb_points_multiplier: float = 10.0
+@export var ignore_shot_damage: bool = false
+@export var ignore_bomb_damage: bool = false
+
+var _last_damage_source: String = "shot"
+
 func _ready() -> void:
 	add_to_group("enemy")
 	monitoring = true
@@ -36,10 +44,24 @@ func _physics_process(delta: float) -> void:
 	if position.y > rect.size.y + 64:
 		queue_free()
 
-func take_damage(amount: int) -> void:
+func take_damage(amount: int, source: String = "shot") -> void:
+	# Respect invulnerability toggles per source
+	if (source == "shot" and ignore_shot_damage) or (source == "bomb" and ignore_bomb_damage):
+		return
 	hp -= amount
+	_last_damage_source = source
 	if hp <= 0:
-		emit_signal("killed", points)
+		var awarded: int = points
+		if _last_damage_source == "bomb":
+			if bomb_points_override >= 0:
+				awarded = bomb_points_override
+			else:
+				awarded = int(round(float(points) * max(1.0, bomb_points_multiplier)))
+		emit_signal("killed", awarded)
+		# Inform ItemDropManager of kill position
+		var idm := get_node_or_null("/root/ItemDropManager")
+		if idm and idm.has_method("on_enemy_killed"):
+			idm.on_enemy_killed(global_position, self)
 		queue_free()
 
 func _on_area_entered(area: Area2D) -> void:

@@ -3,15 +3,15 @@
 [ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
 
 [node name="Type03_ZigzagShotgun" instance=ExtResource("1_base")]
-speed = 150.0
-hp = 1
-points = 140
-movement = 2
-horizontal_speed = 120.0
-zigzag_period_s = 0.5
-fire = 9
-fire_interval_s = 1.8
-bullets_per_burst = 5
-bullet_speed = 340.0
+enemy_type = 1  # BOMBER
+speed = 60.0
+hp = 2
+points = 250
+movement = 1  # SIDE_TO_SIDE
+movement_amplitude = 40.0
+movement_speed = 50.0
+fire_pattern = 4  # BOMB_DROP
+fire_interval = 2.5
+bullet_speed = 120.0
 
 

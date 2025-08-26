@@ -6,12 +6,18 @@ signal stage_completed(stage_number: int)
 
 const ENEMY_SCENE: PackedScene = preload("res://scenes/enemy/Enemy.tscn")
 const PE_BASE: PackedScene = preload("res://scenes/enemy/PatternEnemyBase.tscn")
-const TYPE01: PackedScene = preload("res://scenes/enemy/types/Type01_StraightAimed.tscn")
-const TYPE02: PackedScene = preload("res://scenes/enemy/types/Type02_SineFan.tscn")
-const TYPE03: PackedScene = preload("res://scenes/enemy/types/Type03_ZigzagShotgun.tscn")
-const TYPE04: PackedScene = preload("res://scenes/enemy/types/Type04_DiagonalLeftRing.tscn")
-const TYPE05: PackedScene = preload("res://scenes/enemy/types/Type05_DiagonalRightRing.tscn")
-const TYPE06: PackedScene = preload("res://scenes/enemy/types/Type06_DiveAimed.tscn")
+# Classic 1942-style enemy types
+const TYPE01: PackedScene = preload("res://scenes/enemy/types/Type01_StraightAimed.tscn")    # Fighter - straight down
+const TYPE02: PackedScene = preload("res://scenes/enemy/types/Type02_SineFan.tscn")         # Turret - ground target
+const TYPE03: PackedScene = preload("res://scenes/enemy/types/Type03_ZigzagShotgun.tscn")   # Bomber - drops bombs
+const TYPE04: PackedScene = preload("res://scenes/enemy/types/Type04_DiagonalLeftRing.tscn") # Destroyer - patrols
+const TYPE05: PackedScene = preload("res://scenes/enemy/types/Type05_DiagonalRightRing.tscn") # Turret with spread
+const TYPE06: PackedScene = preload("res://scenes/enemy/types/Type06_DiveAimed.tscn")         # Submarine
+
+# Formation-based enemy types
+const FORMATION_FIGHTER: PackedScene = preload("res://scenes/enemy/types/FormationFighter.tscn")
+const FORMATION_BOMBER: PackedScene = preload("res://scenes/enemy/types/FormationBomber.tscn")
+const ESCORT_FIGHTER: PackedScene = preload("res://scenes/enemy/types/EscortFighter.tscn")
 const TYPE07: PackedScene = preload("res://scenes/enemy/types/Type07_PauseDualLasers.tscn")
 const TYPE08: PackedScene = preload("res://scenes/enemy/types/Type08_SweeperCross.tscn")
 const TYPE09: PackedScene = preload("res://scenes/enemy/types/Type09_BackForthRing.tscn")
@@ -46,6 +52,17 @@ func start_run() -> void:
 		stage_order.append(n)
 	current_stage_index = 0
 	_start_current_stage()
+
+	# Initialize formation manager if not present
+	if not get_node_or_null("/root/FormationManager"):
+		var formation_manager = load("res://scripts/FormationManager.gd").new()
+		get_tree().root.add_child(formation_manager)
+
+func _process(delta: float) -> void:
+	# Update formation manager each frame
+	var formation_manager = get_node_or_null("/root/FormationManager")
+	if formation_manager and formation_manager.has_method("update_formations"):
+		formation_manager.update_formations(delta)
 
 func _start_current_stage() -> void:
 	if current_stage_index < 0 or current_stage_index >= stage_order.size():
@@ -185,37 +202,157 @@ func _spawn_triple_staggered(enemy_types: Array, center_y: float = 60.0) -> void
 		if enemy_types[i]:
 			_spawn_pattern_enemy(enemy_types[i], positions[i])
 
+# Formation spawning functions
+func _spawn_fighter_formation(position: Vector2, member_count: int = 3) -> void:
+	"""Spawn a fighter formation with leader and wingmen"""
+	var leader = FORMATION_FIGHTER.instantiate()
+	leader.global_position = position
+	_connect_enemy_signals(leader)
+
+	var root := get_tree().current_scene
+	var enemies := root.get_node_or_null("GameViewport/Enemies")
+	if enemies:
+		enemies.call_deferred("add_child", leader)
+	else:
+		root.call_deferred("add_child", leader)
+
+	# Add wingmen to formation
+	for i in range(member_count - 1):
+		await get_tree().create_timer(0.1, false).timeout
+		var wingman = TYPE01.instantiate()
+		var offset = Vector2((i + 1) * 50, 15)
+		wingman.global_position = position + offset
+		_connect_enemy_signals(wingman)
+
+		if enemies:
+			enemies.call_deferred("add_child", wingman)
+		else:
+			root.call_deferred("add_child", wingman)
+
+		# Add wingman to formation if leader has formation manager
+		if leader.has_method("add_formation_member"):
+			leader.call_deferred("add_formation_member", wingman)
+
+func _spawn_bomber_escort_formation(position: Vector2, escort_count: int = 2) -> void:
+	"""Spawn a bomber with escort fighters"""
+	var bomber = FORMATION_BOMBER.instantiate()
+	bomber.global_position = position
+	_connect_enemy_signals(bomber)
+
+	var root := get_tree().current_scene
+	var enemies := root.get_node_or_null("GameViewport/Enemies")
+	if enemies:
+		enemies.call_deferred("add_child", bomber)
+	else:
+		root.call_deferred("add_child", bomber)
+
+	# Add escort fighters
+	for i in range(escort_count):
+		await get_tree().create_timer(0.2, false).timeout
+		var escort = ESCORT_FIGHTER.instantiate()
+		var escort_offset = Vector2((i - escort_count/2.0) * 60, -25)
+		escort.global_position = position + escort_offset
+		_connect_enemy_signals(escort)
+
+		if enemies:
+			enemies.call_deferred("add_child", escort)
+		else:
+			root.call_deferred("add_child", escort)
+
+		# Set escort to follow the bomber
+		if escort.has_method("set_leader"):
+			escort.call_deferred("set_leader", bomber)
+
+		# Add escort to bomber's formation
+		if bomber.has_method("add_escort_member"):
+			bomber.call_deferred("add_escort_member", escort)
+
+func _spawn_defensive_line(position: Vector2, turret_count: int = 3) -> void:
+	"""Spawn a defensive line of turrets"""
+	var rect := get_viewport().get_visible_rect()
+	var spacing = rect.size.x / (turret_count + 1)
+
+	for i in range(turret_count):
+		var turret_x = spacing * (i + 1)
+		var turret = TYPE02.instantiate()
+		turret.global_position = Vector2(turret_x, position.y)
+		_connect_enemy_signals(turret)
+
+		var root := get_tree().current_scene
+		var enemies := root.get_node_or_null("GameViewport/Enemies")
+		if enemies:
+			enemies.call_deferred("add_child", turret)
+		else:
+			root.call_deferred("add_child", turret)
+
+func _spawn_formation_wave(formation_type: String, count: int, base_position: Vector2) -> void:
+	"""Spawn a wave of formations"""
+	match formation_type:
+		"fighter_squad":
+			for i in range(count):
+				var formation_pos = base_position + Vector2(i * 120, 0)
+				_spawn_fighter_formation(formation_pos, 3)
+				await get_tree().create_timer(1.5, false).timeout
+
+		"bomber_escort":
+			for i in range(count):
+				var formation_pos = base_position + Vector2(i * 150, 0)
+				_spawn_bomber_escort_formation(formation_pos, 2)
+				await get_tree().create_timer(2.0, false).timeout
+
+		"mixed_fleet":
+			# Mix of different formation types
+			for i in range(count):
+				if i % 2 == 0:
+					_spawn_fighter_formation(base_position + Vector2(i * 100, 0), 2)
+				else:
+					_spawn_bomber_escort_formation(base_position + Vector2(i * 100, 0), 1)
+				await get_tree().create_timer(1.8, false).timeout
+
 
 func _run_stage_1() -> void:
-	# Simpler, more traditional top-entry waves (no side spawns)
+	# Stage 1: Introduction to formation flying
 	var rect := get_viewport().get_visible_rect()
 
-	# Wave 1: Straight line of 5 basic enemies
-	_spawn_wave_line(5, 24.0, 90.0, 1)
-	await get_tree().create_timer(2.0, false).timeout
+	# Wave 1: Basic fighter formations
+	print("Stage 1: Deploying fighter formations...")
+	_spawn_formation_wave("fighter_squad", 2, Vector2(rect.size.x * 0.3, -20))
+	await get_tree().create_timer(4.0, false).timeout
 
-	# Wave 2: Wider line of 7, slightly slower
-	_spawn_wave_line(7, 28.0, 85.0, 1, 18.0)
-	await get_tree().create_timer(2.2, false).timeout
+	# Wave 2: Ground defense line
+	print("Stage 1: Establishing defensive positions...")
+	_spawn_defensive_line(Vector2(0, 140), 3)
+	await get_tree().create_timer(3.5, false).timeout
 
-	# Wave 3: Two quick staggered lines
-	_spawn_wave_line(6, 24.0, 95.0, 1)
-	await get_tree().create_timer(0.6, false).timeout
-	_spawn_wave_line(6, 24.0, 95.0, 1)
-	await get_tree().create_timer(2.0, false).timeout
+	# Wave 3: Bomber escort formations
+	print("Stage 1: Deploying bomber escort formations...")
+	_spawn_formation_wave("bomber_escort", 1, Vector2(rect.size.x * 0.2, -30))
+	await get_tree().create_timer(1.0, false).timeout
+	_spawn_formation_wave("bomber_escort", 1, Vector2(rect.size.x * 0.8, -30))
+	await get_tree().create_timer(4.0, false).timeout
 
-	# Wave 4: Centered singles from top
-	var xs := [rect.size.x * 0.2, rect.size.x * 0.4, rect.size.x * 0.6, rect.size.x * 0.8]
-	for x in xs:
-		_spawn_enemy_at(Vector2(x, -24.0), 100.0, 1, 150)
-		await get_tree().create_timer(0.5, false).timeout
-	await get_tree().create_timer(2.0, false).timeout
+	# Wave 4: Mixed fleet approach
+	print("Stage 1: Mixed fleet engagement...")
+	_spawn_formation_wave("mixed_fleet", 3, Vector2(rect.size.x * 0.15, -25))
+	await get_tree().create_timer(5.0, false).timeout
+
+	# Wave 5: Submarine surfacing behind defenses
+	print("Stage 1: Underwater threat detected...")
+	_spawn_pattern_enemy(TYPE06, Vector2(rect.size.x * 0.5, 200))  # Submarine surfacing
+	await get_tree().create_timer(3.0, false).timeout
+
+	# Final wave: Intense formation assault
+	print("Stage 1: Final formation assault...")
+	_spawn_formation_wave("fighter_squad", 2, Vector2(rect.size.x * 0.25, -20))
+	await get_tree().create_timer(1.0, false).timeout
+	_spawn_formation_wave("bomber_escort", 1, Vector2(rect.size.x * 0.7, -30))
+	await get_tree().create_timer(4.0, false).timeout
 
 	# Boss: Gliath
+	print("Stage 1: Boss encounter - Gliath")
 	var boss: BossBase = GLIATH_SCENE.instantiate()
 	var boss_defeated_signal = boss.defeated
 	boss.global_position = Vector2(rect.size.x * 0.5, -32)
-	# Slide in
 	var root := get_tree().current_scene
 	var enemies := root.get_node_or_null("GameViewport/Enemies")
 	if enemies:
@@ -231,46 +368,67 @@ func _run_stage_1() -> void:
 
 
 func _run_stage_2() -> void:
-	# Traditional shmup-style waves: small groups with varied timing
+	# Stage 2: Advanced formation tactics demonstration
 	var rect := get_viewport().get_visible_rect()
 
-	# Opening: Alternating single spawns
-	_spawn_single_from_side(TYPE11, "right")
-	await get_tree().create_timer(1.8, false).timeout
-	_spawn_single_from_side(TYPE12, "left")
-	await get_tree().create_timer(1.8, false).timeout
+	# Opening: V-formation fighter squad
+	print("Stage 2: V-Formation fighter squad approaching...")
+	_spawn_formation_wave("fighter_squad", 1, Vector2(rect.size.x * 0.4, -20))
+	await get_tree().create_timer(4.0, false).timeout
 
-	# Wave 1: Dual pair from sides
-	_spawn_dual_from_sides(TYPE06, TYPE14)
-	await get_tree().create_timer(2.5, false).timeout
-
-	# Wave 2: Quick succession singles
-	_spawn_single_from_side(TYPE11, "left", 30)
-	await get_tree().create_timer(0.8, false).timeout
-	_spawn_single_from_side(TYPE12, "right", -30)
-	await get_tree().create_timer(0.8, false).timeout
-	_spawn_single_from_side(TYPE06, "left", 0)
+	# Wave 1: Defensive line with flanking maneuvers
+	print("Stage 2: Establishing defensive perimeter...")
+	_spawn_defensive_line(Vector2(0, 130), 4)  # 4 turrets for stronger defense
 	await get_tree().create_timer(2.0, false).timeout
 
-	# Wave 3: Triple diagonal pattern
-	_spawn_triple_staggered([TYPE14, TYPE11, TYPE12], 70)
-	await get_tree().create_timer(2.5, false).timeout
+	# Flanking maneuver with formations
+	_spawn_formation_wave("fighter_squad", 1, Vector2(-30, 30))   # Left flank
+	await get_tree().create_timer(0.5, false).timeout
+	_spawn_formation_wave("fighter_squad", 1, Vector2(rect.size.x + 30, 30))  # Right flank
+	await get_tree().create_timer(4.0, false).timeout
 
-	# Wave 4: Small center group followed by sides
-	_spawn_small_group(2, TYPE06, rect.size.x * 0.5, 70)
-	await get_tree().create_timer(1.5, false).timeout
-	_spawn_dual_from_sides(TYPE14, TYPE11)
+	# Wave 2: Naval patrol with destroyer formations
+	print("Stage 2: Naval patrol patterns...")
+	_spawn_pattern_enemy(TYPE04, Vector2(-60, 110))   # Left destroyer
+	await get_tree().create_timer(1.0, false).timeout
+	_spawn_pattern_enemy(TYPE04, Vector2(rect.size.x + 60, 110))  # Right destroyer
 	await get_tree().create_timer(2.0, false).timeout
 
-	# Pre-boss: Mixed patterns
-	_spawn_single_from_side(TYPE10, "right", 20)
-	await get_tree().create_timer(1.2, false).timeout
-	_spawn_single_from_side(TYPE19, "left", -20)
-	await get_tree().create_timer(1.2, false).timeout
-	_spawn_triple_staggered([TYPE11, TYPE12, TYPE06])
-	await get_tree().create_timer(3.0, false).timeout
+	# Wave 3: Combined arms - bomber escorted by fighters
+	print("Stage 2: Combined arms assault...")
+	_spawn_formation_wave("bomber_escort", 1, Vector2(rect.size.x * 0.3, -25))
+	await get_tree().create_timer(1.0, false).timeout
+	_spawn_formation_wave("bomber_escort", 1, Vector2(rect.size.x * 0.7, -25))
+	await get_tree().create_timer(4.0, false).timeout
+
+	# Wave 4: Echelon formation attack
+	print("Stage 2: Echelon formation attack...")
+	# Create staggered formations from both sides
+	for i in range(3):
+		_spawn_formation_wave("fighter_squad", 1, Vector2(-20 + i * 40, -15 - i * 20))
+		_spawn_formation_wave("fighter_squad", 1, Vector2(rect.size.x + 20 - i * 40, -15 - i * 20))
+		await get_tree().create_timer(1.5, false).timeout
+
+	# Wave 5: Mixed fleet with submarines
+	print("Stage 2: Mixed fleet with underwater elements...")
+	_spawn_formation_wave("mixed_fleet", 2, Vector2(rect.size.x * 0.2, -20))
+	await get_tree().create_timer(1.0, false).timeout
+	_spawn_pattern_enemy(TYPE06, Vector2(rect.size.x * 0.5, 200))  # Submarine surfacing
+	await get_tree().create_timer(1.0, false).timeout
+	_spawn_pattern_enemy(TYPE06, Vector2(rect.size.x * 0.3, 200))  # Another submarine
+	await get_tree().create_timer(4.0, false).timeout
+
+	# Pre-boss: Maximum formation assault
+	print("Stage 2: Maximum formation assault...")
+	_spawn_formation_wave("fighter_squad", 2, Vector2(rect.size.x * 0.25, -18))
+	await get_tree().create_timer(0.8, false).timeout
+	_spawn_formation_wave("bomber_escort", 1, Vector2(rect.size.x * 0.6, -25))
+	await get_tree().create_timer(0.8, false).timeout
+	_spawn_defensive_line(Vector2(0, 125), 2)  # Additional turrets
+	await get_tree().create_timer(4.0, false).timeout
 
 	# Boss: Type-0
+	print("Stage 2: Boss encounter - Type-0")
 	var boss: BossBase = TYPE0_SCENE.instantiate()
 	var boss_defeated_signal = boss.defeated
 	boss.global_position = Vector2(rect.size.x * 0.5, -40)

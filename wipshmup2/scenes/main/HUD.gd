@@ -7,6 +7,7 @@ var _accum_ticks: int = 0
 @onready var _lives_label: Label = $TopBar/HBox/LivesLabel
 @onready var _tps_label: Label = $TopBar/HBox/TPSLabel
 @onready var _bombs_label: Label = $TopBar/HBox/BombsLabel
+@onready var _medal_label: Label = $TopBar/HBox/MedalLabel
 @onready var _overlay_dim: ColorRect = $CenterOverlay/OverlayDim
 @onready var _msg_panel: PanelContainer = $CenterOverlay/MessagePanel
 @onready var _msg_label: Label = $CenterOverlay/MessagePanel/VBox/MessageLabel
@@ -43,8 +44,14 @@ func show_game_over(is_shown: bool) -> void:
 	else:
 		_hint_label.text = ""
 
-func set_bombs(value: int) -> void:
-	_bombs_label.text = "Bombs: %d" % max(0, value)
+func set_bombs(value: int, shards: int = -1) -> void:
+	var text := "Bombs: %d" % max(0, value)
+	if shards >= 0:
+		text += " (%d/40)" % shards
+	_bombs_label.text = text
+
+func set_medal_value(value: int) -> void:
+	_medal_label.text = "Medal: %d" % max(0, value)
 
 func _on_tick(dt: float) -> void:
 	_accum_time_s += dt

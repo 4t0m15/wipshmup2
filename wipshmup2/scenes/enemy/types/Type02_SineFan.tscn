@@ -3,15 +3,13 @@
 [ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
 
 [node name="Type02_SineFan" instance=ExtResource("1_base")]
-speed = 140.0
-hp = 1
-points = 130
-movement = 1
-amplitude_px = 64.0
-frequency_hz = 0.9
-fire = 3
-fire_interval_s = 1.6
-bullets_per_burst = 5
-bullet_speed = 300.0
+enemy_type = 5  # TURRET
+speed = 0.0
+hp = 3
+points = 200
+movement = 0  # Turrets don't move
+fire_pattern = 0  # Straight shot (will aim at player)
+fire_interval = 1.5
+bullet_speed = 160.0
 
 

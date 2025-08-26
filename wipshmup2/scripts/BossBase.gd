@@ -37,8 +37,11 @@ func transform_to_phase(new_phase: int) -> void:
 	on_enter_phase(current_phase)
 	emit_signal("phase_changed", current_phase)
 
-func take_damage(amount: int) -> void:
+func take_damage(amount: int, source: String = "shot") -> void:
 	if not _alive:
+		return
+	# Default: ignore bomb damage for bosses unless overridden by subclasses
+	if source == "bomb":
 		return
 	hp -= amount
 	if hp <= 0:

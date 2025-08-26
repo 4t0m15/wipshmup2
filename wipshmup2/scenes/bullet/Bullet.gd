@@ -25,13 +25,21 @@ func _physics_process(delta: float) -> void:
 	position += direction * speed * delta
 	position = position.round()
 	var rect := get_viewport().get_visible_rect()
-	if position.y < -64 or position.y > rect.size.y + 64 or position.x < -64 or position.x > rect.size.x + 64:
+	var off_top := position.y < -64
+	var off_bottom := position.y > rect.size.y + 64
+	var off_left := position.x < -64
+	var off_right := position.x > rect.size.x + 64
+	if off_top or off_bottom or off_left or off_right:
 		queue_free()
 
 func _on_area_entered(area: Area2D) -> void:
 	if area.is_in_group("enemy"):
 		if area.has_method("take_damage"):
-			area.take_damage(2)  # Increased from 1 to 2 for easier gameplay
+			# Mark source as shot for conditional scoring/behavior
+			area.take_damage(2, "shot")  # Increased from 1 to 2 for easier gameplay
+		var rm := get_node_or_null("/root/RankManager")
+		if rm and rm.has_method("on_shot_fired"):
+			rm.on_shot_fired(0.25)
 		queue_free()
 
 func _on_body_entered(_body: Node) -> void:

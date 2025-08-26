@@ -1,0 +1,29 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/FormationLeader.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://scenes/Sprite-0004.png" id="2_tex"]
+
+[sub_resource type="CircleShape2D" id="1_shape"]
+radius = 8.0
+
+[node name="FormationFighter" type="Area2D"]
+script = ExtResource("1_script")
+enemy_type = 0  # FIGHTER
+speed = 70.0
+hp = 2
+points = 150
+movement = 0  # STRAIGHT_DOWN
+fire_pattern = 0  # STRAIGHT_SHOT
+fire_interval = 2.5
+bullet_speed = 160.0
+formation_pattern = 2  # V_FORMATION
+max_formation_members = 4
+formation_spacing = 45.0
+leadership_style = 0  # Aggressive
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_tex")
+scale = Vector2(1.2, 1.2)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1_shape")

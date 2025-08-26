@@ -1,0 +1,29 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/FormationLeader.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://scenes/Sprite-0004.png" id="2_tex"]
+
+[sub_resource type="CircleShape2D" id="1_shape"]
+radius = 10.0
+
+[node name="FormationBomber" type="Area2D"]
+script = ExtResource("1_script")
+enemy_type = 1  # BOMBER
+speed = 55.0
+hp = 3
+points = 300
+movement = 1  # SIDE_TO_SIDE
+fire_pattern = 4  # BOMB_DROP
+fire_interval = 3.0
+bullet_speed = 110.0
+formation_pattern = 0  # LINE_HORIZONTAL
+max_formation_members = 3
+formation_spacing = 60.0
+leadership_style = 1  # Defensive
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_tex")
+scale = Vector2(1.5, 1.5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1_shape")

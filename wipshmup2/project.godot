@@ -20,6 +20,7 @@ config/icon="res://icon.svg"
 DifficultyConfig="*res://scripts/DifficultyConfig.gd"
 RankManager="*res://scripts/RankManager.gd"
 TickManager="*res://scripts/TickManager.gd"
+ItemDropManager="*res://scripts/ItemDropManager.gd"
 
 [display]
 

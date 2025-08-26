@@ -10,9 +10,12 @@ var score: int = 0
 var game_over: bool = false
 var lives: int = 3
 var bombs: int = 3
+var bomb_shards: int = 0
 var player: CharacterBody2D
 var stage_controller: Node
 var hud: CanvasLayer
+
+var _next_extend_score: int = 1000000
 
 func _ready() -> void:
 	# Start in windowed mode; fullscreen can cause issues on some platforms/drivers
@@ -28,6 +31,20 @@ func _ready() -> void:
 	hud = $HUD
 	_update_score_label()
 	_update_lives_display()
+	_update_bomb_display()
+	# Hook medal value to HUD
+	var idm := get_node_or_null("/root/ItemDropManager")
+	if idm:
+		if idm.has_signal("medal_value_changed"):
+			idm.medal_value_changed.connect(func(v: int):
+				if is_instance_valid(hud):
+					hud.call_deferred("set_medal_value", v)
+			)
+		# Initialize HUD medal value
+		if idm.has_method("get_medal_value"):
+			var mv: int = idm.get_medal_value()
+			if is_instance_valid(hud):
+				hud.call_deferred("set_medal_value", mv)
 	# Hook 50 TPS tick to HUD display (TPS averaged inside HUD)
 	var tm := get_node_or_null("/root/TickManager")
 	if tm and tm.has_signal("tick"):
@@ -153,6 +170,7 @@ func _on_spawn_timer_timeout() -> void:
 func _on_enemy_killed(points: int) -> void:
 	score += points
 	_update_score_label()
+	_check_extends()
 
 func _on_enemy_hit_player() -> void:
 	_on_player_hit()
@@ -162,6 +180,9 @@ func _on_player_hit() -> void:
 		return
 
 	lives -= 1
+	var rm := get_node_or_null("/root/RankManager")
+	if rm and rm.has_method("on_player_died"):
+		rm.on_player_died(lives)
 	_update_lives_display()
 
 	if lives <= 0:
@@ -183,7 +204,7 @@ func _update_score_label() -> void:
 func _update_lives_display() -> void:
 	if is_instance_valid(hud):
 		hud.call("set_lives", lives)
-		hud.call_deferred("set_bombs", bombs)
+		hud.call_deferred("set_bombs", bombs, bomb_shards)
 
 func _use_bomb() -> void:
 	if game_over:
@@ -192,7 +213,10 @@ func _use_bomb() -> void:
 		return
 	bombs -= 1
 	if is_instance_valid(hud):
-		hud.call_deferred("set_bombs", bombs)
+		hud.call_deferred("set_bombs", bombs, bomb_shards)
+	var rm2 := get_node_or_null("/root/RankManager")
+	if rm2 and rm2.has_method("on_bomb_used"):
+		rm2.on_bomb_used()
 	# Clear enemy bullets
 	var root := get_tree().current_scene
 	if root:
@@ -200,6 +224,35 @@ func _use_bomb() -> void:
 		for b in bullets:
 			if b and b is Node:
 				(b as Node).call_deferred("queue_free")
+		# Apply bomb AoE damage to enemies and mark kills as bomb
+		var enemies := root.get_tree().get_nodes_in_group("enemy")
+		for e in enemies:
+			if e and e is Node and not (e as Node).is_in_group("boss"):
+				if (e as Node).has_method("take_damage"):
+					# Moderate bomb damage; enemies can be tuned via hp
+					(e as Node).call_deferred("take_damage", 8, "bomb")
 	# Small safety invulnerability
 	if is_instance_valid(player) and player.has_method("start_invulnerability"):
 		player.call_deferred("start_invulnerability", 0.8)
+
+func add_score(amount: int) -> void:
+	score += amount
+	_update_score_label()
+	_check_extends()
+
+func _check_extends() -> void:
+	while score >= _next_extend_score:
+		lives += 1
+		_next_extend_score += 1000000
+		_update_lives_display()
+
+func _update_bomb_display() -> void:
+	if is_instance_valid(hud):
+		hud.call("set_bombs", bombs, bomb_shards)
+
+func add_bomb_shards(count: int) -> void:
+	bomb_shards = max(0, bomb_shards + count)
+	while bomb_shards >= 40:
+		bombs += 1
+		bomb_shards -= 40
+	_update_bomb_display()

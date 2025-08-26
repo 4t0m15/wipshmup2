@@ -7,12 +7,16 @@ signal hit
 @export var sprite_target_height_px: float = 20.0
 @export var focus_speed_multiplier: float = 0.4
 @export var invuln_blink_interval_s: float = 0.08
+@export var small_icons_per_level: int = 5
 
 const BULLET_SCENE: PackedScene = preload("res://scenes/bullet/Bullet.tscn")
 
 var _can_fire: bool = true
 var _alive: bool = true
 var _invulnerable: bool = false
+var _shot_level: int = 1 # 1..5
+var _small_shot_icons_collected: int = 0
+var _option_count: int = 0 # 0..4
 
 func _ready() -> void:
 	add_to_group("player")
@@ -51,16 +55,66 @@ func _shoot() -> void:
 	if not _can_fire or not _alive:
 		return
 	_can_fire = false
-	var bullet: Area2D = BULLET_SCENE.instantiate()
-	bullet.global_position = global_position + Vector2(0, -20)
 	var root := get_tree().current_scene
-	var container := root.get_node_or_null("GameViewport/Bullets")
-	if container:
-		container.add_child(bullet)
-	else:
-		root.add_child(bullet)
+	var container := root.get_node_or_null("GameViewport/Bullets") if root else null
+	var bullets_fired: int = 0
+	# Main shot pattern based on level
+	var patterns := _get_shot_pattern_dirs(_shot_level)
+	for dir in patterns:
+		var b: Area2D = BULLET_SCENE.instantiate()
+		b.global_position = global_position + Vector2(0, -20)
+		b.set("direction", dir)
+		if container:
+			container.add_child(b)
+		else:
+			root.add_child(b)
+		bullets_fired += 1
+	# Options add extra straight shots
+	var offsets := _get_option_offsets(_option_count)
+	for off in offsets:
+		var b2: Area2D = BULLET_SCENE.instantiate()
+		b2.global_position = global_position + off
+		b2.set("direction", Vector2.UP)
+		if container:
+			container.add_child(b2)
+		else:
+			root.add_child(b2)
+		bullets_fired += 1
+	# Rank hook
+	var rm := get_node_or_null("/root/RankManager")
+	if rm and rm.has_method("on_shot_fired"):
+		rm.on_shot_fired(float(max(1, bullets_fired)))
 	await get_tree().create_timer(fire_cooldown_s, false).timeout
 	_can_fire = true
+
+func _get_shot_pattern_dirs(level: int) -> Array:
+	match clamp(level, 1, 5):
+		1:
+			return [Vector2.UP]
+		2:
+			return [Vector2.UP, Vector2.UP.rotated(deg_to_rad(-10)), Vector2.UP.rotated(deg_to_rad(10))]
+		3:
+			return [Vector2.UP.rotated(deg_to_rad(-12)), Vector2.UP, Vector2.UP.rotated(deg_to_rad(12))]
+		4:
+			return [Vector2.UP.rotated(deg_to_rad(-15)), Vector2.UP.rotated(deg_to_rad(-5)), Vector2.UP.rotated(deg_to_rad(5)), Vector2.UP.rotated(deg_to_rad(15))]
+		5:
+			return [Vector2.UP.rotated(deg_to_rad(-18)), Vector2.UP.rotated(deg_to_rad(-9)), Vector2.UP, Vector2.UP.rotated(deg_to_rad(9)), Vector2.UP.rotated(deg_to_rad(18))]
+	return [Vector2.UP]
+
+func _get_option_offsets(count: int) -> Array:
+	var c: int = clamp(count, 0, 4)
+	match c:
+		0:
+			return []
+		1:
+			return [Vector2(-10, -18)]
+		2:
+			return [Vector2(-12, -18), Vector2(12, -18)]
+		3:
+			return [Vector2(-14, -18), Vector2(0, -24), Vector2(14, -18)]
+		4:
+			return [Vector2(-16, -18), Vector2(-6, -22), Vector2(6, -22), Vector2(16, -18)]
+	return []
 
 func die() -> void:
 	if not _alive:
@@ -87,3 +141,15 @@ func start_invulnerability(duration_s: float = 1.2) -> void:
 	if has_node("Sprite2D"):
 		$Sprite2D.visible = true
 	_invulnerable = false
+
+func apply_shot_item(is_large: bool) -> void:
+	if is_large:
+		_shot_level = clamp(_shot_level + 1, 1, 5)
+	else:
+		_small_shot_icons_collected += 1
+		if _small_shot_icons_collected >= max(1, small_icons_per_level):
+			_small_shot_icons_collected = 0
+			_shot_level = clamp(_shot_level + 1, 1, 5)
+
+func apply_option_item() -> void:
+	_option_count = clamp(_option_count + 1, 0, 4)
