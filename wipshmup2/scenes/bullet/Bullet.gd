@@ -1,6 +1,6 @@
 extends Area2D
 
-@export var speed: float = 800.0
+@export var speed: float = 1000.0
 @export var sprite_target_height_px: float = 8.0
 
 var direction: Vector2 = Vector2.UP
@@ -31,7 +31,7 @@ func _physics_process(delta: float) -> void:
 func _on_area_entered(area: Area2D) -> void:
 	if area.is_in_group("enemy"):
 		if area.has_method("take_damage"):
-			area.take_damage(1)
+			area.take_damage(2)  # Increased from 1 to 2 for easier gameplay
 		queue_free()
 
 func _on_body_entered(_body: Node) -> void:

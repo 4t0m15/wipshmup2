@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
+
+[node name="Type08_SweeperCross" instance=ExtResource("1_base")]
+speed = 130.0
+hp = 2
+points = 190
+movement = 7
+frequency_hz = 1.2
+horizontal_speed = 160.0
+fire = 5
+fire_interval_s = 2.0
+bullets_per_burst = 6
+bullet_speed = 300.0
+
+

@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
+
+[node name="Type19_StraightRotatingRings" instance=ExtResource("1_base")]
+speed = 150.0
+hp = 2
+points = 220
+movement = 0
+fire = 6
+fire_interval_s = 2.4
+bullets_per_burst = 10
+bullet_speed = 300.0
+
+

@@ -3,7 +3,7 @@ extends Area2D
 signal killed(points: int)
 signal hit_player
 
-@export var speed: float = 150.0
+@export var speed: float = 120.0
 @export var hp: int = 1
 @export var points: int = 100
 @export var sprite_target_height_px: float = 18.0

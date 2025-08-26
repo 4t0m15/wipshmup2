@@ -19,12 +19,13 @@ config/icon="res://icon.svg"
 
 DifficultyConfig="*res://scripts/DifficultyConfig.gd"
 RankManager="*res://scripts/RankManager.gd"
+TickManager="*res://scripts/TickManager.gd"
 
 [display]
 
 window/size/viewport_width=320
 window/size/viewport_height=180
-window/size/mode="fullscreen"
+window/size/mode="windowed"
 window/stretch/mode="viewport"
 window/stretch/scale_mode="integer"
 

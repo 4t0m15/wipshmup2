@@ -14,14 +14,13 @@ var _alive: bool = true
 
 func _ready() -> void:
 	add_to_group("enemy")
+	add_to_group("boss")
 	monitoring = true
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
+	max_hp = 5
+	phases_total = 1
 	hp = max_hp
-	var rm := get_node_or_null("/root/RankManager")
-	if rm and rm.has_method("get_enemy_hp_multiplier"):
-		var hp_mult: float = rm.get_enemy_hp_multiplier()
-		hp = int(ceil(float(max_hp) * hp_mult))
 	start_battle()
 
 func start_battle() -> void:

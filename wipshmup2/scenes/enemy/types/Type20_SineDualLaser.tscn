@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
+
+[node name="Type20_SineDualLaser" instance=ExtResource("1_base")]
+speed = 140.0
+hp = 2
+points = 240
+movement = 1
+amplitude_px = 60.0
+frequency_hz = 0.9
+fire = 8
+fire_interval_s = 2.1
+bullets_per_burst = 1
+bullet_speed = 500.0
+
+

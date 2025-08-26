@@ -3,21 +3,29 @@ extends Node
 
 const ENEMY_BULLET_SCENE: PackedScene = preload("res://scenes/bullet/EnemyBullet.tscn")
 
+# Global scalers to significantly nerf boss bullet patterns
+const BASE_DENSITY_MULT: float = 0.3
+const BASE_SPEED_MULT: float = 0.6
+const BASE_CADENCE_MULT: float = 0.75
+
 static func _get_density_multiplier() -> float:
+	var rank_mult: float = 1.0
 	if typeof(RankManager) != TYPE_NIL and RankManager.has_method("get_pattern_density_multiplier"):
-		return float(RankManager.get_pattern_density_multiplier())
-	return 1.0
+		rank_mult = float(RankManager.get_pattern_density_multiplier())
+	return BASE_DENSITY_MULT * rank_mult
 
 static func _get_cadence_multiplier() -> float:
+	var c: float = 1.0
 	if typeof(RankManager) != TYPE_NIL and RankManager.has_method("get_pattern_cadence_multiplier"):
-		return max(0.001, float(RankManager.get_pattern_cadence_multiplier()))
-	return 1.0
+		c = max(0.001, float(RankManager.get_pattern_cadence_multiplier()))
+	# Lower-than-1 means longer intervals between shots
+	return c * BASE_CADENCE_MULT
 
 static func _spawn_bullet(node: Node, position: Vector2, direction: Vector2, speed: float) -> void:
 	var bullet: Area2D = ENEMY_BULLET_SCENE.instantiate()
 	bullet.global_position = position
 	bullet.set("direction", direction.normalized())
-	bullet.set("speed", speed)
+	bullet.set("speed", speed * BASE_SPEED_MULT)
 	var scene_tree: SceneTree = null
 	if is_instance_valid(node):
 		scene_tree = node.get_tree()
@@ -27,7 +35,7 @@ static func _spawn_bullet(node: Node, position: Vector2, direction: Vector2, spe
 			scene_tree = ml
 	if scene_tree and scene_tree.current_scene:
 		var root := scene_tree.current_scene
-		var container := root.get_node_or_null("Bullets")
+		var container := root.get_node_or_null("GameViewport/Bullets")
 		if container:
 			container.add_child(bullet)
 		else:

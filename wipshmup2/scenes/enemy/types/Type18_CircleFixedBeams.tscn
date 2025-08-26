@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
+
+[node name="Type18_CircleFixedBeams" instance=ExtResource("1_base")]
+speed = 110.0
+hp = 3
+points = 260
+movement = 9
+amplitude_px = 68.0
+frequency_hz = 0.7
+fire = 7
+fire_interval_s = 2.6
+bullets_per_burst = 8
+bullet_speed = 280.0
+
+

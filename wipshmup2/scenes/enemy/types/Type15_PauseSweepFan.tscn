@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
+
+[node name="Type15_PauseSweepFan" instance=ExtResource("1_base")]
+speed = 120.0
+hp = 2
+points = 210
+movement = 6
+pause_time_s = 0.7
+fire = 4
+fire_interval_s = 2.0
+bullets_per_burst = 6
+bullet_speed = 320.0
+
+

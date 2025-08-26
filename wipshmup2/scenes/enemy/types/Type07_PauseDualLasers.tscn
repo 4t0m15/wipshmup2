@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
+
+[node name="Type07_PauseDualLasers" instance=ExtResource("1_base")]
+speed = 100.0
+hp = 2
+points = 200
+movement = 6
+pause_time_s = 0.8
+fire = 8
+fire_interval_s = 1.8
+bullets_per_burst = 1
+bullet_speed = 500.0
+
+

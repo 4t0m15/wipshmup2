@@ -3,13 +3,16 @@ extends CharacterBody2D
 signal hit
 
 @export var speed: float = 400.0
-@export var fire_cooldown_s: float = 0.15
+@export var fire_cooldown_s: float = 0.08
 @export var sprite_target_height_px: float = 20.0
+@export var focus_speed_multiplier: float = 0.4
+@export var invuln_blink_interval_s: float = 0.08
 
 const BULLET_SCENE: PackedScene = preload("res://scenes/bullet/Bullet.tscn")
 
 var _can_fire: bool = true
 var _alive: bool = true
+var _invulnerable: bool = false
 
 func _ready() -> void:
 	add_to_group("player")
@@ -33,7 +36,9 @@ func _physics_process(_delta: float) -> void:
 	input_vector.y = Input.get_action_strength("ui_down") - Input.get_action_strength("ui_up")
 	if input_vector.length() > 1.0:
 		input_vector = input_vector.normalized()
-	velocity = input_vector * speed
+	var focusing := (InputMap.has_action("focus") and Input.is_action_pressed("focus")) or Input.is_key_pressed(KEY_SHIFT)
+	var effective_speed: float = speed * (focus_speed_multiplier if focusing else 1.0)
+	velocity = input_vector * effective_speed
 	move_and_slide()
 	var rect := get_viewport().get_visible_rect()
 	global_position.x = clampf(global_position.x, 16.0, rect.size.x - 16.0)
@@ -49,7 +54,7 @@ func _shoot() -> void:
 	var bullet: Area2D = BULLET_SCENE.instantiate()
 	bullet.global_position = global_position + Vector2(0, -20)
 	var root := get_tree().current_scene
-	var container := root.get_node_or_null("Bullets")
+	var container := root.get_node_or_null("GameViewport/Bullets")
 	if container:
 		container.add_child(bullet)
 	else:
@@ -62,7 +67,23 @@ func die() -> void:
 		return
 	_alive = false
 	emit_signal("hit")
+	queue_free()
 
 func _on_hurtbox_area_entered(area: Area2D) -> void:
+	if _invulnerable:
+		return
 	if area.is_in_group("enemy") or area.is_in_group("enemy_bullet"):
 		die()
+
+func start_invulnerability(duration_s: float = 1.2) -> void:
+	if _invulnerable:
+		return
+	_invulnerable = true
+	var end_time := Time.get_ticks_msec() + int(duration_s * 1000.0)
+	while Time.get_ticks_msec() < end_time and is_instance_valid(self):
+		if has_node("Sprite2D"):
+			$Sprite2D.visible = not $Sprite2D.visible
+		await get_tree().create_timer(invuln_blink_interval_s, false).timeout
+	if has_node("Sprite2D"):
+		$Sprite2D.visible = true
+	_invulnerable = false

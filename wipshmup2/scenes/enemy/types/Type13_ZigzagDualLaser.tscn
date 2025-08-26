@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
+
+[node name="Type13_ZigzagDualLaser" instance=ExtResource("1_base")]
+speed = 150.0
+hp = 2
+points = 210
+movement = 2
+horizontal_speed = 130.0
+zigzag_period_s = 0.6
+fire = 8
+fire_interval_s = 2.0
+bullets_per_burst = 1
+bullet_speed = 500.0
+
+

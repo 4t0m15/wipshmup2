@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
+
+[node name="Type14_DiveShotgun" instance=ExtResource("1_base")]
+speed = 160.0
+hp = 2
+points = 220
+movement = 5
+fire = 9
+fire_interval_s = 1.8
+bullets_per_burst = 5
+bullet_speed = 360.0
+
+

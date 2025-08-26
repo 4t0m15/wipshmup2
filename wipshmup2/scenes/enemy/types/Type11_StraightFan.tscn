@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
+
+[node name="Type11_StraightFan" instance=ExtResource("1_base")]
+speed = 150.0
+hp = 1
+points = 130
+movement = 0
+fire = 3
+fire_interval_s = 1.8
+bullets_per_burst = 7
+bullet_speed = 310.0
+
+

@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
+
+[node name="Type16_SweeperRotatingRings" instance=ExtResource("1_base")]
+speed = 130.0
+hp = 2
+points = 230
+movement = 7
+frequency_hz = 1.1
+horizontal_speed = 150.0
+fire = 6
+fire_interval_s = 2.3
+bullets_per_burst = 10
+bullet_speed = 300.0
+
+
