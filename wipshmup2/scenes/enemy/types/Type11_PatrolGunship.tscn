@@ -1,0 +1,26 @@
+[gd_scene load_steps=3 format=3 uid="uid://b88dru64wmp84"]
+
+[ext_resource type="Script" path="res://scripts/ClassicEnemy.gd" id="1_0n9pk"]
+[ext_resource type="Texture2D" uid="uid://d1s1hbxchihfm" path="res://images/enemy.svg" id="2_35kvp"]
+
+[node name="Type11_PatrolGunship" type="Area2D"]
+script = ExtResource("1_0n9pk")
+enemy_type = 2
+speed = 40.0
+hp = 4
+points = 450
+movement = 5
+patrol_distance = 150.0
+fire_pattern = 3
+fire_interval = 1.8
+bullet_speed = 160.0
+fire_delay = 1.1
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_35kvp")
+modulate = Color(0.8, 0.8, 1, 1)
+scale = Vector2(1.2, 1.0)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+
+[node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="."]

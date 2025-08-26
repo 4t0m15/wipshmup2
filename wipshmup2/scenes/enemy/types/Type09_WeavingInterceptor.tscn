@@ -1,0 +1,27 @@
+[gd_scene load_steps=3 format=3 uid="uid://d2m8dw4ehtl0t"]
+
+[ext_resource type="Script" path="res://scripts/ClassicEnemy.gd" id="1_0n9pk"]
+[ext_resource type="Texture2D" uid="uid://d1s1hbxchihfm" path="res://images/enemy.svg" id="2_35kvp"]
+
+[node name="Type09_WeavingInterceptor" type="Area2D"]
+script = ExtResource("1_0n9pk")
+enemy_type = 0
+speed = 100.0
+hp = 2
+points = 250
+movement = 1
+movement_amplitude = 80.0
+movement_speed = 60.0
+fire_pattern = 5
+fire_interval = 1.5
+bullet_speed = 200.0
+fire_delay = 0.8
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_35kvp")
+modulate = Color(1, 0.8, 0.6, 1)
+rotation = 0.785398
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+
+[node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="."]

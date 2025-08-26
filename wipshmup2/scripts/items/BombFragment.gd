@@ -13,16 +13,16 @@ func _ready() -> void:
 		$VisibleOnScreenNotifier2D.screen_exited.connect(_on_screen_exited)
 	else:
 		var vsn := VisibleOnScreenNotifier2D.new()
-		add_child(vsn)
+		call_deferred("add_child", vsn)
 		vsn.screen_exited.connect(_on_screen_exited)
 	if not has_node("Sprite2D"):
 		var spr := Sprite2D.new()
-		add_child(spr)
+		call_deferred("add_child", spr)
 	if not has_node("CollisionShape2D"):
 		var cs := CollisionShape2D.new()
 		cs.shape = CircleShape2D.new()
 		(cs.shape as CircleShape2D).radius = 6.0
-		add_child(cs)
+		call_deferred("add_child", cs)
 	set_deferred("monitoring", true)
 
 func _physics_process(delta: float) -> void:

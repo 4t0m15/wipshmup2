@@ -28,7 +28,7 @@ func _ready() -> void:
 	if not formation_manager:
 		# Create formation manager if it doesn't exist
 		formation_manager = load("res://scripts/FormationManager.gd").new()
-		get_tree().root.add_child(formation_manager)
+		get_tree().root.call_deferred("add_child", formation_manager)
 
 	# Initialize formation
 	if formation_id == "":

@@ -14,17 +14,17 @@ func _ready() -> void:
 		$VisibleOnScreenNotifier2D.screen_exited.connect(_on_screen_exited)
 	else:
 		var vsn := VisibleOnScreenNotifier2D.new()
-		add_child(vsn)
+		call_deferred("add_child", vsn)
 		vsn.screen_exited.connect(_on_screen_exited)
 	# Visuals
 	if not has_node("Sprite2D"):
 		var spr := Sprite2D.new()
-		add_child(spr)
+		call_deferred("add_child", spr)
 	if not has_node("CollisionShape2D"):
 		var cs := CollisionShape2D.new()
 		cs.shape = CircleShape2D.new()
 		(cs.shape as CircleShape2D).radius = 4.0
-		add_child(cs)
+		call_deferred("add_child", cs)
 	# Size sprite
 	var spr2 := get_node_or_null("Sprite2D") as Sprite2D
 	if spr2:
@@ -79,7 +79,7 @@ func _spawn_sparkle() -> void:
 	p.scale_amount_max = 0.8
 	p.gravity = Vector2(0, 120)
 	p.color = Color(1.0, 0.9, 0.4)
-	add_child(p)
+	call_deferred("add_child", p)
 	await get_tree().create_timer(0.5, false).timeout
 	if is_instance_valid(p):
 		p.queue_free()
@@ -90,7 +90,8 @@ func _play_pickup_ping() -> void:
 	gen.mix_rate = 44100
 	gen.buffer_length = 0.1
 	player.stream = gen
-	add_child(player)
+	call_deferred("add_child", player)
+	await get_tree().process_frame
 	player.play()
 	await get_tree().process_frame
 	var pb := player.get_stream_playback() as AudioStreamGeneratorPlayback
@@ -124,5 +125,3 @@ func _on_screen_exited() -> void:
 func _find_main() -> Node:
 	var root := get_tree().current_scene
 	return root
-
-

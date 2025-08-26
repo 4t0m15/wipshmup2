@@ -1,13 +1,6 @@
 class_name EscortFighter
 extends ClassicEnemy
 
-# Escort properties
-@export var formation_id: String = ""
-@export var leader_node: Node2D = null
-@export var escort_position: Vector2 = Vector2.ZERO
-@export var escort_range: float = 80.0
-@export var protectiveness: float = 1.0  # How aggressively to protect (0-1)
-
 # Escort behavior states
 enum EscortState {
 	FORMATION,      # Maintaining formation position
@@ -16,6 +9,13 @@ enum EscortState {
 	RETURNING,      # Returning to formation
 	SCREENING       # Screening for the formation
 }
+
+# Escort properties
+@export var formation_id: String = ""
+@export var leader_node: Node2D = null
+@export var escort_position: Vector2 = Vector2.ZERO
+@export var escort_range: float = 80.0
+@export var protectiveness: float = 1.0  # How aggressively to protect (0-1)
 
 # Internal state
 var escort_state: int = EscortState.FORMATION
@@ -52,7 +52,7 @@ func update_escort_behavior(delta: float) -> void:
 		EscortState.FORMATION:
 			maintain_formation_position(delta)
 		EscortState.BREAKING:
-			break_formation(delta)
+			_execute_formation_break(delta)
 		EscortState.ENGAGING:
 			engage_threats(delta)
 		EscortState.RETURNING:
@@ -115,7 +115,7 @@ func should_engage_threats() -> bool:
 
 	return false
 
-func break_formation(delta: float) -> void:
+func _execute_formation_break(delta: float) -> void:
 	# Move toward player to intercept
 	var player = _find_player()
 	if player:

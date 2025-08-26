@@ -345,9 +345,9 @@ func _spawn_bullet(origin: Vector2, direction: Vector2, spd: float) -> void:
 	if root:
 		var container := root.get_node_or_null("GameViewport/Bullets")
 		if container:
-			container.add_child(bullet)
+			container.call_deferred("add_child", bullet)
 		else:
-			root.add_child(bullet)
+			root.call_deferred("add_child", bullet)
 	else:
 		bullet.queue_free()
 

@@ -39,7 +39,7 @@ func _ensure_items_container() -> Node2D:
 	if not items:
 		items = Node2D.new()
 		items.name = "Items"
-		gv.add_child(items)
+		gv.call_deferred("add_child", items)
 	return items
 
 func reset_chain() -> void:
@@ -92,7 +92,7 @@ func _spawn_medal(pos: Vector2, value: int) -> void:
 	medal.set_script(MEDAL_SCENE)
 	medal.set("value", value)
 	medal.global_position = pos
-	items.add_child(medal)
+	items.call_deferred("add_child", medal)
 
 func _spawn_shot_item(pos: Vector2, is_large: bool) -> void:
 	var items := _ensure_items_container()
@@ -102,7 +102,7 @@ func _spawn_shot_item(pos: Vector2, is_large: bool) -> void:
 	it.set_script(SHOT_ITEM_SCENE)
 	it.set("is_large", is_large)
 	it.global_position = pos
-	items.add_child(it)
+	items.call_deferred("add_child", it)
 
 func _spawn_option_item(pos: Vector2) -> void:
 	var items := _ensure_items_container()
@@ -111,7 +111,7 @@ func _spawn_option_item(pos: Vector2) -> void:
 	var it := Area2D.new()
 	it.set_script(OPTION_ITEM_SCENE)
 	it.global_position = pos
-	items.add_child(it)
+	items.call_deferred("add_child", it)
 
 func _spawn_bomb_frag(pos: Vector2, shards: int) -> void:
 	var items := _ensure_items_container()
@@ -121,4 +121,4 @@ func _spawn_bomb_frag(pos: Vector2, shards: int) -> void:
 	it.set_script(BOMB_FRAG_SCENE)
 	it.set("shards", shards)
 	it.global_position = pos
-	items.add_child(it)
+	items.call_deferred("add_child", it)
