@@ -66,6 +66,20 @@ func _process(delta: float) -> void:
 	var formation_manager = get_node_or_null("/root/FormationManager")
 	if formation_manager and formation_manager.has_method("update_formations"):
 		formation_manager.update_formations(delta)
+	# Despawn any stragglers that reach the bottom edge (safety net)
+	_cleanup_bottom_stragglers()
+
+func _cleanup_bottom_stragglers() -> void:
+	var root := get_tree().current_scene
+	if not root:
+		return
+	var rect := get_viewport().get_visible_rect()
+	var enemies := root.get_tree().get_nodes_in_group("enemy")
+	for e in enemies:
+		if e and e is Node2D:
+			var n := e as Node2D
+			if n.global_position.y >= rect.size.y - 1:
+				n.queue_free()
 
 func _start_current_stage() -> void:
 	if current_stage_index < 0 or current_stage_index >= stage_order.size():

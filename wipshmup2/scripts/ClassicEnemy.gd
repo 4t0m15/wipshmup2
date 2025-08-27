@@ -95,6 +95,10 @@ var _original_movement: int = 0
 func _ready() -> void:
 	add_to_group("enemy")
 	monitoring = true
+	# Explicit collision layers/masks to ensure bullet hits are detected reliably
+	# Layer 1: enemies; Layer 2: player bullets
+	collision_layer = 1
+	collision_mask = 1  # detect player hurtbox (default layer 1)
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
 
@@ -159,6 +163,9 @@ func _physics_process(delta: float) -> void:
 		_fire_timer -= delta
 
 	position = position.round()
+
+	# Fallback: proactively detect overlaps with player bullets to avoid missed area_entered events
+	_ensure_player_bullet_hits()
 
 	# Check if enemy has moved off screen
 	var view := get_viewport().get_visible_rect()
@@ -360,6 +367,20 @@ func _is_on_screen() -> bool:
 	var within_x := global_position.x >= -8 and global_position.x <= view.size.x + 8
 	var within_y := global_position.y >= -8 and global_position.y <= view.size.y + 8
 	return within_x and within_y
+
+func _ensure_player_bullet_hits() -> void:
+	# Extra safety: if any player bullets are overlapping, consume them and apply damage
+	if not monitoring:
+		return
+	var overlaps := get_overlapping_areas()
+	if overlaps.is_empty():
+		return
+	for a in overlaps:
+		if a and a.is_in_group("player_bullet"):
+			# Apply the same damage as Bullet.gd to keep balance consistent
+			take_damage(2, "shot")
+			if a and a.has_method("queue_free"):
+				a.queue_free()
 
 # Formation system methods
 func join_formation(formation_id: String) -> void:

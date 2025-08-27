@@ -225,10 +225,13 @@ func leader_destroyed() -> void:
 	set_state(EscortState.FORMATION)
 	# Could implement logic to find new leader or act independently
 
-func set_leader(new_leader: Node2D) -> void:
-	leader_node = new_leader
-	if leader_node:
+func set_leader(new_leader) -> void:
+	# Accept untyped to avoid call_deferred type conversion issues
+	if new_leader is Node2D:
+		leader_node = new_leader
 		last_leader_position = leader_node.global_position
+	else:
+		leader_node = null
 
 func get_escort_state() -> String:
 	match escort_state:
