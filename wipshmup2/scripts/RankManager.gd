@@ -66,8 +66,6 @@ func on_item_picked(item_type: String, is_large: bool = false) -> void:
 			add = (item_large_rank_rate if is_large else item_small_rank_rate)
 		"option":
 			add = item_large_rank_rate * 0.75
-		"medal":
-			add = item_small_rank_rate * 0.5
 		_:
 			add = item_small_rank_rate * 0.25
 	rank = clamp(rank + add, min_rank, max_rank)

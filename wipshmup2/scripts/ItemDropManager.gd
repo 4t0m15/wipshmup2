@@ -1,23 +1,16 @@
 extends Node
 
-# Manages item drop cycles and medal chaining akin to Battle Garegga
-
-signal medal_value_changed(new_value: int)
-signal medal_chain_broken()
-
-const MEDAL_SCENE: Script = preload("res://scripts/items/Medal.gd")
+# Manages item drop cycles (medal system removed)
 const SHOT_ITEM_SCENE: Script = preload("res://scripts/items/ShotItem.gd")
 const OPTION_ITEM_SCENE: Script = preload("res://scripts/items/OptionItem.gd")
 const BOMB_FRAG_SCENE: Script = preload("res://scripts/items/BombFragment.gd")
 
 @export var drop_every_n_kills: int = 5
 
-# Cycle: small shot, large medal, small shot, large medal, option
+# Cycle without medals: small shot, small shot, option, bomb
 var _drop_cycle: Array = [
 	{"type": "small_shot"},
-	{"type": "large_medal"},
 	{"type": "small_shot"},
-	{"type": "large_medal"},
 	{"type": "option"},
 	{"type": "bomb_small"},
 ]
@@ -25,8 +18,7 @@ var _drop_cycle: Array = [
 var _cycle_index: int = 0
 var _popcorn_kill_counter: int = 0
 
-# Medal chain state: 100..900 by 100, then 1000..10000 by 1000
-var _medal_value: int = 100
+## Medal system removed; no chain value
 
 func _ensure_items_container() -> Node2D:
 	var root := get_tree().current_scene
@@ -42,26 +34,13 @@ func _ensure_items_container() -> Node2D:
 		gv.call_deferred("add_child", items)
 	return items
 
-func reset_chain() -> void:
-	_medal_value = 100
-	emit_signal("medal_value_changed", _medal_value)
+## No-op; legacy API removed
 
-func on_medal_collected() -> void:
-	# Step up medal value
-	if _medal_value < 900:
-		_medal_value += 100
-	elif _medal_value < 10000:
-		_medal_value += 1000
-	else:
-		_medal_value = 10000
-	emit_signal("medal_value_changed", _medal_value)
+## Removed
 
-func get_medal_value() -> int:
-	return _medal_value
+## Removed
 
-func on_medal_missed() -> void:
-	reset_chain()
-	emit_signal("medal_chain_broken")
+## Removed
 
 func on_enemy_killed(pos: Vector2, enemy: Node) -> void:
 	# Ignore bosses for cycle purposes
@@ -75,24 +54,14 @@ func on_enemy_killed(pos: Vector2, enemy: Node) -> void:
 	match String(drop_def.get("type", "")):
 		"small_shot":
 			_spawn_shot_item(pos, false)
-		"large_medal":
-			_spawn_medal(pos, _medal_value)
 		"option":
 			_spawn_option_item(pos)
 		"bomb_small":
 			_spawn_bomb_frag(pos, 1)
 		_:
-			_spawn_medal(pos, _medal_value)
+			_spawn_shot_item(pos, false)
 
-func _spawn_medal(pos: Vector2, value: int) -> void:
-	var items := _ensure_items_container()
-	if not items:
-		return
-	var medal := Area2D.new()
-	medal.set_script(MEDAL_SCENE)
-	medal.set("value", value)
-	medal.global_position = pos
-	items.call_deferred("add_child", medal)
+## Removed
 
 func _spawn_shot_item(pos: Vector2, is_large: bool) -> void:
 	var items := _ensure_items_container()

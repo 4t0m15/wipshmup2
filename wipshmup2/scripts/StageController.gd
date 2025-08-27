@@ -3,6 +3,7 @@ extends Node
 
 signal enemy_killed(points: int)
 signal stage_completed(stage_number: int)
+signal boss_defeated()
 
 const ENEMY_SCENE: PackedScene = preload("res://scenes/enemy/Enemy.tscn")
 const PE_BASE: PackedScene = preload("res://scenes/enemy/PatternEnemyBase.tscn")
@@ -397,6 +398,7 @@ func _run_stage_1() -> void:
 	await get_tree().create_timer(1.3, false).timeout
 	if is_instance_valid(boss):
 		await boss_defeated_signal
+		emit_signal("boss_defeated")
 
 
 func _run_stage_2() -> void:
@@ -503,6 +505,7 @@ func _run_stage_2() -> void:
 	await get_tree().create_timer(1.3, false).timeout
 	if is_instance_valid(boss):
 		await boss_defeated_signal
+		emit_signal("boss_defeated")
 
 
 func _run_stage_3() -> void:
@@ -570,6 +573,7 @@ func _run_stage_3() -> void:
 	await get_tree().create_timer(1.2, false).timeout
 	if is_instance_valid(boss):
 		await boss_defeated_signal
+		emit_signal("boss_defeated")
 
 
 func _run_stage_4() -> void:
@@ -618,6 +622,7 @@ func _run_stage_4() -> void:
 	await get_tree().create_timer(1.2, false).timeout
 	if is_instance_valid(boss):
 		await boss_defeated_signal
+		emit_signal("boss_defeated")
 
 
 func _run_stage_5() -> void:
@@ -660,6 +665,7 @@ func _run_stage_5() -> void:
 	await get_tree().create_timer(1.1, false).timeout
 	if is_instance_valid(boss):
 		await boss_defeated_signal
+		emit_signal("boss_defeated")
 
 
 func _run_stage_6() -> void:
@@ -708,6 +714,7 @@ func _run_stage_6() -> void:
 	await get_tree().create_timer(1.1, false).timeout
 	if is_instance_valid(boss):
 		await boss_defeated_signal
+		emit_signal("boss_defeated")
 
 
 func _run_stage_7() -> void:
@@ -805,6 +812,7 @@ func _run_stage_8() -> void:
 	await get_tree().create_timer(1.0, false).timeout
 	if is_instance_valid(mid):
 		await mid_defeated_signal
+		emit_signal("boss_defeated")
 
 	# Post-mid-boss waves
 	_spawn_dual_from_sides(TYPE10, TYPE10)
@@ -827,3 +835,4 @@ func _run_stage_8() -> void:
 	await get_tree().create_timer(1.0, false).timeout
 	if is_instance_valid(boss):
 		await boss_defeated_signal
+		emit_signal("boss_defeated")

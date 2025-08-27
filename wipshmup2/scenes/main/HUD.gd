@@ -7,11 +7,11 @@ var _accum_ticks: int = 0
 @onready var _lives_label: Label = $TopBar/HBox/LivesLabel
 @onready var _tps_label: Label = $TopBar/HBox/TPSLabel
 @onready var _bombs_label: Label = $TopBar/HBox/BombsLabel
-@onready var _medal_label: Label = $TopBar/HBox/MedalLabel
 @onready var _overlay_dim: ColorRect = $CenterOverlay/OverlayDim
 @onready var _msg_panel: PanelContainer = $CenterOverlay/MessagePanel
 @onready var _msg_label: Label = $CenterOverlay/MessagePanel/VBox/MessageLabel
 @onready var _hint_label: Label = $CenterOverlay/MessagePanel/VBox/HintLabel
+@onready var _popup_container: VBoxContainer = $Popups
 
 func _ready() -> void:
 	var tm := get_node_or_null("/root/TickManager")
@@ -50,9 +50,6 @@ func set_bombs(value: int, shards: int = -1) -> void:
 		text += " (%d/40)" % shards
 	_bombs_label.text = text
 
-func set_medal_value(value: int) -> void:
-	_medal_label.text = "Medal: %d" % max(0, value)
-
 func _on_tick(dt: float) -> void:
 	_accum_time_s += dt
 	_accum_ticks += 1
@@ -62,4 +59,50 @@ func _on_tick(dt: float) -> void:
 		_accum_time_s = 0.0
 		_accum_ticks = 0
 
+func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
+	if not is_instance_valid(_popup_container):
+		return
+	var panel := PanelContainer.new()
+	panel.name = "Popup"
+	# Style
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.04, 0.12, 0.95)
+	style.border_color = Color(0.9, 0.7, 1.0, 0.9)
+	style.border_width_left = 1
+	style.border_width_top = 1
+	style.border_width_right = 1
+	style.border_width_bottom = 1
+	style.corner_radius_top_left = 6
+	style.corner_radius_top_right = 6
+	style.corner_radius_bottom_left = 6
+	style.corner_radius_bottom_right = 6
+	panel.add_theme_stylebox_override("panel", style)
 
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	label.add_theme_constant_override("outline_size", 1)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	panel.add_child(label)
+
+	panel.modulate.a = 0.0
+	_popup_container.add_child(panel)
+
+	# Limit number of visible popups
+	while _popup_container.get_child_count() > 4:
+		var old := _popup_container.get_child(0)
+		if is_instance_valid(old):
+			old.queue_free()
+
+	var fade_in := create_tween()
+	fade_in.tween_property(panel, "modulate:a", 1.0, 0.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	await get_tree().create_timer(1.6, false).timeout
+	if not is_instance_valid(panel):
+		return
+	var fade_out := create_tween()
+	fade_out.tween_property(panel, "modulate:a", 0.0, 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	await fade_out.finished
+	if is_instance_valid(panel):
+		panel.queue_free()

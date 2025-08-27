@@ -26,25 +26,18 @@ func _ready() -> void:
 	stage_controller = STAGE_CONTROLLER_SCRIPT.new()
 	$GameViewport.add_child(stage_controller)
 	stage_controller.enemy_killed.connect(_on_enemy_killed)
+	if stage_controller.has_signal("boss_defeated"):
+		stage_controller.boss_defeated.connect(func():
+			if is_instance_valid(hud) and hud.has_method("show_popup"):
+				hud.call_deferred("show_popup", "Boss Defeated!")
+		)
 	stage_controller.start_run()
 	# HUD
 	hud = $HUD
 	_update_score_label()
 	_update_lives_display()
 	_update_bomb_display()
-	# Hook medal value to HUD
-	var idm := get_node_or_null("/root/ItemDropManager")
-	if idm:
-		if idm.has_signal("medal_value_changed"):
-			idm.medal_value_changed.connect(func(v: int):
-				if is_instance_valid(hud):
-					hud.call_deferred("set_medal_value", v)
-			)
-		# Initialize HUD medal value
-		if idm.has_method("get_medal_value"):
-			var mv: int = idm.get_medal_value()
-			if is_instance_valid(hud):
-				hud.call_deferred("set_medal_value", mv)
+	# Medal system removed: no HUD medal hooks
 	# Hook 50 TPS tick to HUD display (TPS averaged inside HUD)
 	var tm := get_node_or_null("/root/TickManager")
 	if tm and tm.has_signal("tick"):
@@ -222,15 +215,15 @@ func _use_bomb() -> void:
 	if root:
 		var bullets := root.get_tree().get_nodes_in_group("enemy_bullet")
 		for b in bullets:
-			if b and b is Node:
-				(b as Node).call_deferred("queue_free")
+			if is_instance_valid(b):
+				b.call_deferred("queue_free")
 		# Apply bomb AoE damage to enemies and mark kills as bomb
 		var enemies := root.get_tree().get_nodes_in_group("enemy")
 		for e in enemies:
-			if e and e is Node and not (e as Node).is_in_group("boss"):
-				if (e as Node).has_method("take_damage"):
+			if is_instance_valid(e) and not e.is_in_group("boss"):
+				if e.has_method("take_damage"):
 					# Moderate bomb damage; enemies can be tuned via hp
-					(e as Node).call_deferred("take_damage", 8, "bomb")
+					e.call_deferred("take_damage", 8, "bomb")
 	# Small safety invulnerability
 	if is_instance_valid(player) and player.has_method("start_invulnerability"):
 		player.call_deferred("start_invulnerability", 0.8)
@@ -245,6 +238,9 @@ func _check_extends() -> void:
 		lives += 1
 		_next_extend_score += 1000000
 		_update_lives_display()
+		# Popup: life extend
+		if is_instance_valid(hud) and hud.has_method("show_popup"):
+			hud.call_deferred("show_popup", "Extend! ♥")
 
 func _update_bomb_display() -> void:
 	if is_instance_valid(hud):
@@ -255,4 +251,7 @@ func add_bomb_shards(count: int) -> void:
 	while bomb_shards >= 40:
 		bombs += 1
 		bomb_shards -= 40
+		# Popup: bomb assembled from shards
+		if is_instance_valid(hud) and hud.has_method("show_popup"):
+			hud.call_deferred("show_popup", "Bomb +1")
 	_update_bomb_display()

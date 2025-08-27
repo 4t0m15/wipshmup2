@@ -34,6 +34,17 @@ shadow_size = 12
 layer = 2
 script = ExtResource("1_4zv1d")
 
+[node name="Popups" type="VBoxContainer" parent="."]
+offset_left = -80.0
+offset_top = 18.0
+offset_right = 80.0
+offset_bottom = 18.0
+anchor_left = 0.5
+anchor_top = 0.0
+anchor_right = 0.5
+anchor_bottom = 0.0
+theme_override_constants/separation = 4
+
 [node name="TopBar" type="MarginContainer" parent="."]
 offset_right = 320.0
 offset_bottom = 16.0
@@ -74,12 +85,7 @@ theme_override_colors/font_color = Color(0.9, 1, 0.7, 1)
 theme_override_colors/font_outline_color = Color(0.2, 0.5, 0.1, 0.8)
 theme_override_constants/outline_size = 1
 
-[node name="MedalLabel" type="Label" parent="TopBar/HBox"]
-text = "Medal: 100"
-theme_override_font_sizes/font_size = 10
-theme_override_colors/font_color = Color(1, 0.95, 0.5, 1)
-theme_override_colors/font_outline_color = Color(0.4, 0.35, 0.2, 0.8)
-theme_override_constants/outline_size = 1
+
 
 [node name="CenterOverlay" type="Control" parent="."]
 layout_mode = 3
