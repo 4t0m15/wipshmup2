@@ -186,11 +186,13 @@ class Formation:
 		return true
 
 # Main formation management
-var formations: Dictionary  # formation_id -> Formation
+var formations: Dictionary = {}  # formation_id -> Formation
 var formation_counter: int = 0
 
 func _ready() -> void:
 	# Set as singleton
+	if formations == null:
+		formations = {}
 	if get_parent() == get_tree().root:
 		pass  # Already at root level
 

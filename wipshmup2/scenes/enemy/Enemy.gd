@@ -41,6 +41,10 @@ func _physics_process(delta: float) -> void:
 	position.y += speed * delta
 	position = position.round()
 	var rect := get_viewport().get_visible_rect()
+	# Despawn just before bottom edge to avoid invincible edge collisions lingering
+	if position.y >= rect.size.y - 2:
+		queue_free()
+		return
 	if position.y > rect.size.y + 64:
 		queue_free()
 

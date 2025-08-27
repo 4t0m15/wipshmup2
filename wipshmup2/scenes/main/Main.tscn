@@ -1,8 +1,7 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=3 format=3 uid="uid://c6kbxfx42hul1"]
 
-[ext_resource type="Script" path="res://scenes/main/Main.gd" id="1_9m0k2"]
+[ext_resource type="Script" uid="uid://f7x5uq6o2is6" path="res://scenes/main/Main.gd" id="1_9m0k2"]
 [ext_resource type="PackedScene" path="res://scenes/main/HUD.tscn" id="2_hud"]
-; CRT shader setup - SubViewport based rendering
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_9m0k2")
@@ -13,16 +12,11 @@ render_target_update_mode = 4
 
 [node name="GameCamera" type="Camera2D" parent="GameViewport"]
 position = Vector2(160, 90)
-enabled = true
 
 [node name="BG" type="ColorRect" parent="GameViewport"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 0.0
-offset_bottom = 0.0
 color = Color(0, 0, 0, 1)
 
 [node name="SpawnTimer" type="Timer" parent="GameViewport"]
@@ -41,35 +35,21 @@ render_target_update_mode = 4
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 0.0
-offset_bottom = 0.0
 
 [node name="HUD" parent="." instance=ExtResource("2_hud")]
 
 [node name="PostFX" type="CanvasLayer" parent="."]
-layer = 1
 
 [node name="Dither" type="ColorRect" parent="PostFX"]
+visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 0.0
-offset_bottom = 0.0
 mouse_filter = 2
-visible = false
 
 [node name="CRT" type="ColorRect" parent="PostFX"]
+visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 0.0
-offset_bottom = 0.0
 mouse_filter = 2
-visible = false
-

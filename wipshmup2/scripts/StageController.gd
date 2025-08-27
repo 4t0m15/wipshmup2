@@ -233,7 +233,7 @@ func _spawn_fighter_formation(position: Vector2, member_count: int = 3) -> void:
 			root.call_deferred("add_child", wingman)
 
 		# Add wingman to formation if leader has formation manager
-		if leader.has_method("add_formation_member"):
+		if is_instance_valid(leader) and leader.has_method("add_formation_member"):
 			leader.call_deferred("add_formation_member", wingman)
 
 func _spawn_bomber_escort_formation(position: Vector2, escort_count: int = 2) -> void:
@@ -263,11 +263,11 @@ func _spawn_bomber_escort_formation(position: Vector2, escort_count: int = 2) ->
 			root.call_deferred("add_child", escort)
 
 		# Set escort to follow the bomber
-		if escort.has_method("set_leader"):
+		if is_instance_valid(escort) and escort.has_method("set_leader"):
 			escort.call_deferred("set_leader", bomber)
 
 		# Add escort to bomber's formation
-		if bomber.has_method("add_escort_member"):
+		if is_instance_valid(bomber) and bomber.has_method("add_escort_member"):
 			bomber.call_deferred("add_escort_member", escort)
 
 func _spawn_defensive_line(position: Vector2, turret_count: int = 3) -> void:

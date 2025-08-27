@@ -162,6 +162,10 @@ func _physics_process(delta: float) -> void:
 
 	# Check if enemy has moved off screen
 	var view := get_viewport().get_visible_rect()
+	# Safety: despawn just before bottom to avoid lingering, invulnerable enemies at screen edge
+	if enemy_type != EnemyType.TURRET and position.y >= view.size.y - 2:
+		queue_free()
+		return
 	if position.y > view.size.y + 64 or position.x < -64 or position.x > view.size.x + 64:
 		queue_free()
 
