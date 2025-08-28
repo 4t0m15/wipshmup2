@@ -1,7 +1,6 @@
-wipshmup2 - a shmup game inspired by Cho Ren Sha 68K, 1942, the TouHou Project series and Galaga/Galaxian.
+## wipshmup2 - a shmup game inspired by Cho Ren Sha 68K, 1942, the TouHou Project series and Galaga/Galaxian.
 
-Credits:
-Harrison Allen for the base of my own CRT shader which is very heavily modified from his which can be found @ (https://godotshaders.com/shader/crt-with-luminance-preservation/)
+Credits: Harrison Allen for the base of my own CRT shader which is very heavily modified from his which can be found @ (https://godotshaders.com/shader/crt-with-luminance-preservation/)
 
 Kody Gentry for the base of my own dithering "shader" (my version isn't really a shader more of an effect) which can be found @ (https://github.com/kodygentry/godot-dot-shader)
 
@@ -9,9 +8,9 @@ Kody Gentry for the base of my own dithering "shader" (my version isn't really a
 
 controls: arrow keys to move x to deploy bomb and space to shoot
 
-                                        Architecture
-                                 ===========================
+## Architecture
 
+```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                                    GODOT ENGINE                                        │
 │                                                                                        │
@@ -107,9 +106,11 @@ controls: arrow keys to move x to deploy bomb and space to shoot
 │                       │ └─────────────┘ │                                             │
 │                       └─────────────────┘                                             │
 └───────────────────────────────────────────────────────────────────────────────────────┘
+```
 
-                                    DATA FLOW
-                                    =========
+## Data Flow
+
+```
 
      ┌─────────────┐              ┌──────────────┐              ┌─────────────┐
      │   INPUT     │              │   GAME       │              │   OUTPUT    │
@@ -134,9 +135,11 @@ controls: arrow keys to move x to deploy bomb and space to shoot
      │ │(Shift)  │ │              │              │              │             │
      │ └─────────┘ │              └──────────────┘              │             │
      └─────────────┘                                            └─────────────┘
+```
 
-                                 COLLISION SYSTEM
-                                 ================
+## Collision System
+
+```
 
                     ┌────────────────────────────────────────┐
                     │            COLLISION GROUPS            │
@@ -165,9 +168,11 @@ controls: arrow keys to move x to deploy bomb and space to shoot
                     │         │   COLLISION     │            │
                     │         └─────────────────┘            │
                     └────────────────────────────────────────┘
+```
 
-                                Signal Flow Chart
-                                ==================
+## Signal Flow Chart
+
+```
 
     Player.hit ──────────────────────► Main._on_player_hit()
        │                                       │
@@ -191,9 +196,11 @@ controls: arrow keys to move x to deploy bomb and space to shoot
                                               │
                                               ▼
                                         TPS Display
+```
 
-                              Enemy Behavior Types
-                              ====================
+## Enemy Behavior Types
+
+```
 
     ┌──────────────────────────────────────────────────────────────────────────────────┐
     │                               REGULAR ENEMIES                                    │
@@ -213,9 +220,11 @@ controls: arrow keys to move x to deploy bomb and space to shoot
     │  Gliath      │ Type0       │ Iron Casket    │ Graf Zeppelin  │ Fortress          │
     │  Cross Sinker│ Blockade    │ FGR            │ BB             │                   │
     └──────────────────────────────────────────────────────────────────────────────────┘
+```
 
-                               RENDERING PIPELINE
-                               ==================
+## Rendering Pipeline
+
+```
 
     Game Content (320x180) --> GameViewport
                                      │
@@ -227,6 +236,8 @@ controls: arrow keys to move x to deploy bomb and space to shoot
                                High Contrast              │
                                      │                    ▼
                                      └------------► What you see (final output)
-                                                    
+```
 
-Thanks for reading :)
+---
+
+*Thanks for reading! :)*
