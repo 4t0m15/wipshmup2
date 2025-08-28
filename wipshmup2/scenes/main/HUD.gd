@@ -2,6 +2,7 @@ extends CanvasLayer
 
 var _accum_time_s: float = 0.0
 var _accum_ticks: int = 0
+var _rainbow_time: float = 0.0
 
 @onready var _score_label: Label = $TopBar/HBox/ScoreLabel
 @onready var _lives_label: Label = $TopBar/HBox/LivesLabel
@@ -12,11 +13,22 @@ var _accum_ticks: int = 0
 @onready var _msg_label: Label = $CenterOverlay/MessagePanel/VBox/MessageLabel
 @onready var _hint_label: Label = $CenterOverlay/MessagePanel/VBox/HintLabel
 @onready var _popup_container: VBoxContainer = $Popups
+@onready var _shiba_label: Label = $ShibaLabel
 
 func _ready() -> void:
 	var tm := get_node_or_null("/root/TickManager")
 	if tm and tm.has_signal("tick"):
 		tm.tick.connect(_on_tick)
+
+func _process(delta: float) -> void:
+	_rainbow_time += delta * 3.0  # Speed up the rainbow effect
+	if is_instance_valid(_shiba_label):
+		_shiba_label.add_theme_color_override("font_color", _get_rainbow_color(_rainbow_time))
+
+func _get_rainbow_color(time: float) -> Color:
+	# Create rainbow effect using HSV color space
+	var hue = fmod(time, 1.0)  # Cycle through hue from 0 to 1
+	return Color.from_hsv(hue, 1.0, 1.0)  # Full saturation and value for vibrant colors
 
 func set_score(value: int) -> void:
 	_score_label.text = "Score: %d" % value
@@ -44,10 +56,8 @@ func show_game_over(is_shown: bool) -> void:
 	else:
 		_hint_label.text = ""
 
-func set_bombs(value: int, shards: int = -1) -> void:
+func set_bombs(value: int) -> void:
 	var text := "Bombs: %d" % max(0, value)
-	if shards >= 0:
-		text += " (%d/40)" % shards
 	_bombs_label.text = text
 
 func _on_tick(dt: float) -> void:

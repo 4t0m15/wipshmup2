@@ -10,10 +10,10 @@ var score: int = 0
 var game_over: bool = false
 var lives: int = 3
 var bombs: int = 3
-var bomb_shards: int = 0
 var player: CharacterBody2D
 var stage_controller: Node
 var hud: CanvasLayer
+var bgm_player: AudioStreamPlayer
 
 var _next_extend_score: int = 1000000
 
@@ -37,6 +37,8 @@ func _ready() -> void:
 	_update_score_label()
 	_update_lives_display()
 	_update_bomb_display()
+	# BGM
+	bgm_player = $BGMPlayer
 	# Medal system removed: no HUD medal hooks
 	# Hook 50 TPS tick to HUD display (TPS averaged inside HUD)
 	var tm := get_node_or_null("/root/TickManager")
@@ -172,6 +174,11 @@ func _on_player_hit() -> void:
 	if game_over:
 		return
 
+	# Play player hit sound
+	var audio_manager = get_node_or_null("/root/AudioManager")
+	if audio_manager and audio_manager.has_method("play_player_hit"):
+		audio_manager.play_player_hit()
+
 	lives -= 1
 	var rm := get_node_or_null("/root/RankManager")
 	if rm and rm.has_method("on_player_died"):
@@ -197,16 +204,22 @@ func _update_score_label() -> void:
 func _update_lives_display() -> void:
 	if is_instance_valid(hud):
 		hud.call("set_lives", lives)
-		hud.call_deferred("set_bombs", bombs, bomb_shards)
+		hud.call_deferred("set_bombs", bombs)
 
 func _use_bomb() -> void:
 	if game_over:
 		return
 	if bombs <= 0:
 		return
+	
+	# Play bomb sound
+	var audio_manager = get_node_or_null("/root/AudioManager")
+	if audio_manager and audio_manager.has_method("play_bomb_use"):
+		audio_manager.play_bomb_use()
+	
 	bombs -= 1
 	if is_instance_valid(hud):
-		hud.call_deferred("set_bombs", bombs, bomb_shards)
+		hud.call_deferred("set_bombs", bombs)
 	var rm2 := get_node_or_null("/root/RankManager")
 	if rm2 and rm2.has_method("on_bomb_used"):
 		rm2.on_bomb_used()
@@ -235,6 +248,11 @@ func add_score(amount: int) -> void:
 
 func _check_extends() -> void:
 	while score >= _next_extend_score:
+		# Play extend sound
+		var audio_manager = get_node_or_null("/root/AudioManager")
+		if audio_manager and audio_manager.has_method("play_extend"):
+			audio_manager.play_extend()
+		
 		lives += 1
 		_next_extend_score += 1000000
 		_update_lives_display()
@@ -244,14 +262,12 @@ func _check_extends() -> void:
 
 func _update_bomb_display() -> void:
 	if is_instance_valid(hud):
-		hud.call("set_bombs", bombs, bomb_shards)
+		hud.call("set_bombs", bombs)
 
-func add_bomb_shards(count: int) -> void:
-	bomb_shards = max(0, bomb_shards + count)
-	while bomb_shards >= 40:
-		bombs += 1
-		bomb_shards -= 40
-		# Popup: bomb assembled from shards
-		if is_instance_valid(hud) and hud.has_method("show_popup"):
-			hud.call_deferred("show_popup", "Bomb +1")
-	_update_bomb_display()
+func pause_bgm() -> void:
+	if is_instance_valid(bgm_player):
+		bgm_player.stream_paused = true
+
+func resume_bgm() -> void:
+	if is_instance_valid(bgm_player):
+		bgm_player.stream_paused = false

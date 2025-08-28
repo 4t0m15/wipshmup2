@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://c6kbxfx42hul1"]
+[gd_scene load_steps=4 format=3 uid="uid://c6kbxfx42hul1"]
 
 [ext_resource type="Script" uid="uid://f7x5uq6o2is6" path="res://scenes/main/Main.gd" id="1_9m0k2"]
 [ext_resource type="PackedScene" path="res://scenes/main/HUD.tscn" id="2_hud"]
+[ext_resource type="AudioStream" uid="uid://b7k2yqd8vp3xd" path="res://retro-waves-139640.mp3" id="3_bgm"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_9m0k2")
@@ -37,6 +38,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="HUD" parent="." instance=ExtResource("2_hud")]
+
+[node name="BGMPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3_bgm")
+autoplay = true
 
 [node name="PostFX" type="CanvasLayer" parent="."]
 

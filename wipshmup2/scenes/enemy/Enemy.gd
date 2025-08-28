@@ -55,6 +55,11 @@ func take_damage(amount: int, source: String = "shot") -> void:
 	hp -= amount
 	_last_damage_source = source
 	if hp <= 0:
+		# Play enemy death sound
+		var audio_manager = get_node_or_null("/root/AudioManager")
+		if audio_manager and audio_manager.has_method("play_enemy_death"):
+			audio_manager.play_enemy_death()
+		
 		var awarded: int = points
 		if _last_damage_source == "bomb":
 			if bomb_points_override >= 0:
@@ -62,10 +67,6 @@ func take_damage(amount: int, source: String = "shot") -> void:
 			else:
 				awarded = int(round(float(points) * max(1.0, bomb_points_multiplier)))
 		emit_signal("killed", awarded)
-		# Inform ItemDropManager of kill position
-		var idm := get_node_or_null("/root/ItemDropManager")
-		if idm and idm.has_method("on_enemy_killed"):
-			idm.on_enemy_killed(global_position, self)
 		queue_free()
 
 func _on_area_entered(area: Area2D) -> void:

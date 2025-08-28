@@ -34,6 +34,14 @@ func _physics_process(delta: float) -> void:
 
 func _on_area_entered(area: Area2D) -> void:
 	if area.is_in_group("enemy"):
+		# Play hit sound
+		var audio_manager = get_node_or_null("/root/AudioManager")
+		if audio_manager:
+			if area.is_in_group("boss") and audio_manager.has_method("play_boss_hit"):
+				audio_manager.play_boss_hit()
+			elif audio_manager.has_method("play_bullet_hit"):
+				audio_manager.play_bullet_hit()
+		
 		if area.has_method("take_damage"):
 			# Mark source as shot for conditional scoring/behavior
 			area.take_damage(2, "shot")  # Increased from 1 to 2 for easier gameplay

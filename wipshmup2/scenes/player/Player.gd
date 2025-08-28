@@ -7,15 +7,12 @@ signal hit
 @export var sprite_target_height_px: float = 20.0
 @export var focus_speed_multiplier: float = 0.4
 @export var invuln_blink_interval_s: float = 0.08
-@export var small_icons_per_level: int = 5
-
 const BULLET_SCENE: PackedScene = preload("res://scenes/bullet/Bullet.tscn")
 
 var _can_fire: bool = true
 var _alive: bool = true
 var _invulnerable: bool = false
 var _shot_level: int = 1
-var _small_shot_icons_collected: int = 0
 var _option_count: int = 0
 
 func _ready() -> void:
@@ -57,6 +54,11 @@ func _physics_process(_delta: float) -> void:
 func _shoot() -> void:
 	if not _can_fire or not _alive: return
 	_can_fire = false
+	
+	# Play shooting sound
+	var audio_manager = get_node_or_null("/root/AudioManager")
+	if audio_manager and audio_manager.has_method("play_player_shot"):
+		audio_manager.play_player_shot()
 	
 	var root := get_tree().current_scene
 	var container := root.get_node_or_null("GameViewport/Bullets") if root else null
@@ -131,14 +133,4 @@ func start_invulnerability(duration_s: float = 1.2) -> void:
 		$Sprite2D.visible = true
 	_invulnerable = false
 
-func apply_shot_item(is_large: bool) -> void:
-	if is_large:
-		_shot_level = clamp(_shot_level + 1, 1, 5)
-	else:
-		_small_shot_icons_collected += 1
-		if _small_shot_icons_collected >= max(1, small_icons_per_level):
-			_small_shot_icons_collected = 0
-			_shot_level = clamp(_shot_level + 1, 1, 5)
 
-func apply_option_item() -> void:
-	_option_count = clamp(_option_count + 1, 0, 4)

@@ -17,6 +17,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+AudioManager="*res://scripts/autoload/AudioManager.gd"
 DifficultyConfig="*res://scripts/DifficultyConfig.gd"
 RankManager="*res://scripts/RankManager.gd"
 TickManager="*res://scripts/TickManager.gd"
@@ -36,7 +37,6 @@ enabled=PackedStringArray("res://addons/godot_super-wakatime/plugin.cfg")
 
 [rendering]
 
-renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
+renderer/rendering_method="mobile"
 textures/default_texture_filter=0
 2d/snapping/use_gpu_pixel_snap=true

@@ -5,8 +5,7 @@ extends Node
 @export var time_rank_rate: float = 0.01
 @export var kill_rank_rate: float = 0.0005
 @export var shot_rank_rate: float = 0.000015
-@export var item_small_rank_rate: float = 0.0003
-@export var item_large_rank_rate: float = 0.0010
+
 @export var bomb_use_rank_add: float = 0.06
 @export var death_rank_drop: float = 0.22
 @export var bullet_seal_rank_rate: float = 0.0002
@@ -55,14 +54,7 @@ func on_enemy_killed(points: int) -> void:
 func on_shot_fired(multiplier: float = 1.0) -> void:
 	rank = clamp(rank + shot_rank_rate * max(0.0, multiplier), min_rank, max_rank)
 
-func on_item_picked(item_type: String, is_large: bool = false) -> void:
-	var add := item_small_rank_rate * 0.25
-	match item_type:
-		"shot":
-			add = item_large_rank_rate if is_large else item_small_rank_rate
-		"option":
-			add = item_large_rank_rate * 0.75
-	rank = clamp(rank + add, min_rank, max_rank)
+
 
 func on_bomb_used() -> void:
 	rank = clamp(rank + bomb_use_rank_add, min_rank, max_rank)
