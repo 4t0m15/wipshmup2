@@ -9,24 +9,17 @@ const BOMB_FRAG_SCENE: Script = preload("res://scripts/items/BombFragment.gd")
 
 # Cycle without medals: small shot, small shot, option, bomb
 var _drop_cycle: Array = [
-	{"type": "small_shot"},
-	{"type": "small_shot"},
-	{"type": "option"},
-	{"type": "bomb_small"},
+	{"type": "small_shot"}, {"type": "small_shot"}, {"type": "option"}, {"type": "bomb_small"}
 ]
 
 var _cycle_index: int = 0
 var _popcorn_kill_counter: int = 0
 
-## Medal system removed; no chain value
-
 func _ensure_items_container() -> Node2D:
 	var root := get_tree().current_scene
-	if not root:
-		return null
+	if not root: return null
 	var gv := root.get_node_or_null("GameViewport")
-	if not gv:
-		return root
+	if not gv: return root
 	var items := gv.get_node_or_null("Items")
 	if not items:
 		items = Node2D.new()
@@ -34,60 +27,27 @@ func _ensure_items_container() -> Node2D:
 		gv.call_deferred("add_child", items)
 	return items
 
-## No-op; legacy API removed
-
-## Removed
-
-## Removed
-
-## Removed
-
 func on_enemy_killed(pos: Vector2, enemy: Node) -> void:
 	# Ignore bosses for cycle purposes
-	if enemy and enemy.is_in_group("boss"):
-		return
+	if enemy and enemy.is_in_group("boss"): return
 	_popcorn_kill_counter += 1
-	if _popcorn_kill_counter % max(1, drop_every_n_kills) != 0:
-		return
+	if _popcorn_kill_counter % max(1, drop_every_n_kills) != 0: return
+	
 	var drop_def: Dictionary = _drop_cycle[_cycle_index]
 	_cycle_index = (_cycle_index + 1) % _drop_cycle.size()
+	
 	match String(drop_def.get("type", "")):
-		"small_shot":
-			_spawn_shot_item(pos, false)
-		"option":
-			_spawn_option_item(pos)
-		"bomb_small":
-			_spawn_bomb_frag(pos, 1)
-		_:
-			_spawn_shot_item(pos, false)
+		"small_shot": _spawn_item(SHOT_ITEM_SCENE, pos, {"is_large": false})
+		"option": _spawn_item(OPTION_ITEM_SCENE, pos, {})
+		"bomb_small": _spawn_item(BOMB_FRAG_SCENE, pos, {"shards": 1})
+		_: _spawn_item(SHOT_ITEM_SCENE, pos, {"is_large": false})
 
-## Removed
-
-func _spawn_shot_item(pos: Vector2, is_large: bool) -> void:
+func _spawn_item(script: Script, pos: Vector2, properties: Dictionary) -> void:
 	var items := _ensure_items_container()
-	if not items:
-		return
+	if not items: return
 	var it := Area2D.new()
-	it.set_script(SHOT_ITEM_SCENE)
-	it.set("is_large", is_large)
+	it.set_script(script)
 	it.global_position = pos
-	items.call_deferred("add_child", it)
-
-func _spawn_option_item(pos: Vector2) -> void:
-	var items := _ensure_items_container()
-	if not items:
-		return
-	var it := Area2D.new()
-	it.set_script(OPTION_ITEM_SCENE)
-	it.global_position = pos
-	items.call_deferred("add_child", it)
-
-func _spawn_bomb_frag(pos: Vector2, shards: int) -> void:
-	var items := _ensure_items_container()
-	if not items:
-		return
-	var it := Area2D.new()
-	it.set_script(BOMB_FRAG_SCENE)
-	it.set("shards", shards)
-	it.global_position = pos
+	for key in properties:
+		it.set(key, properties[key])
 	items.call_deferred("add_child", it)

@@ -29,7 +29,6 @@ func start_battle() -> void:
 	emit_signal("phase_changed", current_phase)
 
 func on_enter_phase(_phase: int) -> void:
-	# To be overridden by subclasses
 	pass
 
 func transform_to_phase(new_phase: int) -> void:
@@ -38,15 +37,10 @@ func transform_to_phase(new_phase: int) -> void:
 	emit_signal("phase_changed", current_phase)
 
 func take_damage(amount: int, source: String = "shot") -> void:
-	if not _alive:
-		return
-	# Default: ignore bomb damage for bosses unless overridden by subclasses
-	if source == "bomb":
-		return
+	if not _alive or source == "bomb": return
 	hp -= amount
 	if hp <= 0:
 		if current_phase < phases_total:
-			# Transform to next phase with small HP refill relative to progression
 			current_phase += 1
 			hp = int(ceil(float(max_hp) / float(phases_total)))
 			transform_to_phase(current_phase)
@@ -54,18 +48,13 @@ func take_damage(amount: int, source: String = "shot") -> void:
 			die()
 
 func die() -> void:
-	if not _alive:
-		return
+	if not _alive: return
 	_alive = false
 	emit_signal("defeated")
 	queue_free()
 
 func _on_area_entered(area: Area2D) -> void:
-	# Player collision results in hit; bullet damage is handled by Bullet.gd calling take_damage
-	if area.is_in_group("player_hurtbox"):
-		# Optionally damage player, but Main handles player death
-		pass
+	pass
 
 func _on_body_entered(body: Node) -> void:
-	if body.is_in_group("player"):
-		pass
+	pass

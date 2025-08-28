@@ -10,6 +10,7 @@ extends Node
 var _cfg: ConfigFile = ConfigFile.new()
 var _loaded: bool = false
 var _current: String = "normal"
+
 func _ready() -> void:
 	_load()
 
@@ -17,7 +18,6 @@ func _load() -> void:
 	var err: int = _cfg.load(config_path)
 	if err != OK:
 		_loaded = false
-		# Keep defaults in memory; file may not exist in exported builds
 		return
 	_loaded = true
 	_current = str(_cfg.get_value("general", "current_difficulty", "normal"))
@@ -35,13 +35,10 @@ func set_current_difficulty(difficulty_name: String, persist: bool = true) -> vo
 		_cfg.save(config_path)
 
 func _get_value_for_current(key: String, default_value: Variant) -> Variant:
-	# Prefer per-difficulty section; fall back to normal; finally the provided default
 	var value: Variant = _cfg.get_value(_current, key, null)
 	if value == null:
 		value = _cfg.get_value("normal", key, null)
-	if value == null:
-		return default_value
-	return value
+	return value if value != null else default_value
 
 func get_rank_params() -> Dictionary:
 	return {
