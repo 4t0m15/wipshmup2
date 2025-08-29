@@ -1,12 +1,14 @@
 extends Area2D
 
-@export var speed: float = 1000.0
+@export var speed: float = 400.0
 @export var sprite_target_height_px: float = 8.0
 
 var direction: Vector2 = Vector2.UP
 
 func _ready() -> void:
 	monitoring = true
+	collision_layer = 0
+	collision_mask = 1
 	add_to_group("player_bullet")
 	if has_node("VisibleOnScreenNotifier2D"):
 		$VisibleOnScreenNotifier2D.screen_exited.connect(_on_screen_exited)
@@ -41,7 +43,7 @@ func _on_area_entered(area: Area2D) -> void:
 				audio_manager.play_boss_hit()
 			elif audio_manager.has_method("play_bullet_hit"):
 				audio_manager.play_bullet_hit()
-		
+
 		if area.has_method("take_damage"):
 			# Mark source as shot for conditional scoring/behavior
 			area.take_damage(2, "shot")  # Increased from 1 to 2 for easier gameplay

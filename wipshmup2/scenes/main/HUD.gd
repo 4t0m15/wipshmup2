@@ -14,11 +14,26 @@ var _rainbow_time: float = 0.0
 @onready var _hint_label: Label = $CenterOverlay/MessagePanel/VBox/HintLabel
 @onready var _popup_container: VBoxContainer = $Popups
 @onready var _shiba_label: Label = $ShibaLabel
+@onready var _dev_info_label: Label
 
 func _ready() -> void:
 	var tm := get_node_or_null("/root/TickManager")
 	if tm and tm.has_signal("tick"):
 		tm.tick.connect(_on_tick)
+
+	# Create dev info label if it doesn't exist
+	if not has_node("DevInfo"):
+		_dev_info_label = Label.new()
+		_dev_info_label.name = "DevInfo"
+		_dev_info_label.add_theme_font_size_override("font_size", 10)
+		_dev_info_label.add_theme_color_override("font_color", Color.CYAN)
+		_dev_info_label.add_theme_color_override("font_outline_color", Color.BLACK)
+		_dev_info_label.add_theme_constant_override("outline_size", 1)
+		_dev_info_label.position = Vector2(10, 40)
+		_dev_info_label.visible = false
+		add_child(_dev_info_label)
+	else:
+		_dev_info_label = get_node("DevInfo")
 
 func _process(delta: float) -> void:
 	_rainbow_time += delta * 3.0  # Speed up the rainbow effect
@@ -107,12 +122,24 @@ func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 			old.queue_free()
 
 	var fade_in := create_tween()
-	fade_in.tween_property(panel, "modulate:a", 1.0, 0.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	fade_in.tween_property(panel, "modulate:a", 1.0, 0.15)\
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	await get_tree().create_timer(1.6, false).timeout
 	if not is_instance_valid(panel):
 		return
+
 	var fade_out := create_tween()
-	fade_out.tween_property(panel, "modulate:a", 0.0, 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	fade_out.tween_property(panel, "modulate:a", 0.0, 0.25)\
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	await fade_out.finished
 	if is_instance_valid(panel):
 		panel.queue_free()
+
+func set_dev_info(dev_mode: bool, invincibility: bool, audio_muted: bool) -> void:
+	if is_instance_valid(_dev_info_label):
+		_dev_info_label.visible = dev_mode
+		if dev_mode:
+			_dev_info_label.text = "DEV MODE\nInvincible: %s\nAudio: %s" % [
+				"ON" if invincibility else "OFF",
+				"MUTED" if audio_muted else "ON"
+			]

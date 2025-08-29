@@ -17,6 +17,12 @@ var bgm_player: AudioStreamPlayer
 
 var _next_extend_score: int = 1000000
 
+# Developer mode variables
+var dev_mode: bool = false
+var dev_invincibility: bool = false
+var dev_audio_muted: bool = false
+var _backslash_was_pressed: bool = false
+
 func _ready() -> void:
 	# Start in windowed mode; fullscreen can cause issues on some platforms/drivers
 	# Use Command+F (macOS) or Alt+Enter (others) to toggle fullscreen from the editor.
@@ -123,6 +129,13 @@ func _enable_crt() -> void:
 func _process(_delta: float) -> void:
 	if game_over and Input.is_action_just_pressed("ui_accept"):
 		get_tree().reload_current_scene()
+
+	# Developer mode toggle with backslash key
+	var backslash_pressed = Input.is_physical_key_pressed(KEY_BACKSLASH)
+	if backslash_pressed and not _backslash_was_pressed:
+		_toggle_dev_mode()
+	_backslash_was_pressed = backslash_pressed
+
 	# Bomb input (fallback to X key if action not present)
 	var has_bomb_action := InputMap.has_action("bomb")
 	var bomb_pressed := false
@@ -144,6 +157,9 @@ func _spawn_player() -> void:
 	if player and player.has_method("start_invulnerability"):
 		player.call_deferred("start_invulnerability", 1.2)
 
+	# Apply dev mode settings to new player
+	_apply_dev_invincibility_state()
+
 func _respawn_player() -> void:
 	if game_over or lives <= 0:
 		return
@@ -157,6 +173,9 @@ func _respawn_player() -> void:
 	# Respawn invulnerability window
 	if player and player.has_method("start_invulnerability"):
 		player.call_deferred("start_invulnerability", 1.2)
+
+	# Apply dev mode settings to respawned player
+	_apply_dev_invincibility_state()
 
 func _on_spawn_timer_timeout() -> void:
 	# Disabled: StageController handles enemy spawns
@@ -211,12 +230,12 @@ func _use_bomb() -> void:
 		return
 	if bombs <= 0:
 		return
-	
+
 	# Play bomb sound
 	var audio_manager = get_node_or_null("/root/AudioManager")
 	if audio_manager and audio_manager.has_method("play_bomb_use"):
 		audio_manager.play_bomb_use()
-	
+
 	bombs -= 1
 	if is_instance_valid(hud):
 		hud.call_deferred("set_bombs", bombs)
@@ -252,7 +271,7 @@ func _check_extends() -> void:
 		var audio_manager = get_node_or_null("/root/AudioManager")
 		if audio_manager and audio_manager.has_method("play_extend"):
 			audio_manager.play_extend()
-		
+
 		lives += 1
 		_next_extend_score += 1000000
 		_update_lives_display()
@@ -271,3 +290,47 @@ func pause_bgm() -> void:
 func resume_bgm() -> void:
 	if is_instance_valid(bgm_player):
 		bgm_player.stream_paused = false
+
+# Developer mode functions
+func _toggle_dev_mode() -> void:
+	dev_mode = not dev_mode
+	dev_invincibility = dev_mode
+	dev_audio_muted = dev_mode
+
+	# Apply audio muting
+	_apply_dev_audio_state()
+
+	# Apply player invincibility
+	_apply_dev_invincibility_state()
+
+	# Show dev mode status
+	if is_instance_valid(hud):
+		if hud.has_method("show_popup"):
+			var status = "ENABLED" if dev_mode else "DISABLED"
+			var popup_text = "DEV MODE %s\nInvincibility: %s\nAudio: %s" % [
+				status,
+				"ON" if dev_invincibility else "OFF",
+				"MUTED" if dev_audio_muted else "ON"
+			]
+			hud.call_deferred("show_popup", popup_text, Color.CYAN if dev_mode else Color.WHITE)
+
+		# Update persistent dev info display
+		if hud.has_method("set_dev_info"):
+			hud.call_deferred("set_dev_info", dev_mode, dev_invincibility, dev_audio_muted)
+
+func _apply_dev_audio_state() -> void:
+	# Mute/unmute AudioManager
+	var audio_manager = get_node_or_null("/root/AudioManager")
+	if audio_manager:
+		for audio_player in audio_manager.audio_players:
+			if is_instance_valid(audio_player):
+				audio_player.volume_db = -80.0 if dev_audio_muted else -10.0
+
+	# Mute/unmute BGM
+	if is_instance_valid(bgm_player):
+		bgm_player.volume_db = -80.0 if dev_audio_muted else 0.0
+
+func _apply_dev_invincibility_state() -> void:
+	# Apply invincibility to current player
+	if is_instance_valid(player) and player.has_method("set_dev_invincibility"):
+		player.call_deferred("set_dev_invincibility", dev_invincibility)

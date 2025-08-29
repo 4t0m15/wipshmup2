@@ -20,23 +20,21 @@ static func _get_cadence_multiplier() -> float:
 	return c * BASE_CADENCE_MULT
 
 static func _spawn_bullet(node: Node, position: Vector2, direction: Vector2, speed: float) -> void:
-	# Play enemy shot sound
-	var audio_manager = Engine.get_singleton("AudioManager")
-	if not audio_manager:
-		audio_manager = Engine.get_main_loop().get_root().get_node_or_null("/root/AudioManager")
-	if audio_manager and audio_manager.has_method("play_enemy_shot"):
-		audio_manager.play_enemy_shot()
-	
+
 	var bullet: Area2D = ENEMY_BULLET_SCENE.instantiate()
 	bullet.global_position = position
 	bullet.set("direction", direction.normalized())
 	bullet.set("speed", speed * BASE_SPEED_MULT)
-	
+
 	var scene_tree: SceneTree = node.get_tree() if is_instance_valid(node) else Engine.get_main_loop() as SceneTree
 	if scene_tree and scene_tree.current_scene:
 		var container := scene_tree.current_scene.get_node_or_null("GameViewport/Bullets")
 		var target = container if container else scene_tree.current_scene
-		target.call_deferred("add_child", bullet)
+		target.add_child(bullet)
+		# Ensure collision is properly enabled after adding to scene
+		bullet.monitoring = true
+		bullet.collision_layer = 0
+		bullet.collision_mask = 1
 	else:
 		bullet.queue_free()
 
@@ -73,7 +71,7 @@ static func fire_sweeping_spread(node: Node, origin_node: Node2D, start_degrees:
 	var end_rad: float = deg_to_rad(end_degrees)
 	var step_time: float = duration_s / float(steps) / _get_cadence_multiplier()
 	var bps: int = max(1, int(round(float(bullets_per_step) * _get_density_multiplier())))
-	
+
 	for i in range(steps):
 		if not is_instance_valid(origin_node): return
 		var t: float = float(i) / float(max(steps - 1, 1))
@@ -85,7 +83,7 @@ static func fire_aimed_beam(node: Node, origin_node: Node2D, target_node: Node2D
 	if duration_s <= 0.0 or interval_s <= 0.0: return
 	var elapsed: float = 0.0
 	var iv: float = interval_s / _get_cadence_multiplier()
-	
+
 	while elapsed < duration_s:
 		if not is_instance_valid(origin_node) or not is_instance_valid(target_node): return
 		var to_target: Vector2 = (target_node.global_position - origin_node.global_position).normalized()
@@ -97,7 +95,7 @@ static func fire_cross_hatch(node: Node, origin_node: Node2D, waves: int, bullet
 	if waves <= 0: return
 	var bpf: int = max(1, int(round(float(bullets_per_fan) * _get_density_multiplier())))
 	var iv: float = interval_s / _get_cadence_multiplier()
-	
+
 	for i in range(waves):
 		if not is_instance_valid(origin_node): return
 		var origin: Vector2 = origin_node.global_position
@@ -114,7 +112,7 @@ static func fire_rotating_rings(node: Node, origin_node: Node2D, bursts: int, bu
 	if bursts <= 0: return
 	var angle: float = 0.0
 	var iv: float = interval_s / _get_cadence_multiplier()
-	
+
 	for i in range(bursts):
 		if not is_instance_valid(origin_node): return
 		var count: int = max(1, int(round(float(bullets_per_ring) * _get_density_multiplier())))
@@ -127,7 +125,7 @@ static func fire_fixed_beam(node: Node, origin_node: Node2D, angle_degrees: floa
 	var elapsed: float = 0.0
 	var dir: Vector2 = Vector2.RIGHT.rotated(deg_to_rad(angle_degrees)).normalized()
 	var iv: float = interval_s / _get_cadence_multiplier()
-	
+
 	while elapsed < duration_s:
 		if not is_instance_valid(origin_node): return
 		_spawn_bullet(node, origin_node.global_position, dir, speed)
@@ -142,7 +140,7 @@ static func fire_dual_lasers(node: Node, origin_node: Node2D, base_angle_degrees
 	var dir_a: Vector2 = Vector2.RIGHT.rotated(deg_to_rad(ang_a)).normalized()
 	var dir_b: Vector2 = Vector2.RIGHT.rotated(deg_to_rad(ang_b)).normalized()
 	var iv: float = interval_s / _get_cadence_multiplier()
-	
+
 	while elapsed < duration_s:
 		if not is_instance_valid(origin_node): return
 		var origin: Vector2 = origin_node.global_position

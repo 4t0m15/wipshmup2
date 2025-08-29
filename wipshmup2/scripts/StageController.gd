@@ -67,16 +67,18 @@ func _cleanup_bottom_stragglers() -> void:
 			e.queue_free()
 
 func _start_current_stage() -> void:
-	if current_stage_index < 0 or current_stage_index >= stage_order.size(): return
+	if current_stage_index < 0 or current_stage_index >= stage_order.size():
+		# Loop back to stage 1 when we reach the end
+		current_stage_index = 0
 	var stage_num := stage_order[current_stage_index]
 	if typeof(RankManager) != TYPE_NIL:
 		RankManager.reset(stage_num)
-	
+
 	var stage_funcs = {
 		1: _run_stage_1, 2: _run_stage_2, 3: _run_stage_3, 4: _run_stage_4,
 		5: _run_stage_5, 6: _run_stage_6, 7: _run_stage_7, 8: _run_stage_8
 	}
-	
+
 	if stage_funcs.has(stage_num):
 		await stage_funcs[stage_num].call()
 		emit_signal("stage_completed", stage_num)
@@ -91,7 +93,10 @@ func _connect_enemy_signals(enemy: Area2D) -> void:
 				RankManager.on_enemy_killed(points)
 		)
 
-func _spawn_enemy(scene: PackedScene, pos: Vector2, speed: float = 150.0, hp: int = 1, points: int = 100) -> void:
+func _spawn_enemy(
+	scene: PackedScene, pos: Vector2, speed: float = 75.0,
+	hp: int = 1, points: int = 100
+) -> void:
 	var e: Area2D = scene.instantiate()
 	e.set("speed", speed)
 	e.set("hp", hp)
@@ -101,7 +106,13 @@ func _spawn_enemy(scene: PackedScene, pos: Vector2, speed: float = 150.0, hp: in
 	var root := get_tree().current_scene
 	var container := root.get_node_or_null("GameViewport/Enemies")
 	var target = container if container else root
-	target.call_deferred("add_child", e)
+	target.add_child(e)
+	# Ensure collision is properly enabled after adding to scene
+	await get_tree().process_frame
+	if is_instance_valid(e):
+		e.monitoring = true
+		e.collision_layer = 1
+		e.collision_mask = 0
 
 func _spawn_wave_line(count: int, y: float, speed: float, hp: int, margin: float = 24.0) -> void:
 	var width := get_viewport().get_visible_rect().size.x
@@ -119,7 +130,10 @@ func _spawn_wave_v(shape_count: int, speed: float, hp: int) -> void:
 		_spawn_enemy(ENEMY_SCENE, Vector2(center - spread * offset, -32 - 16 * i), speed, hp)
 		_spawn_enemy(ENEMY_SCENE, Vector2(center + spread * offset, -32 - 16 * i), speed, hp)
 
-func _spawn_group(count: int, enemy_type: PackedScene, start_x: float, spacing: float = 60.0) -> void:
+func _spawn_group(
+	count: int, enemy_type: PackedScene, start_x: float,
+	spacing: float = 60.0
+) -> void:
 	var base_x := start_x - (count - 1) * spacing * 0.5
 	for i in count:
 		_spawn_enemy(enemy_type, Vector2(base_x + i * spacing, -32.0))
@@ -129,23 +143,41 @@ func _spawn_from_side(enemy_type: PackedScene, side: String, y_offset: float = 0
 	var x := -32.0 if side == "left" else rect.size.x + 32.0
 	_spawn_enemy(enemy_type, Vector2(x, -40.0 + y_offset))
 
-func _spawn_formation(position: Vector2, leader_type: PackedScene, wingman_type: PackedScene, member_count: int = 3) -> void:
+func _spawn_formation(
+	position: Vector2, leader_type: PackedScene,
+	wingman_type: PackedScene, member_count: int = 3
+) -> void:
 	var leader = leader_type.instantiate()
 	leader.global_position = position
 	_connect_enemy_signals(leader)
 	var root := get_tree().current_scene
 	var enemies := root.get_node_or_null("GameViewport/Enemies")
 	var target = enemies if enemies else root
-	target.call_deferred("add_child", leader)
+	target.add_child(leader)
+	# Ensure collision is properly enabled after adding to scene
+	await get_tree().process_frame
+	if is_instance_valid(leader):
+		leader.monitoring = true
+		leader.collision_layer = 1
+		leader.collision_mask = 0
 
 	for i in range(member_count - 1):
-		await get_tree().create_timer(0.1, false).timeout
+		await get_tree().create_timer(0.2, false).timeout
 		var wingman = wingman_type.instantiate()
 		wingman.global_position = position + Vector2((i + 1) * 50, -10)
 		_connect_enemy_signals(wingman)
-		target.call_deferred("add_child", wingman)
-		if is_instance_valid(leader) and leader.has_method("add_formation_member"):
-			leader.call_deferred("add_formation_member", wingman)
+		target.add_child(wingman)
+		# Ensure collision is properly enabled after adding to scene
+		await get_tree().process_frame
+		if is_instance_valid(wingman):
+			wingman.monitoring = true
+			wingman.collision_layer = 1
+			wingman.collision_mask = 0
+		if is_instance_valid(leader) and is_instance_valid(wingman) and leader.has_method("add_formation_member"):
+			if wingman is Area2D:
+				leader.add_formation_member(wingman)
+			else:
+				print("WARNING: Wingman is not Area2D type: ", wingman.get_class())
 
 func _spawn_boss(boss_scene: PackedScene, y_pos: float = 48.0) -> void:
 	var boss: BossBase = boss_scene.instantiate()
@@ -155,8 +187,13 @@ func _spawn_boss(boss_scene: PackedScene, y_pos: float = 48.0) -> void:
 	var root := get_tree().current_scene
 	var enemies := root.get_node_or_null("GameViewport/Enemies")
 	var target = enemies if enemies else root
-	target.call_deferred("add_child", boss)
+	target.add_child(boss)
 	await get_tree().process_frame
+	# Ensure collision is properly enabled after adding to scene
+	if is_instance_valid(boss):
+		boss.monitoring = true
+		boss.collision_layer = 1
+		boss.collision_mask = 0
 	create_tween().tween_property(boss, "global_position:y", y_pos, 1.2)
 	await get_tree().create_timer(1.3, false).timeout
 	if is_instance_valid(boss):
@@ -165,22 +202,22 @@ func _spawn_boss(boss_scene: PackedScene, y_pos: float = 48.0) -> void:
 
 # Simplified stage implementations
 func _run_stage_1() -> void:
-	_spawn_wave_line(5, 50.0, 120.0, 1)
-	await get_tree().create_timer(2.0, false).timeout
-	_spawn_wave_v(3, 100.0, 1)
-	await get_tree().create_timer(3.0, false).timeout
+	_spawn_wave_line(5, 50.0, 60.0, 1)
+	await get_tree().create_timer(4.0, false).timeout
+	_spawn_wave_v(3, 50.0, 1)
+	await get_tree().create_timer(6.0, false).timeout
 	_spawn_group(3, TYPE01, 200.0)
-	await get_tree().create_timer(2.0, false).timeout
+	await get_tree().create_timer(4.0, false).timeout
 	_spawn_boss(GLIATH_SCENE)
 
 func _run_stage_2() -> void:
 	_spawn_group(4, TYPE02, 150.0)
-	await get_tree().create_timer(1.5, false).timeout
+	await get_tree().create_timer(3.0, false).timeout
 	_spawn_from_side(TYPE03, "left")
 	_spawn_from_side(TYPE03, "right")
-	await get_tree().create_timer(2.0, false).timeout
+	await get_tree().create_timer(4.0, false).timeout
 	_spawn_formation(Vector2(300, -50), FORMATION_FIGHTER, TYPE01, 3)
-	await get_tree().create_timer(3.0, false).timeout
+	await get_tree().create_timer(6.0, false).timeout
 	_spawn_boss(TYPE0_SCENE, 56.0)
 
 func _run_stage_3() -> void:

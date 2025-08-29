@@ -1,7 +1,10 @@
-[gd_scene load_steps=3 format=3 uid="uid://bkm8dw4ehtl0r"]
+[gd_scene load_steps=4 format=3 uid="uid://bkm8dw4ehtl0r"]
 
 [ext_resource type="Script" path="res://scripts/ClassicEnemy.gd" id="1_0n9pk"]
-[ext_resource type="Texture2D" uid="uid://d1s1hbxchihfm" path="res://images/enemy.svg" id="2_35kvp"]
+[ext_resource type="Texture2D" uid="uid://dtoeja6hsa1w6" path="res://images/enemy.svg" id="2_35kvp"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_1"]
+radius = 8.0
 
 [node name="Type07_ChaserDrone" type="Area2D"]
 script = ExtResource("1_0n9pk")
@@ -22,5 +25,6 @@ texture = ExtResource("2_35kvp")
 modulate = Color(0.8, 1, 0.8, 1)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_1")
 
 [node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="."]

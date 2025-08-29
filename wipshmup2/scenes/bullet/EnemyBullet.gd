@@ -1,6 +1,6 @@
 extends Area2D
 
-@export var speed: float = 320.0
+@export var speed: float = 120.0
 @export var damage: int = 1
 @export var sprite_target_height_px: float = 6.0
 

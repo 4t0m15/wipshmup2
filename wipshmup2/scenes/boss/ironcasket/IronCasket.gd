@@ -69,5 +69,3 @@ func _phase2_task(self_node: Node2D, phase_snapshot: int) -> void:
 			create_tween().tween_property(self_node, "global_position:y", original_y, 0.25)
 			await get_tree().create_timer(0.25, false).timeout
 		await get_tree().create_timer(0.35, false).timeout
-
-

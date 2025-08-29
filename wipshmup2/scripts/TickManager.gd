@@ -3,7 +3,7 @@ extends Node
 # Centralized time management for performance optimization
 var _current_time: float = 0.0
 var _delta_time: float = 0.0
-var _time_scale: float = 1.0
+var _time_scale: float = 0.5
 
 # Cache management
 var _cache_duration: float = 0.1  # Default cache duration

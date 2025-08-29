@@ -13,17 +13,17 @@ enum FirePattern { NONE, STRAIGHT_SHOT, SPREAD_3, SPREAD_5, ALTERNATING, BOMB_DR
 const ENEMY_BULLET_SCENE: PackedScene = preload("res://scenes/bullet/EnemyBullet.tscn")
 
 @export var enemy_type: int = EnemyType.FIGHTER
-@export var speed: float = 80.0
+@export var speed: float = 40.0
 @export var hp: int = 1
 @export var points: int = 100
 @export var sprite_target_height_px: float = 18.0
 @export var movement: int = Movement.STRAIGHT_DOWN
 @export var movement_amplitude: float = 32.0
-@export var movement_speed: float = 60.0
+@export var movement_speed: float = 30.0
 @export var patrol_distance: float = 80.0
 @export var fire_pattern: int = FirePattern.STRAIGHT_SHOT
 @export var fire_interval: float = 2.0
-@export var bullet_speed: float = 180.0
+@export var bullet_speed: float = 80.0
 @export var fire_delay: float = 0.0
 @export var formation_offset: Vector2 = Vector2.ZERO
 @export var formation_leader: Node2D = null
@@ -49,9 +49,17 @@ func _ready() -> void:
 	add_to_group("enemy")
 	monitoring = true
 	collision_layer = 1
-	collision_mask = 1
+	collision_mask = 0
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
+
+	# Safety check: ensure we have collision shape
+	if not has_node("CollisionShape2D"):
+		push_warning("ClassicEnemy missing CollisionShape2D: " + name)
+	else:
+		var collision_shape = $CollisionShape2D
+		if not collision_shape.shape:
+			push_warning("ClassicEnemy CollisionShape2D has no shape: " + name)
 
 	_initial_position = global_position
 	_base_position = global_position
@@ -79,6 +87,9 @@ func _ready() -> void:
 		_fire_timer = fire_delay
 		_fire_loop()
 
+	# Validate collision setup after initialization
+	call_deferred("_validate_collision_setup")
+
 func _physics_process(delta: float) -> void:
 	_time_alive += delta
 	_movement_phase += delta
@@ -92,9 +103,24 @@ func _physics_process(delta: float) -> void:
 
 	# Round position for pixel-perfect movement
 	position = position.round()
-	
+
 	# Check bounds and cleanup
 	_check_bounds_and_cleanup()
+
+func _validate_collision_setup() -> void:
+	# Ensure collision detection is working properly
+	if not monitoring:
+		monitoring = true
+
+	if collision_layer != 1:
+		collision_layer = 1
+
+	if collision_mask != 0:
+		collision_mask = 0
+
+	# Ensure we're in the enemy group
+	if not is_in_group("enemy"):
+		add_to_group("enemy")
 
 func _apply_movement_pattern(delta: float) -> void:
 	match movement:
@@ -136,6 +162,10 @@ func _check_bounds_and_cleanup() -> void:
 func take_damage(amount: int, source: String = "shot") -> void:
 	if (source == "shot" and ignore_shot_damage) or (source == "bomb" and ignore_bomb_damage):
 		return
+
+	# Safety check: ensure we're still valid
+	if not is_instance_valid(self):
+		return
 	hp -= amount
 	_last_damage_source = source
 	if hp <= 0:
@@ -143,10 +173,11 @@ func take_damage(amount: int, source: String = "shot") -> void:
 		var audio_manager = get_node_or_null("/root/AudioManager")
 		if audio_manager and audio_manager.has_method("play_enemy_death"):
 			audio_manager.play_enemy_death()
-		
+
 		var awarded: int = points
 		if _last_damage_source == "bomb":
-			awarded = bomb_points_override if bomb_points_override >= 0 else int(round(float(points) * max(1.0, bomb_points_multiplier)))
+			awarded = bomb_points_override if bomb_points_override >= 0 else \
+				int(round(float(points) * max(1.0, bomb_points_multiplier)))
 		emit_signal("killed", awarded)
 		queue_free()
 
@@ -226,7 +257,7 @@ func _spawn_bullet(direction: Vector2) -> void:
 	var audio_manager = get_node_or_null("/root/AudioManager")
 	if audio_manager and audio_manager.has_method("play_enemy_shot"):
 		audio_manager.play_enemy_shot()
-	
+
 	GameUtils.spawn_bullet(ENEMY_BULLET_SCENE, global_position, direction, bullet_speed, get_tree().current_scene)
 
 # Optimized player finding with caching
