@@ -1,10 +1,6 @@
 extends Area2D
 
-<<<<<<< HEAD
 @export var speed: float = 140.0  # Reduced from 320.0 for playable speed
-=======
-@export var speed: float = 120.0
->>>>>>> 9294ecbecb174677da8c7ff24e87b6288a93cb14
 @export var damage: int = 1
 @export var sprite_target_height_px: float = 6.0
 

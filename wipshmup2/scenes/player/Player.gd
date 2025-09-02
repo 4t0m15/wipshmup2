@@ -2,13 +2,8 @@ extends CharacterBody2D
 
 signal hit
 
-<<<<<<< HEAD
 @export var speed: float = 160.0  # Reduced from 400.0 for playable speed
 @export var fire_cooldown_s: float = 0.12  # Increased from 0.08 for better pacing
-=======
-@export var speed: float = 200.0
-@export var fire_cooldown_s: float = 0.08
->>>>>>> 9294ecbecb174677da8c7ff24e87b6288a93cb14
 @export var sprite_target_height_px: float = 20.0
 @export var focus_speed_multiplier: float = 0.4
 @export var invuln_blink_interval_s: float = 0.08
@@ -139,7 +134,6 @@ func start_invulnerability(duration_s: float = 1.2) -> void:
 		$Sprite2D.visible = true
 	_invulnerable = false
 
-<<<<<<< HEAD
 func increase_power_level() -> void:
 	# Increase shot level (max 5)
 	_shot_level = min(_shot_level + 1, 5)
@@ -153,7 +147,6 @@ func increase_power_level() -> void:
 		audio_manager.play_power_up()
 
 
-=======
 func set_dev_invincibility(enabled: bool) -> void:
 	_dev_invincibility = enabled
 	# If enabling dev invincibility, make sure sprite is visible
@@ -162,4 +155,3 @@ func set_dev_invincibility(enabled: bool) -> void:
 		$Sprite2D.modulate = Color.CYAN  # Tint cyan to show dev mode
 	elif not enabled and has_node("Sprite2D"):
 		$Sprite2D.modulate = Color.WHITE  # Reset to normal color
->>>>>>> 9294ecbecb174677da8c7ff24e87b6288a93cb14

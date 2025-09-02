@@ -3,11 +3,7 @@ extends Area2D
 signal killed(points: int)
 signal hit_player
 
-<<<<<<< HEAD
 @export var speed: float = 50.0  # Reduced from 120.0 for playable speed
-=======
-@export var speed: float = 60.0
->>>>>>> 9294ecbecb174677da8c7ff24e87b6288a93cb14
 @export var hp: int = 1
 @export var points: int = 100
 @export var sprite_target_height_px: float = 18.0
@@ -27,9 +23,7 @@ func _ready() -> void:
 	collision_mask = 0
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
-<<<<<<< HEAD
 	print("Enemy ", name, " ready, monitoring: ", monitoring, " groups: ", get_groups())  # Debug log
-=======
 
 	# Safety check: ensure we have collision shape
 	if not has_node("CollisionShape2D"):
@@ -38,7 +32,7 @@ func _ready() -> void:
 		var collision_shape = $CollisionShape2D
 		if not collision_shape.shape:
 			push_warning("Enemy CollisionShape2D has no shape: " + name)
->>>>>>> 9294ecbecb174677da8c7ff24e87b6288a93cb14
+
 	# Apply dynamic difficulty scaling from RankManager autoload if available
 	var rm := get_node_or_null("/root/RankManager")
 	if rm and rm.has_method("get_enemy_speed_multiplier"):

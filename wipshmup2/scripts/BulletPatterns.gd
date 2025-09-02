@@ -20,13 +20,8 @@ static func _get_cadence_multiplier() -> float:
 	return c * BASE_CADENCE_MULT
 
 static func _spawn_bullet(node: Node, position: Vector2, direction: Vector2, speed: float) -> void:
-<<<<<<< HEAD
 	# Play enemy shot sound
-
 	
-=======
-
->>>>>>> 9294ecbecb174677da8c7ff24e87b6288a93cb14
 	var bullet: Area2D = ENEMY_BULLET_SCENE.instantiate()
 	bullet.global_position = position
 	bullet.set("direction", direction.normalized())

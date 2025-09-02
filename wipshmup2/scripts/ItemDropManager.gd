@@ -1,22 +1,3 @@
-<<<<<<< HEAD
-extends Node
-
-# ItemDropManager - Handles item drops from enemies
-# Currently a placeholder for future item system implementation
-
-func _ready() -> void:
-	# Add to group for autoloads to find
-	add_to_group("item_drop_manager")
-
-func drop_item(_enemy_position: Vector2, _item_type: String = "powerup") -> void:
-	# Placeholder for item drop functionality
-	pass
-
-func get_drop_chance(_enemy_type: String) -> float:
-	# Placeholder for drop chance calculation
-	return 0.1  # 10% default chance
-=======
-class_name ItemDropManager
 extends Node
 
 # Item drop system for power-ups, score items, and special pickups
@@ -32,9 +13,6 @@ enum ItemType {
 	SHIELD
 }
 
-const POWER_UP_SCENE: PackedScene = preload("res://scenes/items/PowerUp.tscn")
-const SCORE_ITEM_SCENE: PackedScene = preload("res://scenes/items/ScoreItem.tscn")
-
 var drop_rates := {
 	ItemType.POWER_UP: 0.15,
 	ItemType.SCORE_SMALL: 0.3,
@@ -48,6 +26,8 @@ var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_rng.randomize()
+	# Add to group for autoloads to find
+	add_to_group("item_drop_manager")
 
 func try_drop_item(position: Vector2, enemy_points: int = 100) -> void:
 	var drop_chance := _calculate_drop_chance(enemy_points)
@@ -70,7 +50,7 @@ func _select_item_type() -> ItemType:
 	var roll := _rng.randf() * total_weight
 	var current_weight := 0.0
 
-	for item_type in drop_rates:
+	for item_type: ItemType in drop_rates:
 		current_weight += drop_rates[item_type]
 		if roll <= current_weight:
 			return item_type
@@ -78,35 +58,23 @@ func _select_item_type() -> ItemType:
 	return ItemType.SCORE_SMALL  # Fallback
 
 func _spawn_item(item_type: ItemType, position: Vector2) -> void:
-	var item_scene: PackedScene
+	# Placeholder implementation since item scenes don't exist yet
+	print("Would spawn item of type: ", item_type, " at position: ", position)
+	# TODO: Implement actual item spawning when scenes are created
 
-	match item_type:
-		ItemType.POWER_UP, ItemType.LIFE_EXTEND, ItemType.BOMB, ItemType.SHIELD:
-			if ResourceLoader.exists("res://scenes/items/PowerUp.tscn"):
-				item_scene = load("res://scenes/items/PowerUp.tscn")
-			else:
-				return  # Skip if scene doesn't exist
-		_:
-			if ResourceLoader.exists("res://scenes/items/ScoreItem.tscn"):
-				item_scene = load("res://scenes/items/ScoreItem.tscn")
-			else:
-				return  # Skip if scene doesn't exist
+func get_drop_rate(item_type: ItemType) -> float:
+	return drop_rates.get(item_type, 0.0)
 
-	var item = item_scene.instantiate()
-	item.global_position = position
-	item.set("item_type", item_type)
+func drop_item(_enemy_position: Vector2, _item_type: String = "powerup") -> void:
+	# Legacy function for compatibility
+	pass
 
-	var root := get_tree().current_scene
-	var container := root.get_node_or_null("GameViewport/Items")
-	var target = container if container else root
-	target.add_child(item)
+func get_drop_chance(_enemy_type: String) -> float:
+	# Legacy function for compatibility
+	return 0.1  # 10% default chance
 
 func force_drop_item(item_type: ItemType, position: Vector2) -> void:
 	_spawn_item(item_type, position)
 
 func set_drop_rate(item_type: ItemType, rate: float) -> void:
 	drop_rates[item_type] = clamp(rate, 0.0, 1.0)
-
-func get_drop_rate(item_type: ItemType) -> float:
-	return drop_rates.get(item_type, 0.0)
->>>>>>> 9294ecbecb174677da8c7ff24e87b6288a93cb14

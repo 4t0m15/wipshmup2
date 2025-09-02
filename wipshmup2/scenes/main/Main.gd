@@ -281,13 +281,9 @@ func _use_bomb() -> void:
 		return
 	if bombs <= 0:
 		return
-<<<<<<< HEAD
 	
 	print("Using bomb. Bombs before: ", bombs)  # Debug log
 	
-=======
-
->>>>>>> 9294ecbecb174677da8c7ff24e87b6288a93cb14
 	# Play bomb sound
 	var audio_manager = get_node_or_null("/root/AudioManager")
 	if audio_manager and audio_manager.has_method("play_bomb_use"):

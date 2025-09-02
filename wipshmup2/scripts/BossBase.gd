@@ -62,10 +62,6 @@ func die() -> void:
 	emit_signal("defeated")
 	queue_free()
 
-<<<<<<< HEAD
-func _on_area_entered(_area: Area2D) -> void:
-	pass
-=======
 func _on_area_entered(area: Area2D) -> void:
 	if area.is_in_group("player_bullet"):
 		# Play hit sound
@@ -75,7 +71,6 @@ func _on_area_entered(area: Area2D) -> void:
 		if area.has_method("queue_free"):
 			area.queue_free()
 		take_damage(2, "shot")
->>>>>>> 9294ecbecb174677da8c7ff24e87b6288a93cb14
 
 func _on_body_entered(_body: Node) -> void:
 	pass
