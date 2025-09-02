@@ -1,6 +1,6 @@
 extends Area2D
 
-@export var speed: float = 1000.0
+@export var speed: float = 400.0  # Reduced from 1000.0 for playable speed
 @export var sprite_target_height_px: float = 8.0
 
 var direction: Vector2 = Vector2.UP
@@ -8,6 +8,7 @@ var direction: Vector2 = Vector2.UP
 func _ready() -> void:
 	monitoring = true
 	add_to_group("player_bullet")
+	print("Bullet ready, monitoring: ", monitoring, " groups: ", get_groups())  # Debug log
 	if has_node("VisibleOnScreenNotifier2D"):
 		$VisibleOnScreenNotifier2D.screen_exited.connect(_on_screen_exited)
 	area_entered.connect(_on_area_entered)
@@ -33,7 +34,10 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 
 func _on_area_entered(area: Area2D) -> void:
+	print("Bullet hit area: ", area.name, " Groups: ", area.get_groups())  # Debug log
+	
 	if area.is_in_group("enemy"):
+		print("Bullet hit enemy: ", area.name)  # Debug log
 		# Play hit sound
 		var audio_manager = get_node_or_null("/root/AudioManager")
 		if audio_manager:
@@ -49,6 +53,8 @@ func _on_area_entered(area: Area2D) -> void:
 		if rm and rm.has_method("on_shot_fired"):
 			rm.on_shot_fired(0.25)
 		queue_free()
+	else:
+		print("Bullet hit non-enemy area: ", area.name)  # Debug log
 
 func _on_body_entered(_body: Node) -> void:
 	pass

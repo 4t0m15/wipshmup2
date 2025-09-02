@@ -2,8 +2,8 @@ extends CharacterBody2D
 
 signal hit
 
-@export var speed: float = 400.0
-@export var fire_cooldown_s: float = 0.08
+@export var speed: float = 160.0  # Reduced from 400.0 for playable speed
+@export var fire_cooldown_s: float = 0.12  # Increased from 0.08 for better pacing
 @export var sprite_target_height_px: float = 20.0
 @export var focus_speed_multiplier: float = 0.4
 @export var invuln_blink_interval_s: float = 0.08
@@ -132,5 +132,17 @@ func start_invulnerability(duration_s: float = 1.2) -> void:
 	if has_node("Sprite2D"):
 		$Sprite2D.visible = true
 	_invulnerable = false
+
+func increase_power_level() -> void:
+	# Increase shot level (max 5)
+	_shot_level = min(_shot_level + 1, 5)
+	
+	# Increase option count (max 4)
+	_option_count = min(_option_count + 1, 4)
+	
+	# Play power-up sound
+	var audio_manager = get_node_or_null("/root/AudioManager")
+	if audio_manager and audio_manager.has_method("play_power_up"):
+		audio_manager.play_power_up()
 
 

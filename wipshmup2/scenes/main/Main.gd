@@ -15,7 +15,22 @@ var stage_controller: Node
 var hud: CanvasLayer
 var bgm_player: AudioStreamPlayer
 
-var _next_extend_score: int = 1000000
+# Enhanced scoring system variables
+var chain_count: int = 0
+var max_chain: int = 0
+var last_kill_time: float = 0.0
+var chain_timeout: float = 2.0  # Time window for chain bonus
+var medal_level: int = 0  # 0-3: Bronze, Silver, Gold, Platinum
+
+# Balanced score thresholds (inspired by Do Re Mi Sha 68k)
+var _next_extend_score: int = 500000  # More frequent extends
+var _next_bomb_score: int = 25000     # More frequent bombs
+var _next_medal_score: int = 100000   # Medal upgrade threshold
+
+# Scoring multipliers and bonuses
+var base_score_multiplier: float = 1.0
+var chain_bonus_multiplier: float = 1.0
+var medal_bonus_multiplier: float = 1.0
 
 func _ready() -> void:
 	# Start in windowed mode; fullscreen can cause issues on some platforms/drivers
@@ -25,18 +40,33 @@ func _ready() -> void:
 	# Use StageController instead of random spawns
 	stage_controller = STAGE_CONTROLLER_SCRIPT.new()
 	$GameViewport.add_child(stage_controller)
+	
+	# Create enemy container for proper spawning
+	var enemy_container = Node2D.new()
+	enemy_container.name = "Enemies"
+	$GameViewport.add_child(enemy_container)
+	
+	# Create bullet container for proper spawning
+	var bullet_container = Node2D.new()
+	bullet_container.name = "Bullets"
+	$GameViewport.add_child(bullet_container)
+	
 	stage_controller.enemy_killed.connect(_on_enemy_killed)
 	if stage_controller.has_signal("boss_defeated"):
-		stage_controller.boss_defeated.connect(func():
-			if is_instance_valid(hud) and hud.has_method("show_popup"):
-				hud.call_deferred("show_popup", "Boss Defeated!")
-		)
+		stage_controller.boss_defeated.connect(_on_boss_defeated)
+	
+	# Wait a frame to ensure containers are ready
+	await get_tree().process_frame
 	stage_controller.start_run()
 	# HUD
 	hud = $HUD
+	print("Initial bombs: ", bombs)  # Debug log
+	print("Initial scoring system initialized")  # Debug log
 	_update_score_label()
 	_update_lives_display()
 	_update_bomb_display()
+	_update_chain_display()
+	_update_medal_display()
 	# BGM
 	bgm_player = $BGMPlayer
 	# Medal system removed: no HUD medal hooks
@@ -83,6 +113,7 @@ func _enable_dither() -> void:
 	# Ensure the dither output renders into PostDitherViewport
 	dither_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	return
+
 func _enable_crt() -> void:
 	var crt := $PostFX/CRT
 	var dither_viewport := $PostDitherViewport
@@ -122,6 +153,7 @@ func _enable_crt() -> void:
 
 func _process(_delta: float) -> void:
 	if game_over and Input.is_action_just_pressed("ui_accept"):
+		_reset_scoring_system()
 		get_tree().reload_current_scene()
 	# Bomb input (fallback to X key if action not present)
 	var has_bomb_action := InputMap.has_action("bomb")
@@ -163,9 +195,26 @@ func _on_spawn_timer_timeout() -> void:
 	pass
 
 func _on_enemy_killed(points: int) -> void:
-	score += points
+	# Enhanced scoring system with chain bonuses and medal multipliers
+	var final_score = _calculate_enhanced_score(points)
+	score += final_score
+	
+	# Update chain system
+	_update_chain_system()
+	
+	# Update medal system
+	_check_medal_upgrade()
+	
+	# Update displays
 	_update_score_label()
+	_update_chain_display()
+	_update_medal_display()
+	
+	# Check for rewards
 	_check_extends()
+	_check_bomb_restore()
+	
+	print("Enemy killed: Base points: ", points, " Final score: ", final_score, " Chain: ", chain_count, " Medal: ", medal_level)
 
 func _on_enemy_hit_player() -> void:
 	_on_player_hit()
@@ -179,6 +228,9 @@ func _on_player_hit() -> void:
 	if audio_manager and audio_manager.has_method("play_player_hit"):
 		audio_manager.play_player_hit()
 
+	# Reset chain on player hit (common in shmup games)
+	_reset_chain()
+	
 	lives -= 1
 	var rm := get_node_or_null("/root/RankManager")
 	if rm and rm.has_method("on_player_died"):
@@ -204,7 +256,6 @@ func _update_score_label() -> void:
 func _update_lives_display() -> void:
 	if is_instance_valid(hud):
 		hud.call("set_lives", lives)
-		hud.call_deferred("set_bombs", bombs)
 
 func _use_bomb() -> void:
 	if game_over:
@@ -212,14 +263,16 @@ func _use_bomb() -> void:
 	if bombs <= 0:
 		return
 	
+	print("Using bomb. Bombs before: ", bombs)  # Debug log
+	
 	# Play bomb sound
 	var audio_manager = get_node_or_null("/root/AudioManager")
 	if audio_manager and audio_manager.has_method("play_bomb_use"):
 		audio_manager.play_bomb_use()
 	
 	bombs -= 1
-	if is_instance_valid(hud):
-		hud.call_deferred("set_bombs", bombs)
+	print("Bombs after: ", bombs)  # Debug log
+	_update_bomb_display()  # Use the dedicated function for consistency
 	var rm2 := get_node_or_null("/root/RankManager")
 	if rm2 and rm2.has_method("on_bomb_used"):
 		rm2.on_bomb_used()
@@ -246,6 +299,31 @@ func add_score(amount: int) -> void:
 	_update_score_label()
 	_check_extends()
 
+func add_bomb() -> void:
+	bombs += 1
+	_update_bomb_display()
+
+func add_life() -> void:
+	lives += 1
+	_update_lives_display()
+
+func _check_bomb_restore() -> void:
+	# Check if we should restore a bomb (every 25,000 points - more frequent)
+	if score >= _next_bomb_score and bombs < 3:
+		print("Restoring bomb! Score: ", score, " Next bomb at: ", _next_bomb_score)  # Debug log
+		# Play bomb restore sound
+		var audio_manager = get_node_or_null("/root/AudioManager")
+		if audio_manager and audio_manager.has_method("play_bomb_restore"):
+			audio_manager.play_bomb_restore()
+		
+		bombs = min(bombs + 1, 3)  # Cap at 3 bombs
+		_next_bomb_score += 25000  # Next bomb at +25k score (more frequent)
+		print("Bombs after restore: ", bombs, " Next bomb at: ", _next_bomb_score)  # Debug log
+		_update_bomb_display()
+		# Popup: bomb restored
+		if is_instance_valid(hud) and hud.has_method("show_popup"):
+			hud.call_deferred("show_popup", "Bomb!")
+
 func _check_extends() -> void:
 	while score >= _next_extend_score:
 		# Play extend sound
@@ -254,8 +332,13 @@ func _check_extends() -> void:
 			audio_manager.play_extend()
 		
 		lives += 1
+		# Restore bombs on score extend (every 1,000,000 points)
+		print("Score extend! Restoring bomb. Bombs before: ", bombs)  # Debug log
+		bombs = min(bombs + 1, 3)  # Cap at 3 bombs
 		_next_extend_score += 1000000
+		print("Bombs after extend: ", bombs)  # Debug log
 		_update_lives_display()
+		_update_bomb_display()  # Update bomb display separately
 		# Popup: life extend
 		if is_instance_valid(hud) and hud.has_method("show_popup"):
 			hud.call_deferred("show_popup", "Extend! ♥")
@@ -263,6 +346,169 @@ func _check_extends() -> void:
 func _update_bomb_display() -> void:
 	if is_instance_valid(hud):
 		hud.call("set_bombs", bombs)
+
+# Enhanced scoring system functions
+func _calculate_enhanced_score(base_points: int) -> int:
+	var final_score = base_points
+	
+	# Apply chain bonus (up to 3x multiplier)
+	chain_bonus_multiplier = 1.0 + (chain_count * 0.1)  # +10% per kill in chain
+	chain_bonus_multiplier = min(chain_bonus_multiplier, 3.0)  # Cap at 3x
+	final_score = int(final_score * chain_bonus_multiplier)
+	
+	# Apply medal bonus (up to 2x multiplier)
+	medal_bonus_multiplier = 1.0 + (medal_level * 0.25)  # +25% per medal level
+	medal_bonus_multiplier = min(medal_bonus_multiplier, 2.0)  # Cap at 2x
+	final_score = int(final_score * medal_bonus_multiplier)
+	
+	# Apply distance bonus (close-range kills get more points)
+	var distance_bonus = _calculate_distance_bonus()
+	final_score += distance_bonus
+	
+	return final_score
+
+func _update_chain_system() -> void:
+	var current_time = Time.get_unix_time_from_system()
+	
+	# Check if chain should continue or reset
+	if current_time - last_kill_time <= chain_timeout:
+		chain_count += 1
+	else:
+		chain_count = 1  # Reset chain
+	
+	# Update max chain if needed
+	if chain_count > max_chain:
+		max_chain = chain_count
+	
+	last_kill_time = current_time
+
+func _check_medal_upgrade() -> void:
+	var new_medal_level = 0
+	
+	# Medal levels based on score thresholds
+	if score >= 1000000:  # 1M points
+		new_medal_level = 3  # Platinum
+	elif score >= 500000:   # 500K points
+		new_medal_level = 2  # Gold
+	elif score >= 200000:   # 200K points
+		new_medal_level = 1  # Silver
+	else:
+		new_medal_level = 0  # Bronze
+	
+	# Check if medal level increased
+	if new_medal_level > medal_level:
+		medal_level = new_medal_level
+		_show_medal_upgrade(new_medal_level)
+
+func _show_medal_upgrade(new_medal_level: int) -> void:
+	var medal_names = ["Bronze", "Silver", "Gold", "Platinum"]
+	
+	if is_instance_valid(hud) and hud.has_method("show_popup"):
+		var message = medal_names[new_medal_level] + " Medal!"
+		hud.call_deferred("show_popup", message)
+	
+	# Play medal upgrade sound
+	var audio_manager = get_node_or_null("/root/AudioManager")
+	if audio_manager and audio_manager.has_method("play_medal_upgrade"):
+		audio_manager.play_medal_upgrade()
+
+func _update_chain_display() -> void:
+	if is_instance_valid(hud) and hud.has_method("set_chain"):
+		hud.call("set_chain", chain_count, max_chain)
+
+func _update_medal_display() -> void:
+	if is_instance_valid(hud) and hud.has_method("set_medal"):
+		hud.call("set_medal", medal_level)
+
+func _reset_chain() -> void:
+	# Reset chain count when player gets hit
+	chain_count = 0
+	_update_chain_display()
+	print("Chain reset due to player hit")
+
+func _on_boss_defeated() -> void:
+	# Special boss defeat handling with bonus scoring
+	var boss_bonus = 50000  # Base boss bonus
+	var chain_bonus = chain_count * 1000  # Bonus based on current chain
+	var medal_bonus = medal_level * 5000  # Bonus based on medal level
+	
+	var total_boss_bonus = boss_bonus + chain_bonus + medal_bonus
+	score += total_boss_bonus
+	
+	# Show boss defeated popup
+	if is_instance_valid(hud) and hud.has_method("show_popup"):
+		var message = "Boss Defeated! +" + str(total_boss_bonus) + " pts"
+		hud.call_deferred("show_popup", message)
+	
+	# Update displays
+	_update_score_label()
+	_update_chain_display()
+	_update_medal_display()
+	
+	print("Boss defeated! Bonus: ", total_boss_bonus, " Chain: ", chain_count, " Medal: ", medal_level)
+
+func _calculate_distance_bonus() -> int:
+	# Calculate distance bonus based on player position relative to screen
+	# Close-range kills get bonus points (risk-reward system)
+	if not is_instance_valid(player):
+		return 0
+	
+	var screen_center = Vector2(160, 90)  # Half of 320x180
+	var player_pos = player.global_position
+	var distance = player_pos.distance_to(screen_center)
+	var max_distance = 100.0  # Maximum distance for full bonus
+	
+	# Closer to center = more bonus points (up to 1000 points)
+	var distance_ratio = 1.0 - (distance / max_distance)
+	distance_ratio = clamp(distance_ratio, 0.0, 1.0)
+	
+	return int(distance_ratio * 1000)
+
+func _is_player_stuck() -> bool:
+	# Check if player is stuck in a dangerous position
+	# This can be used for emergency bomb restoration
+	if not is_instance_valid(player):
+		return false
+	
+	var screen_center = Vector2(160, 90)
+	var player_pos = player.global_position
+	var _distance = player_pos.distance_to(screen_center)
+	
+	# Player is considered "stuck" if too close to screen edges
+	var screen_bounds = Vector2(320, 180)
+	var edge_threshold = 20.0
+	
+	return (player_pos.x <= edge_threshold or 
+			player_pos.x >= screen_bounds.x - edge_threshold or
+			player_pos.y <= edge_threshold or
+			player_pos.y >= screen_bounds.y - edge_threshold)
+
+func _emergency_bomb_restore() -> void:
+	# Emergency bomb restoration when player is in danger
+	if bombs <= 0 and _is_player_stuck():
+		print("Emergency bomb restoration!")
+		bombs = 1
+		_update_bomb_display()
+		
+		# Play emergency sound
+		var audio_manager = get_node_or_null("/root/AudioManager")
+		if audio_manager and audio_manager.has_method("play_bomb_restore"):
+			audio_manager.play_bomb_restore()
+
+func _reset_scoring_system() -> void:
+	# Reset all scoring system variables when restarting
+	score = 0
+	chain_count = 0
+	max_chain = 0
+	last_kill_time = 0.0
+	medal_level = 0
+	_next_extend_score = 500000
+	_next_bomb_score = 25000
+	_next_medal_score = 100000
+	base_score_multiplier = 1.0
+	chain_bonus_multiplier = 1.0
+	medal_bonus_multiplier = 1.0
+	print("Scoring system reset")
 
 func pause_bgm() -> void:
 	if is_instance_valid(bgm_player):

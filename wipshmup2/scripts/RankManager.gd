@@ -13,13 +13,13 @@ extends Node
 var rank: float = 1.0
 var stage_number: int = 1
 
-# Max multiplier caps
+# Max multiplier caps - Reduced for more manageable difficulty scaling
 var multipliers = {
-	"enemy_speed": 1.8,
-	"enemy_hp": 2.0,
-	"bullet_speed": 1.7,
-	"pattern_density": 2.0,
-	"pattern_cadence": 1.0
+	"enemy_speed": 1.4,      # Reduced from 1.8 for better pacing
+	"enemy_hp": 2.0,         # Kept same for challenge balance
+	"bullet_speed": 1.3,     # Reduced from 1.7 for dodgeable bullets
+	"pattern_density": 1.6,  # Reduced from 2.0 for manageable patterns
+	"pattern_cadence": 0.8   # Reduced from 1.0 for slower firing
 }
 
 func _ready() -> void:

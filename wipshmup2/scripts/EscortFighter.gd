@@ -70,7 +70,7 @@ func maintain_formation_position(delta: float) -> void:
 	var distance = current_pos.distance_to(target_position)
 
 	if distance > 5.0:
-		var move_speed = speed * 1.1 * delta  # Escorts move slightly faster
+		var move_speed = speed * 0.9 * delta  # Escorts move slightly slower for balance
 		global_position += direction * min(move_speed, distance)
 
 	# Check if should break formation to engage threats
@@ -120,7 +120,7 @@ func engage_threats(delta: float) -> void:
 		return
 
 	var direction = (player.global_position - global_position).normalized()
-	global_position += direction * speed * 1.2 * delta
+	global_position += direction * speed * 0.9 * delta  # Reduced from 1.2 for balance
 
 	time_since_engagement += delta
 	if time_since_engagement > 3.0:
@@ -129,7 +129,7 @@ func engage_threats(delta: float) -> void:
 func return_to_formation(delta: float) -> void:
 	return_timer += delta
 	var direction = (target_position - global_position).normalized()
-	global_position += direction * speed * 0.8 * delta
+	global_position += direction * speed * 0.6 * delta  # Reduced from 0.8 for balance
 
 	if return_timer > 2.0 or global_position.distance_to(target_position) < 10.0:
 		set_state(EscortState.FORMATION)

@@ -60,6 +60,14 @@ func set_bombs(value: int) -> void:
 	var text := "Bombs: %d" % max(0, value)
 	_bombs_label.text = text
 
+func set_chain(_current_chain: int, _max_chain: int) -> void:
+	# Placeholder for chain display - can be implemented later
+	pass
+
+func set_medal(_medal_level: int) -> void:
+	# Placeholder for medal display - can be implemented later
+	pass
+
 func _on_tick(dt: float) -> void:
 	_accum_time_s += dt
 	_accum_ticks += 1

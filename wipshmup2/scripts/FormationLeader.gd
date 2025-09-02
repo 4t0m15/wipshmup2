@@ -14,7 +14,7 @@ enum FormationState {
 @export var formation_pattern: int = 0  # FormationManager.FormationPattern
 @export var formation_id: String = ""
 @export var formation_spacing: float = 40.0
-@export var formation_speed: float = 60.0
+@export var formation_speed: float = 25.0  # Reduced from 60.0 for playable speed
 @export var break_formation_distance: float = 100.0
 @export var rejoin_formation_distance: float = 150.0
 

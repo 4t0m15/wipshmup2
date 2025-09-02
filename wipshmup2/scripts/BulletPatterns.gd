@@ -4,7 +4,7 @@ extends Node
 const ENEMY_BULLET_SCENE: PackedScene = preload("res://scenes/bullet/EnemyBullet.tscn")
 
 const BASE_DENSITY_MULT: float = 0.3
-const BASE_SPEED_MULT: float = 0.6
+const BASE_SPEED_MULT: float = 0.4  # Reduced from 0.6 for playable speed
 const BASE_CADENCE_MULT: float = 0.75
 
 static func _get_density_multiplier() -> float:
@@ -21,11 +21,7 @@ static func _get_cadence_multiplier() -> float:
 
 static func _spawn_bullet(node: Node, position: Vector2, direction: Vector2, speed: float) -> void:
 	# Play enemy shot sound
-	var audio_manager = Engine.get_singleton("AudioManager")
-	if not audio_manager:
-		audio_manager = Engine.get_main_loop().get_root().get_node_or_null("/root/AudioManager")
-	if audio_manager and audio_manager.has_method("play_enemy_shot"):
-		audio_manager.play_enemy_shot()
+
 	
 	var bullet: Area2D = ENEMY_BULLET_SCENE.instantiate()
 	bullet.global_position = position
@@ -48,7 +44,7 @@ static func _await_seconds(node: Node, seconds: float) -> void:
 		if ml is SceneTree:
 			await (ml as SceneTree).create_timer(seconds, false).timeout
 
-static func fire_ring(node: Node, origin: Vector2, bullet_count: int, speed: float = 300.0, start_angle_rad: float = 0.0) -> void:
+static func fire_ring(node: Node, origin: Vector2, bullet_count: int, speed: float = 120.0, start_angle_rad: float = 0.0) -> void:  # Reduced from 300.0
 	if bullet_count <= 0: return
 	var count: int = max(1, int(round(float(bullet_count) * _get_density_multiplier())))
 	var step: float = PI * 2.0 / float(count)
@@ -56,7 +52,7 @@ static func fire_ring(node: Node, origin: Vector2, bullet_count: int, speed: flo
 		var angle := start_angle_rad + step * float(i)
 		_spawn_bullet(node, origin, Vector2.RIGHT.rotated(angle), speed)
 
-static func fire_fan(node: Node, origin: Vector2, bullet_count: int, spread_degrees: float, base_angle_degrees: float, speed: float = 320.0) -> void:
+static func fire_fan(node: Node, origin: Vector2, bullet_count: int, spread_degrees: float, base_angle_degrees: float, speed: float = 130.0) -> void:  # Reduced from 320.0
 	if bullet_count <= 0: return
 	var count: int = max(1, int(round(float(bullet_count) * _get_density_multiplier())))
 	var spread_rad: float = deg_to_rad(spread_degrees)
@@ -67,7 +63,7 @@ static func fire_fan(node: Node, origin: Vector2, bullet_count: int, spread_degr
 		var angle := start + step * float(i)
 		_spawn_bullet(node, origin, Vector2.RIGHT.rotated(angle), speed)
 
-static func fire_sweeping_spread(node: Node, origin_node: Node2D, start_degrees: float, end_degrees: float, duration_s: float, steps: int, bullets_per_step: int, speed: float = 300.0) -> void:
+static func fire_sweeping_spread(node: Node, origin_node: Node2D, start_degrees: float, end_degrees: float, duration_s: float, steps: int, bullets_per_step: int, speed: float = 120.0) -> void:  # Reduced from 300.0
 	if steps <= 0 or bullets_per_step <= 0 or duration_s <= 0.0: return
 	var start_rad: float = deg_to_rad(start_degrees)
 	var end_rad: float = deg_to_rad(end_degrees)
@@ -81,7 +77,7 @@ static func fire_sweeping_spread(node: Node, origin_node: Node2D, start_degrees:
 		fire_fan(node, origin_node.global_position, bps, 20.0, rad_to_deg(angle), speed)
 		await _await_seconds(node, step_time)
 
-static func fire_aimed_beam(node: Node, origin_node: Node2D, target_node: Node2D, duration_s: float, interval_s: float = 0.05, speed: float = 1000.0) -> void:
+static func fire_aimed_beam(node: Node, origin_node: Node2D, target_node: Node2D, duration_s: float, interval_s: float = 0.05, speed: float = 400.0) -> void:  # Reduced from 1000.0
 	if duration_s <= 0.0 or interval_s <= 0.0: return
 	var elapsed: float = 0.0
 	var iv: float = interval_s / _get_cadence_multiplier()
@@ -93,7 +89,7 @@ static func fire_aimed_beam(node: Node, origin_node: Node2D, target_node: Node2D
 		await _await_seconds(node, iv)
 		elapsed += iv
 
-static func fire_cross_hatch(node: Node, origin_node: Node2D, waves: int, bullets_per_fan: int = 7, spread_degrees: float = 60.0, speed: float = 300.0, interval_s: float = 0.25) -> void:
+static func fire_cross_hatch(node: Node, origin_node: Node2D, waves: int, bullets_per_fan: int = 7, spread_degrees: float = 60.0, speed: float = 120.0, interval_s: float = 0.25) -> void:  # Reduced from 300.0
 	if waves <= 0: return
 	var bpf: int = max(1, int(round(float(bullets_per_fan) * _get_density_multiplier())))
 	var iv: float = interval_s / _get_cadence_multiplier()
@@ -110,7 +106,7 @@ static func fire_cross_hatch(node: Node, origin_node: Node2D, waves: int, bullet
 		fire_fan(node, origin, bpf, spread_degrees, -135.0, speed)
 		await _await_seconds(node, iv)
 
-static func fire_rotating_rings(node: Node, origin_node: Node2D, bursts: int, bullets_per_ring: int = 16, speed: float = 260.0, rotation_step_degrees: float = 12.0, interval_s: float = 0.35) -> void:
+static func fire_rotating_rings(node: Node, origin_node: Node2D, bursts: int, bullets_per_ring: int = 16, speed: float = 100.0, rotation_step_degrees: float = 12.0, interval_s: float = 0.35) -> void:  # Reduced from 260.0
 	if bursts <= 0: return
 	var angle: float = 0.0
 	var iv: float = interval_s / _get_cadence_multiplier()
@@ -122,7 +118,7 @@ static func fire_rotating_rings(node: Node, origin_node: Node2D, bursts: int, bu
 		angle += rotation_step_degrees
 		await _await_seconds(node, iv)
 
-static func fire_fixed_beam(node: Node, origin_node: Node2D, angle_degrees: float, duration_s: float, interval_s: float = 0.02, speed: float = 1100.0) -> void:
+static func fire_fixed_beam(node: Node, origin_node: Node2D, angle_degrees: float, duration_s: float, interval_s: float = 0.02, speed: float = 450.0) -> void:  # Reduced from 1100.0
 	if duration_s <= 0.0 or interval_s <= 0.0: return
 	var elapsed: float = 0.0
 	var dir: Vector2 = Vector2.RIGHT.rotated(deg_to_rad(angle_degrees)).normalized()
@@ -134,7 +130,7 @@ static func fire_fixed_beam(node: Node, origin_node: Node2D, angle_degrees: floa
 		await _await_seconds(node, iv)
 		elapsed += iv
 
-static func fire_dual_lasers(node: Node, origin_node: Node2D, base_angle_degrees: float, separation_degrees: float, duration_s: float, interval_s: float = 0.025, speed: float = 1100.0) -> void:
+static func fire_dual_lasers(node: Node, origin_node: Node2D, base_angle_degrees: float, separation_degrees: float, duration_s: float, interval_s: float = 0.025, speed: float = 450.0) -> void:  # Reduced from 1100.0
 	if duration_s <= 0.0 or interval_s <= 0.0: return
 	var elapsed: float = 0.0
 	var ang_a: float = base_angle_degrees - separation_degrees * 0.5

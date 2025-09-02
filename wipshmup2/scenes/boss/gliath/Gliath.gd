@@ -4,7 +4,7 @@ const ENEMY_SCENE: PackedScene = preload("res://scenes/enemy/Enemy.tscn")
 const BP := preload("res://scripts/BulletPatterns.gd")
 
 @export var move_y: float = 48.0
-@export var move_speed: float = 80.0
+@export var move_speed: float = 35.0  # Reduced from 80.0 for playable speed
 
 var _phase_task_running: bool = false
 

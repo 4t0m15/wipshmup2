@@ -13,17 +13,17 @@ enum FirePattern { NONE, STRAIGHT_SHOT, SPREAD_3, SPREAD_5, ALTERNATING, BOMB_DR
 const ENEMY_BULLET_SCENE: PackedScene = preload("res://scenes/bullet/EnemyBullet.tscn")
 
 @export var enemy_type: int = EnemyType.FIGHTER
-@export var speed: float = 80.0
+@export var speed: float = 35.0  # Reduced from 80.0 for playable speed
 @export var hp: int = 1
 @export var points: int = 100
 @export var sprite_target_height_px: float = 18.0
 @export var movement: int = Movement.STRAIGHT_DOWN
 @export var movement_amplitude: float = 32.0
-@export var movement_speed: float = 60.0
+@export var movement_speed: float = 25.0  # Reduced from 60.0 for playable speed
 @export var patrol_distance: float = 80.0
 @export var fire_pattern: int = FirePattern.STRAIGHT_SHOT
-@export var fire_interval: float = 2.0
-@export var bullet_speed: float = 180.0
+@export var fire_interval: float = 2.5  # Increased from 2.0 for better pacing
+@export var bullet_speed: float = 80.0  # Reduced from 180.0 for playable speed
 @export var fire_delay: float = 0.0
 @export var formation_offset: Vector2 = Vector2.ZERO
 @export var formation_leader: Node2D = null

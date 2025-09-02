@@ -3,7 +3,7 @@ extends Area2D
 signal killed(points: int)
 signal hit_player
 
-@export var speed: float = 120.0
+@export var speed: float = 50.0  # Reduced from 120.0 for playable speed
 @export var hp: int = 1
 @export var points: int = 100
 @export var sprite_target_height_px: float = 18.0
@@ -21,6 +21,7 @@ func _ready() -> void:
 	monitoring = true
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
+	print("Enemy ", name, " ready, monitoring: ", monitoring, " groups: ", get_groups())  # Debug log
 	# Apply dynamic difficulty scaling from RankManager autoload if available
 	var rm := get_node_or_null("/root/RankManager")
 	if rm and rm.has_method("get_enemy_speed_multiplier"):
@@ -49,12 +50,18 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 
 func take_damage(amount: int, source: String = "shot") -> void:
+	print("Enemy ", name, " taking damage: ", amount, " from ", source, " HP: ", hp)  # Debug log
+	
 	# Respect invulnerability toggles per source
 	if (source == "shot" and ignore_shot_damage) or (source == "bomb" and ignore_bomb_damage):
+		print("Enemy ", name, " ignoring damage from ", source)  # Debug log
 		return
 	hp -= amount
 	_last_damage_source = source
+	print("Enemy ", name, " HP after damage: ", hp)  # Debug log
+	
 	if hp <= 0:
+		print("Enemy ", name, " killed!")  # Debug log
 		# Play enemy death sound
 		var audio_manager = get_node_or_null("/root/AudioManager")
 		if audio_manager and audio_manager.has_method("play_enemy_death"):

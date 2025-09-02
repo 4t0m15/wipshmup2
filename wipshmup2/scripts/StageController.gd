@@ -41,6 +41,9 @@ var stage_order: Array[int] = []
 var current_stage_index: int = 0
 
 func start_run() -> void:
+	# Add to group for autoloads to find
+	add_to_group("stage_controller")
+	
 	stage_order.clear()
 	for n in [1, 2, 3, 4, 5, 6, 7, 8]:
 		stage_order.append(n)
@@ -91,16 +94,23 @@ func _connect_enemy_signals(enemy: Area2D) -> void:
 				RankManager.on_enemy_killed(points)
 		)
 
-func _spawn_enemy(scene: PackedScene, pos: Vector2, speed: float = 150.0, hp: int = 1, points: int = 100) -> void:
+func _spawn_enemy(scene: PackedScene, pos: Vector2, speed: float = 60.0, hp: int = 1, points: int = 100) -> void:  # Reduced from 150.0
 	var e: Area2D = scene.instantiate()
 	e.set("speed", speed)
 	e.set("hp", hp)
 	e.set("points", points)
 	e.global_position = pos
 	_connect_enemy_signals(e)
+	
+	# Find the enemy container in the current scene
 	var root := get_tree().current_scene
 	var container := root.get_node_or_null("GameViewport/Enemies")
 	var target = container if container else root
+	
+	# Debug logging
+	print("Spawning enemy at: ", pos, " in container: ", str(target.get_path()) if target else "none")
+	print("Enemy scene: ", scene.resource_path if scene else "none")
+	
 	target.call_deferred("add_child", e)
 
 func _spawn_wave_line(count: int, y: float, speed: float, hp: int, margin: float = 24.0) -> void:
@@ -165,9 +175,9 @@ func _spawn_boss(boss_scene: PackedScene, y_pos: float = 48.0) -> void:
 
 # Simplified stage implementations
 func _run_stage_1() -> void:
-	_spawn_wave_line(5, 50.0, 120.0, 1)
+	_spawn_wave_line(5, 50.0, 50.0, 1)  # Reduced from 120.0
 	await get_tree().create_timer(2.0, false).timeout
-	_spawn_wave_v(3, 100.0, 1)
+	_spawn_wave_v(3, 40.0, 1)  # Reduced from 100.0
 	await get_tree().create_timer(3.0, false).timeout
 	_spawn_group(3, TYPE01, 200.0)
 	await get_tree().create_timer(2.0, false).timeout
@@ -184,7 +194,7 @@ func _run_stage_2() -> void:
 	_spawn_boss(TYPE0_SCENE, 56.0)
 
 func _run_stage_3() -> void:
-	_spawn_wave_line(6, 60.0, 140.0, 2)
+	_spawn_wave_line(6, 60.0, 60.0, 2)  # Reduced from 140.0
 	await get_tree().create_timer(1.5, false).timeout
 	_spawn_group(3, TYPE04, 200.0)
 	_spawn_group(3, TYPE05, 400.0)
@@ -194,7 +204,7 @@ func _run_stage_3() -> void:
 	_spawn_boss(IRONCASKET_SCENE, 52.0)
 
 func _run_stage_4() -> void:
-	_spawn_wave_v(4, 120.0, 2)
+	_spawn_wave_v(4, 50.0, 2)  # Reduced from 120.0
 	await get_tree().create_timer(1.0, false).timeout
 	_spawn_group(4, TYPE06, 150.0)
 	await get_tree().create_timer(2.0, false).timeout
@@ -204,7 +214,7 @@ func _run_stage_4() -> void:
 	_spawn_boss(GRAFZEPPELIN_SCENE, 54.0)
 
 func _run_stage_5() -> void:
-	_spawn_wave_line(7, 70.0, 160.0, 2)
+	_spawn_wave_line(7, 70.0, 65.0, 2)  # Reduced from 160.0
 	await get_tree().create_timer(1.0, false).timeout
 	_spawn_group(3, TYPE08, 200.0)
 	_spawn_group(3, TYPE09, 400.0)
@@ -214,7 +224,7 @@ func _run_stage_5() -> void:
 	_spawn_boss(FORTRESS_SCENE, 52.0)
 
 func _run_stage_6() -> void:
-	_spawn_wave_v(5, 140.0, 3)
+	_spawn_wave_v(5, 60.0, 3)  # Reduced from 140.0
 	await get_tree().create_timer(1.0, false).timeout
 	_spawn_group(4, TYPE11, 150.0)
 	_spawn_group(4, TYPE12, 450.0)
@@ -224,7 +234,7 @@ func _run_stage_6() -> void:
 	_spawn_boss(CROSSSINKER_SCENE, 54.0)
 
 func _run_stage_7() -> void:
-	_spawn_wave_line(8, 80.0, 180.0, 3)
+	_spawn_wave_line(8, 80.0, 75.0, 3)  # Reduced from 180.0
 	await get_tree().create_timer(1.0, false).timeout
 	_spawn_group(4, TYPE13, 200.0)
 	await get_tree().create_timer(2.0, false).timeout
@@ -234,7 +244,7 @@ func _run_stage_7() -> void:
 	_spawn_boss(BLOCKADE_SCENE, 52.0)
 
 func _run_stage_8() -> void:
-	_spawn_wave_v(6, 160.0, 3)
+	_spawn_wave_v(6, 65.0, 3)  # Reduced from 160.0
 	await get_tree().create_timer(1.0, false).timeout
 	_spawn_group(5, TYPE08, 150.0)
 	_spawn_group(5, TYPE09, 450.0)

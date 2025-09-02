@@ -17,7 +17,7 @@ class Formation:
 	var pattern: int
 	var state: int = FormationState.FORMING
 	var spacing: float = 40.0
-	var formation_speed: float = 60.0
+	var formation_speed: float = 25.0  # Reduced from 60.0 for playable speed
 	var center_point: Vector2
 	var _cached_positions: Array[Vector2] = []
 	var _position_cache_valid: bool = false
