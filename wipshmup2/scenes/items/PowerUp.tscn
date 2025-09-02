@@ -1,0 +1,23 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/items/PowerUp.gd" id="1_powerup_script"]
+[ext_resource type="Texture2D" path="res://assets/Ships/Mine_Spin.png" id="2_powerup_texture"]
+
+[sub_resource type="CircleShape2D" id="1_collision"]
+radius = 8.0
+
+[node name="PowerUp" type="Area2D"]
+script = ExtResource("1_powerup_script")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.1, 0.1)
+texture = ExtResource("2_powerup_texture")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1_collision")
+
+[node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="."]
+
+[node name="FloatTimer" type="Timer" parent="."]
+wait_time = 0.016
+autostart = true

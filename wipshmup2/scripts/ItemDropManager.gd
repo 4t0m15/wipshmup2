@@ -39,13 +39,13 @@ func try_drop_item(position: Vector2, enemy_points: int = 100) -> void:
 func _calculate_drop_chance(enemy_points: int) -> float:
 	# Higher value enemies have better drop rates
 	var base_chance := 0.2
-	var point_multiplier := min(enemy_points / 1000.0, 2.0)
+	var point_multiplier: float = min(enemy_points / 1000.0, 2.0)
 	return base_chance * point_multiplier
 
 func _select_item_type() -> ItemType:
 	var total_weight := 0.0
 	for rate in drop_rates.values():
-		total_weight += rate
+		total_weight += rate   
 
 	var roll := _rng.randf() * total_weight
 	var current_weight := 0.0

@@ -107,14 +107,14 @@ func _enable_dither() -> void:
 		push_error("GameViewport texture is null; cannot apply dither shader.")
 		return
 	mat.set_shader_parameter("tex", tex)
-	# Force strict black-and-white high-contrast output
-	mat.set_shader_parameter("grayscale", true)
-	mat.set_shader_parameter("dither_strength", 1.0)
-	mat.set_shader_parameter("min_dither_brightness", 0.0)
+	# Much more subtle dither effect
+	mat.set_shader_parameter("grayscale", false)
+	mat.set_shader_parameter("dither_strength", 0.1)
+	mat.set_shader_parameter("min_dither_brightness", 0.3)
 	mat.set_shader_parameter("color_a", Color(0, 0, 0, 1))
 	mat.set_shader_parameter("color_b", Color(1, 1, 1, 1))
-	mat.set_shader_parameter("bayer_mode", 8)
-	mat.set_shader_parameter("dither_repeat", 1.0)
+	mat.set_shader_parameter("bayer_mode", 4)
+	mat.set_shader_parameter("dither_repeat", 0.5)
 	dither_node.material = mat
 	# Ensure the dither output renders into PostDitherViewport
 	dither_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -141,14 +141,14 @@ func _enable_crt() -> void:
 		mat.shader = CRT_SHADER
 		# Set the viewport texture as the input
 		mat.set_shader_parameter("tex", viewport_texture)
-		# More conservative CRT settings to see content better
-		mat.set_shader_parameter("mask_type", 0)  # Null mask first
-		mat.set_shader_parameter("curve", 0.0)    # No curve for now
-		mat.set_shader_parameter("sharpness", 1.0) # Max sharpness
+		# Very subtle CRT effect
+		mat.set_shader_parameter("mask_type", 0)  # No mask
+		mat.set_shader_parameter("curve", 0.0)    # No curve
+		mat.set_shader_parameter("sharpness", 0.3) # Low sharpness
 		mat.set_shader_parameter("color_offset", 0.0) # No offset
-		mat.set_shader_parameter("mask_brightness", 1.0)
-		mat.set_shader_parameter("scanline_brightness", 1.0)
-		mat.set_shader_parameter("min_scanline_thickness", 1.0) # Thick scanlines
+		mat.set_shader_parameter("mask_brightness", 0.2)
+		mat.set_shader_parameter("scanline_brightness", 0.1)
+		mat.set_shader_parameter("min_scanline_thickness", 0.5) # Thin scanlines
 		mat.set_shader_parameter("aspect", 0.5625)  # 180/320 = 0.5625
 		mat.set_shader_parameter("wobble_strength", 0.0)
 		crt.material = mat
@@ -167,6 +167,10 @@ func _process(_delta: float) -> void:
 	if backslash_pressed and not _backslash_was_pressed:
 		_toggle_dev_mode()
 	_backslash_was_pressed = backslash_pressed
+	
+	# Toggle shaders with F1 key
+	if Input.is_action_just_pressed("ui_focus_next"):  # F1 key
+		_toggle_shaders()
 
 	# Bomb input (fallback to X key if action not present)
 	var has_bomb_action := InputMap.has_action("bomb")
@@ -580,3 +584,20 @@ func _apply_dev_invincibility_state() -> void:
 	# Apply invincibility to current player
 	if is_instance_valid(player) and player.has_method("set_dev_invincibility"):
 		player.call_deferred("set_dev_invincibility", dev_invincibility)
+
+func _toggle_shaders() -> void:
+	# Toggle shaders on/off
+	var crt = $PostFX/CRT
+	var dither = $PostDitherViewport/DitherPass
+	
+	if crt and dither:
+		var shaders_enabled = crt.visible
+		crt.visible = !shaders_enabled
+		dither.visible = !shaders_enabled
+		
+		print("Shaders: ", "OFF" if shaders_enabled else "ON")
+		
+		# Show status in HUD if available
+		if is_instance_valid(hud) and hud.has_method("show_popup"):
+			var status = "ENABLED" if !shaders_enabled else "DISABLED"
+			hud.call_deferred("show_popup", "Shaders: %s" % status, Color.YELLOW)
