@@ -2,8 +2,13 @@ extends CharacterBody2D
 
 signal hit
 
+<<<<<<< HEAD
 @export var speed: float = 160.0  # Reduced from 400.0 for playable speed
 @export var fire_cooldown_s: float = 0.12  # Increased from 0.08 for better pacing
+=======
+@export var speed: float = 200.0
+@export var fire_cooldown_s: float = 0.08
+>>>>>>> 9294ecbecb174677da8c7ff24e87b6288a93cb14
 @export var sprite_target_height_px: float = 20.0
 @export var focus_speed_multiplier: float = 0.4
 @export var invuln_blink_interval_s: float = 0.08
@@ -14,6 +19,7 @@ var _alive: bool = true
 var _invulnerable: bool = false
 var _shot_level: int = 1
 var _option_count: int = 0
+var _dev_invincibility: bool = false
 
 func _ready() -> void:
 	add_to_group("player")
@@ -117,7 +123,7 @@ func die() -> void:
 	queue_free()
 
 func _on_hurtbox_area_entered(area: Area2D) -> void:
-	if _invulnerable: return
+	if _invulnerable or _dev_invincibility: return
 	if area.is_in_group("enemy") or area.is_in_group("enemy_bullet"):
 		die()
 
@@ -126,13 +132,14 @@ func start_invulnerability(duration_s: float = 1.2) -> void:
 	_invulnerable = true
 	var end_time := Time.get_ticks_msec() + int(duration_s * 1000.0)
 	while Time.get_ticks_msec() < end_time and is_instance_valid(self):
-		if has_node("Sprite2D"):
+		if has_node("Sprite2D") and not _dev_invincibility:  # Don't blink in dev mode
 			$Sprite2D.visible = not $Sprite2D.visible
 		await get_tree().create_timer(invuln_blink_interval_s, false).timeout
 	if has_node("Sprite2D"):
 		$Sprite2D.visible = true
 	_invulnerable = false
 
+<<<<<<< HEAD
 func increase_power_level() -> void:
 	# Increase shot level (max 5)
 	_shot_level = min(_shot_level + 1, 5)
@@ -146,3 +153,13 @@ func increase_power_level() -> void:
 		audio_manager.play_power_up()
 
 
+=======
+func set_dev_invincibility(enabled: bool) -> void:
+	_dev_invincibility = enabled
+	# If enabling dev invincibility, make sure sprite is visible
+	if enabled and has_node("Sprite2D"):
+		$Sprite2D.visible = true
+		$Sprite2D.modulate = Color.CYAN  # Tint cyan to show dev mode
+	elif not enabled and has_node("Sprite2D"):
+		$Sprite2D.modulate = Color.WHITE  # Reset to normal color
+>>>>>>> 9294ecbecb174677da8c7ff24e87b6288a93cb14

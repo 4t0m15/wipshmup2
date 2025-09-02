@@ -3,7 +3,11 @@ extends Area2D
 signal killed(points: int)
 signal hit_player
 
+<<<<<<< HEAD
 @export var speed: float = 50.0  # Reduced from 120.0 for playable speed
+=======
+@export var speed: float = 60.0
+>>>>>>> 9294ecbecb174677da8c7ff24e87b6288a93cb14
 @export var hp: int = 1
 @export var points: int = 100
 @export var sprite_target_height_px: float = 18.0
@@ -19,9 +23,22 @@ var _last_damage_source: String = "shot"
 func _ready() -> void:
 	add_to_group("enemy")
 	monitoring = true
+	collision_layer = 1
+	collision_mask = 0
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
+<<<<<<< HEAD
 	print("Enemy ", name, " ready, monitoring: ", monitoring, " groups: ", get_groups())  # Debug log
+=======
+
+	# Safety check: ensure we have collision shape
+	if not has_node("CollisionShape2D"):
+		push_warning("Enemy missing CollisionShape2D: " + name)
+	else:
+		var collision_shape = $CollisionShape2D
+		if not collision_shape.shape:
+			push_warning("Enemy CollisionShape2D has no shape: " + name)
+>>>>>>> 9294ecbecb174677da8c7ff24e87b6288a93cb14
 	# Apply dynamic difficulty scaling from RankManager autoload if available
 	var rm := get_node_or_null("/root/RankManager")
 	if rm and rm.has_method("get_enemy_speed_multiplier"):
@@ -38,6 +55,9 @@ func _ready() -> void:
 				var s: float = sprite_target_height_px / float(tex_size.y)
 				spr.scale = Vector2(s, s)
 
+	# Validate collision setup after initialization
+	call_deferred("_validate_collision_setup")
+
 func _physics_process(delta: float) -> void:
 	position.y += speed * delta
 	position = position.round()
@@ -49,6 +69,21 @@ func _physics_process(delta: float) -> void:
 	if position.y > rect.size.y + 64:
 		queue_free()
 
+func _validate_collision_setup() -> void:
+	# Ensure collision detection is working properly
+	if not monitoring:
+		monitoring = true
+
+	if collision_layer != 1:
+		collision_layer = 1
+
+	if collision_mask != 0:
+		collision_mask = 0
+
+	# Ensure we're in the enemy group
+	if not is_in_group("enemy"):
+		add_to_group("enemy")
+
 func take_damage(amount: int, source: String = "shot") -> void:
 	print("Enemy ", name, " taking damage: ", amount, " from ", source, " HP: ", hp)  # Debug log
 	
@@ -56,6 +91,11 @@ func take_damage(amount: int, source: String = "shot") -> void:
 	if (source == "shot" and ignore_shot_damage) or (source == "bomb" and ignore_bomb_damage):
 		print("Enemy ", name, " ignoring damage from ", source)  # Debug log
 		return
+
+	# Safety check: ensure we're still valid
+	if not is_instance_valid(self):
+		return
+
 	hp -= amount
 	_last_damage_source = source
 	print("Enemy ", name, " HP after damage: ", hp)  # Debug log
@@ -66,7 +106,7 @@ func take_damage(amount: int, source: String = "shot") -> void:
 		var audio_manager = get_node_or_null("/root/AudioManager")
 		if audio_manager and audio_manager.has_method("play_enemy_death"):
 			audio_manager.play_enemy_death()
-		
+
 		var awarded: int = points
 		if _last_damage_source == "bomb":
 			if bomb_points_override >= 0:
