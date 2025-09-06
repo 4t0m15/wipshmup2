@@ -89,9 +89,19 @@ var _planet_pool: Array[PlanetBody] = []
 
 # Textures
 
+
+
 var _star_texture: Texture2D
 
+
+
+var _star_textures: Array[Texture2D] = []
+
 var _planet_textures: Array[Texture2D] = []
+
+@export var asset_base_dir: String = "res://assets2/Space"  # Override base directory for space art assets
+
+
 
 
 
@@ -163,17 +173,46 @@ func _get_planet_from_pool() -> PlanetBody:
 # Initialization / Setup
 # -----------------------------
 
+
 func _load_textures():
 
+	# Unified loader using override-able base directory (supports assets2 migration)
+	_star_textures.clear()
+	var star_files := [
+		"SpaceJunk.png",
+		"SpaceJunk_500.png"
+	]
+	for fn in star_files:
+		var p = asset_base_dir + "/" + fn
+		var tex: Texture2D = load(p)
+		if tex:
+			_star_textures.append(tex)
+		else:
+			push_warning("SpaceBackground: Missing star texture: " + p)
+	if _star_textures.size() > 0:
+		_star_texture = _star_textures[0]
+	else:
+		push_warning("SpaceBackground: No star textures loaded; stars will be invisible")
 
-	_star_texture = preload("res://assets/Space/SpaceJunk_frame_001.png")
-
-	_planet_textures.append(preload("res://assets/Space/Planet_1.png"))
-
-	_planet_textures.append(preload("res://assets/Space/Planet_2.png"))
 
 
-	_planet_textures.append(preload("res://assets/Space/Asteroid_frame_001.png"))
+	_planet_textures.clear()
+
+	var planet_files := [
+		"Planet_1.png",
+		"Planet_2.png",
+		"Asteroid.png"
+	]
+	for fn in planet_files:
+		var p = asset_base_dir + "/" + fn
+		var tex: Texture2D = load(p)
+		if tex:
+			_planet_textures.append(tex)
+		else:
+			push_warning("SpaceBackground: Missing planet texture: " + p)
+
+	_validate_loaded_textures()
+
 
 
 
@@ -216,7 +255,9 @@ func _setup_parallax_background():
 	if parallax_background.layers.is_empty():
 
 
-		parallax_background.add_layer(preload("res://assets/Space/Galaxy_frame_001.png"), Vector2(0.1, 0.1))
+
+		parallax_background.add_layer(load(asset_base_dir + "/Galaxy.png"), Vector2(0.1, 0.1))
+
 
 
 		parallax_background.add_layer(preload("res://assets/Space/Sun.png"), Vector2(0.3, 0.3))
@@ -246,15 +287,19 @@ func _create_star_field():
 
 
 func _create_star(for_pool: bool = false) -> Node2D:
-
 	# Rewritten to use StarBody typed entity (replaces ad-hoc Node2D + meta usage)
-
 	var star: StarBody = StarBody.new()
 	add_child(star)  # Parent early so viewport lookups (if any) work inside initialize
+
+	# Pick a random variant if we have multi-frame textures
+	var star_texture: Texture2D = _star_texture
+	if _star_textures.size() > 0:
+		star_texture = _star_textures[randi() % _star_textures.size()]
+
 	star.initialize(
-		_star_texture,
+		star_texture,
 		star_speed_range,              # speed_range
-		Vector2(0.3, 1.0),             # alpha range (moved from hard-coded randf_range earlier)
+		Vector2(0.3, 1.0),             # alpha range
 		Vector2(-0.2, 0.2),            # vertical direction variance
 		lod_frame_mod_star_slow,
 		lod_frame_mod_star_medium,
@@ -265,6 +310,27 @@ func _create_star(for_pool: bool = false) -> Node2D:
 		# Immediately detach for pool storage (caller will not keep it parented)
 		remove_child(star)
 	return star
+
+# -----------------------------
+# Validation / Integrity
+# -----------------------------
+func _validate_loaded_textures() -> void:
+	if _star_textures.is_empty():
+		push_warning("SpaceBackground: No star textures loaded")
+	if _planet_textures.is_empty():
+		push_warning("SpaceBackground: No planet textures loaded")
+	# Defer deeper integrity check until after parallax setup
+	call_deferred("_background_integrity_check")
+
+func _background_integrity_check() -> void:
+	if not is_instance_valid(parallax_background):
+		push_warning("SpaceBackground: Parallax background missing after setup")
+		return
+	if parallax_background.layers.is_empty():
+		push_warning("SpaceBackground: No parallax layers present; consider a config or manual add_layer() calls")
+	else:
+		print("SpaceBackground: Integrity OK -> parallax_layers=", parallax_background.layers.size(),
+			" star_textures=", _star_textures.size(), " planet_textures=", _planet_textures.size())
 
 
 

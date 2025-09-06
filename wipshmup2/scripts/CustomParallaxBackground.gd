@@ -13,7 +13,10 @@ class_name CustomParallaxBackground
 
 @export var enable_vertical_scroll: bool = false
 
+
 @export var vertical_scroll_speed: float = 30.0
+@export var asset_base_dir: String = "res://assets2/Space"  # Base directory for parallax textures (galaxy, planets)
+
 
 
 
@@ -70,7 +73,13 @@ func _setup_default_layers():
 	var far_layer = CustomParallaxLayer.new()
 
 
-	far_layer.texture = preload("res://assets/Space/Galaxy_frame_001.png")
+
+	var galaxy_tex: Texture2D = load(asset_base_dir + "/Galaxy.png")
+	if galaxy_tex:
+		far_layer.texture = galaxy_tex
+	else:
+		push_warning("CustomParallaxBackground: Missing Galaxy texture at " + asset_base_dir + "/Galaxy.png")
+
 
 
 	far_layer.scroll_scale = Vector2(0.1, 0.1)

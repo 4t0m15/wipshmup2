@@ -33,10 +33,18 @@ is performed dynamically via load().
 ## ---------------------------
 ## Instead of nesting Resources (which can clutter the inspector), we keep parallel
 ## arrays for texture paths and scroll scales. Both must be same size.
+
+
+@export var asset_base_dir: String = "res://assets2/Space" # Base directory for parallax textures (supports migrated assets)
+
 @export var parallax_texture_paths: Array[String] = [
-	"res://assets/Space/Galaxy.png",
-	"res://assets/Space/Sun.png"
+
+	asset_base_dir + "/Galaxy.png",
+
+	asset_base_dir + "/Sun.png"
 ]
+
+
 @export var parallax_scroll_scales: Array[Vector2] = [
 	Vector2(0.1, 0.1),
 	Vector2(0.3, 0.3)
