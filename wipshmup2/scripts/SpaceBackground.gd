@@ -35,9 +35,11 @@ var _lod_summary_timer: float = 0.0
 
 # Performance settings
 
-@export var update_frequency: float = 0.5  # Update every other frame for performance
 
-var _update_timer: float = 0.0
+@export var update_frequency: float = 0.5  # Logical rate: 1.0=every frame, 0.5=every 2nd, 0.25=every 4th
+
+var _frame_counter: int = 0
+
 
 
 
@@ -163,12 +165,16 @@ func _get_planet_from_pool() -> PlanetBody:
 
 func _load_textures():
 
-	_star_texture = preload("res://assets/Space/SpaceJunk.png")
+
+	_star_texture = preload("res://assets/Space/SpaceJunk_frame_001.png")
+
 	_planet_textures.append(preload("res://assets/Space/Planet_1.png"))
 
 	_planet_textures.append(preload("res://assets/Space/Planet_2.png"))
 
-	_planet_textures.append(preload("res://assets/Space/Asteroid.png"))
+
+	_planet_textures.append(preload("res://assets/Space/Asteroid_frame_001.png"))
+
 
 
 
@@ -209,7 +215,9 @@ func _setup_parallax_background():
 
 	if parallax_background.layers.is_empty():
 
-		parallax_background.add_layer(preload("res://assets/Space/Galaxy.png"), Vector2(0.1, 0.1))
+
+		parallax_background.add_layer(preload("res://assets/Space/Galaxy_frame_001.png"), Vector2(0.1, 0.1))
+
 
 		parallax_background.add_layer(preload("res://assets/Space/Sun.png"), Vector2(0.3, 0.3))
 
@@ -324,15 +332,17 @@ func _configure_planet_runtime(planet: Node2D):
 
 func _process(delta: float):
 
-	_update_timer += delta
 
+	_frame_counter += 1
 	_lod_frame += 1
 
-	if _update_timer < update_frequency / 60.0:
-
+	if update_frequency <= 0.0:
+		return
+	var frames_per_update := int(round(1.0 / max(update_frequency, 0.0001)))
+	frames_per_update = max(frames_per_update, 1)
+	if (_frame_counter % frames_per_update) != 0:
 		return
 
-	_update_timer = 0.0
 
 
 	_update_stars(delta)

@@ -19,9 +19,11 @@ class_name CustomParallaxBackground
 
 # Performance settings
 
-@export var update_frequency: float = 1.0  # How often to update (1.0 = every frame, 0.5 = every other frame)
 
-var _update_timer: float = 0.0
+@export var update_frequency: float = 1.0  # Logical rate: 1.0=every frame, 0.5=every 2nd, 0.25=every 4th
+
+var _frame_counter: int = 0
+
 
 
 
@@ -67,7 +69,9 @@ func _setup_default_layers():
 
 	var far_layer = CustomParallaxLayer.new()
 
-	far_layer.texture = preload("res://assets/Space/Galaxy.png")
+
+	far_layer.texture = preload("res://assets/Space/Galaxy_frame_001.png")
+
 
 	far_layer.scroll_scale = Vector2(0.1, 0.1)
 
@@ -86,17 +90,20 @@ func _setup_default_layers():
 
 
 
+
 func _process(delta: float):
 
-	_update_timer += delta
+	_frame_counter += 1
 
-	if _update_timer < update_frequency / 60.0:  # 60 FPS base
-
+	# Frame-skipping model: update_frequency expresses updates per frame baseline (1.0 = every frame, 0.5 = every 2nd, etc.)
+	if update_frequency <= 0.0:
+		return  # Disabled
+	var frames_per_update := int(round(1.0 / max(update_frequency, 0.0001)))
+	frames_per_update = max(frames_per_update, 1)
+	if (_frame_counter % frames_per_update) != 0:
 		return
-
-	_update_timer = 0.0
-
 	_update_parallax(delta)
+
 
 
 
