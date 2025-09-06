@@ -3,12 +3,12 @@
 [ext_resource type="Script" uid="uid://f7x5uq6o2is6" path="res://scenes/main/Main.gd" id="1_9m0k2"]
 [ext_resource type="PackedScene" path="res://scenes/main/HUD.tscn" id="2_hud"]
 [ext_resource type="AudioStream" uid="uid://b7k2yqd8vp3xd" path="res://retro-waves-139640.mp3" id="3_bgm"]
-[ext_resource type="Texture2D" uid="uid://btghnfdxrkws0" path="res://assets/Space/Galaxy.png" id="4_galaxy"]
-[ext_resource type="Texture2D" uid="uid://ddfa0vkngqirs" path="res://assets/Space/Sun.png" id="5_sun"]
-[ext_resource type="Texture2D" uid="uid://cwrv1seasb008" path="res://assets/Space/Planet_1.png" id="6_planet1"]
-[ext_resource type="Texture2D" uid="uid://dke15nx5raa5h" path="res://assets/Space/Planet_2.png" id="7_planet2"]
-[ext_resource type="Texture2D" uid="uid://b6d35k7g1lbva" path="res://assets/Space/Asteroid.png" id="8_asteroid"]
-[ext_resource type="Texture2D" uid="uid://b75smj5bm4w1t" path="res://assets/Space/SpaceJunk.png" id="9_spacejunk"]
+[ext_resource type="Texture2D" uid="uid://bv7re1j7m86ji" path="res://assets/Space/Galaxy_frame_001.png" id="4_galaxy"]
+[ext_resource type="Texture2D" uid="uid://d3uotmrfdxr3p" path="res://assets/Space/Sun.png" id="5_sun"]
+[ext_resource type="Texture2D" uid="uid://dmye4x1306x7u" path="res://assets/Space/Planet_1.png" id="6_planet1"]
+[ext_resource type="Texture2D" uid="uid://dpmcwivcfhdbk" path="res://assets/Space/Planet_2.png" id="7_planet2"]
+[ext_resource type="Texture2D" uid="uid://qt8m4324ww0o" path="res://assets/Space/Asteroid_frame_001.png" id="8_asteroid"]
+[ext_resource type="Texture2D" uid="uid://b72tbm6talogl" path="res://assets/Space/SpaceJunk_frame_001.png" id="9_spacejunk"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_9m0k2")
@@ -16,6 +16,7 @@ script = ExtResource("1_9m0k2")
 [node name="GameViewport" type="SubViewport" parent="."]
 size = Vector2i(320, 180)
 render_target_update_mode = 4
+transparent_bg = false
 
 [node name="GameCamera" type="Camera2D" parent="GameViewport"]
 position = Vector2(160, 90)
@@ -24,7 +25,7 @@ position = Vector2(160, 90)
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0, 0, 0, 1)
+color = Color(0.2, 0.1, 0.3, 1)
 
 [node name="SpaceBackground" type="Node2D" parent="GameViewport"]
 
@@ -85,6 +86,13 @@ anchor_bottom = 1.0
 [node name="BGMPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("3_bgm")
 autoplay = true
+
+[node name="GameDisplay" type="TextureRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+expand_mode = 1
+stretch_mode = 6
 
 [node name="PostFX" type="CanvasLayer" parent="."]
 

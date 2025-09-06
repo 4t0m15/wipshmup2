@@ -1,8 +1,13 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=4 format=3 uid="uid://type03_zigzag_shotgun"]
 
-[ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
+[ext_resource type="Script" path="res://scripts/ClassicEnemy.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/Ships/C_Fighter_M_frame_001.png" id="2_tex"]
 
-[node name="Type03_ZigzagShotgun" instance=ExtResource("1_base")]
+[sub_resource type="CircleShape2D" id="1_shape"]
+radius = 10.0
+
+[node name="Type03_ZigzagShotgun" type="Area2D"]
+script = ExtResource("1_script")
 enemy_type = 1  # BOMBER
 speed = 60.0
 hp = 2
@@ -14,4 +19,10 @@ fire_pattern = 4  # BOMB_DROP
 fire_interval = 2.5
 bullet_speed = 120.0
 
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_tex")
+modulate = Color(1, 0.8, 0.8, 1)
+scale = Vector2(1.2, 1.2)
 
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1_shape")

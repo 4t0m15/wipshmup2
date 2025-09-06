@@ -3,10 +3,10 @@ extends Area2D
 signal killed(points: int)
 signal hit_player
 
-@export var speed: float = 50.0  # Reduced from 120.0 for playable speed
+@export var speed: float = 50.0
 @export var hp: int = 1
 @export var points: int = 100
-@export var sprite_target_height_px: float = 18.0
+@export var enemy_type: String = "fighter"
 
 # Scoring and damage-source behavior
 @export var bomb_points_override: int = -1
@@ -23,7 +23,7 @@ func _ready() -> void:
 	collision_mask = 0
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
-	print("Enemy ", name, " ready, monitoring: ", monitoring, " groups: ", get_groups())  # Debug log
+	print("Enemy ", name, " ready, monitoring: ", monitoring, " groups: ", get_groups())
 
 	# Safety check: ensure we have collision shape
 	if not has_node("CollisionShape2D"):
@@ -40,14 +40,15 @@ func _ready() -> void:
 		var hp_mult: float = rm.get_enemy_hp_multiplier()
 		speed *= speed_mult
 		hp = int(ceil(float(hp) * hp_mult))
-	# Normalize sprite size to target height
+
+	# Use SpriteManager to setup sprite
 	if has_node("Sprite2D"):
 		var spr: Sprite2D = $Sprite2D
-		if spr and spr.texture:
-			var tex_size: Vector2i = spr.texture.get_size()
-			if tex_size.y > 0:
-				var s: float = sprite_target_height_px / float(tex_size.y)
-				spr.scale = Vector2(s, s)
+		SpriteManager.auto_setup_enemy_sprite(spr, enemy_type)
+		print("Enemy sprite setup via SpriteManager for type: ", enemy_type)
+	else:
+		print("Enemy missing Sprite2D node!")
+
 
 	# Validate collision setup after initialization
 	call_deferred("_validate_collision_setup")
@@ -79,11 +80,11 @@ func _validate_collision_setup() -> void:
 		add_to_group("enemy")
 
 func take_damage(amount: int, source: String = "shot") -> void:
-	print("Enemy ", name, " taking damage: ", amount, " from ", source, " HP: ", hp)  # Debug log
-	
+	print("Enemy ", name, " taking damage: ", amount, " from ", source, " HP: ", hp)
+
 	# Respect invulnerability toggles per source
 	if (source == "shot" and ignore_shot_damage) or (source == "bomb" and ignore_bomb_damage):
-		print("Enemy ", name, " ignoring damage from ", source)  # Debug log
+		print("Enemy ", name, " ignoring damage from ", source)
 		return
 
 	# Safety check: ensure we're still valid
@@ -92,10 +93,10 @@ func take_damage(amount: int, source: String = "shot") -> void:
 
 	hp -= amount
 	_last_damage_source = source
-	print("Enemy ", name, " HP after damage: ", hp)  # Debug log
-	
+	print("Enemy ", name, " HP after damage: ", hp)
+
 	if hp <= 0:
-		print("Enemy ", name, " killed!")  # Debug log
+		print("Enemy ", name, " killed!")
 		# Play enemy death sound
 		var audio_manager = get_node_or_null("/root/AudioManager")
 		if audio_manager and audio_manager.has_method("play_enemy_death"):

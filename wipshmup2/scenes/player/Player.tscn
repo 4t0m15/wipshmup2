@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3 uid="uid://dwsoi382u7q"]
 
 [ext_resource type="Script" uid="uid://c2de2iotj83a7" path="res://scenes/player/Player.gd" id="1_w6q3k"]
-[ext_resource type="Texture2D" path="res://assets/Ships/Player.png" id="2_gfjak"]
+[ext_resource type="Texture2D" uid="uid://gxkk0yrq4kqc" path="res://assets/Ships/Player_frame_001.png" id="2_gfjak"]
 
 [sub_resource type="CircleShape2D" id="1"]
 radius = 8.0
@@ -13,7 +13,7 @@ radius = 6.0
 script = ExtResource("1_w6q3k")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-scale = Vector2(0.08, 0.08)
+scale = Vector2(1.5, 1.5)
 texture = ExtResource("2_gfjak")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]

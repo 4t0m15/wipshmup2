@@ -1,10 +1,10 @@
 [gd_scene load_steps=4 format=3 uid="uid://gth6tavdfuif"]
 
 [ext_resource type="Script" path="res://scripts/FormationLeader.gd" id="1_0n9pk"]
-[ext_resource type="Texture2D" uid="uid://dtoeja6hsa1w6" path="res://images/enemy.svg" id="2_35kvp"]
+[ext_resource type="Texture2D" path="res://assets/Ships/C_Destroyer_frame_002.png" id="2_35kvp"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_1"]
-radius = 8.0
+radius = 10.0
 
 [node name="Type13_FormationLeader" type="Area2D"]
 script = ExtResource("1_0n9pk")
@@ -22,7 +22,7 @@ formation_id = "v_formation_alpha"
 [node name="Sprite2D" type="Sprite2D" parent="."]
 texture = ExtResource("2_35kvp")
 modulate = Color(1, 1, 0.6, 1)
-scale = Vector2(1.4, 1.2)
+scale = Vector2(0.7, 0.7)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_1")

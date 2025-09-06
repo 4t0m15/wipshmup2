@@ -5,7 +5,7 @@ extends Node
 signal item_collected(item_type: String, value: int)
 
 enum ItemType {
-	POWER_UP,
+	POWER_UP,   
 	SCORE_SMALL,
 	SCORE_LARGE,
 	LIFE_EXTEND,

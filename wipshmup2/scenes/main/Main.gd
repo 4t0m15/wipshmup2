@@ -6,28 +6,26 @@ const STAGE_CONTROLLER_SCRIPT: Script = preload("res://scripts/StageController.g
 const CRT_SHADER: Shader = preload("res://shaders/crt.gdshader")
 const DITHER_SHADER: Shader = preload("res://shaders/dither_viewport.gdshader")
 
-var score: int = 0
+# Game state variables
+var stage_controller: Node
+var player: Node
+var hud: Node
+var bgm_player: AudioStreamPlayer
 var game_over: bool = false
 var lives: int = 3
 var bombs: int = 3
-var player: CharacterBody2D
-var stage_controller: Node
-var hud: CanvasLayer
-var bgm_player: AudioStreamPlayer
+var score: int = 0
 
-# Enhanced scoring system variables
+# Chain system variables
 var chain_count: int = 0
 var max_chain: int = 0
 var last_kill_time: float = 0.0
-var chain_timeout: float = 2.0  # Time window for chain bonus
-var medal_level: int = 0  # 0-3: Bronze, Silver, Gold, Platinum
+var chain_timeout: float = 2.0  # 2 seconds to maintain chain
 
-# Balanced score thresholds (inspired by Do Re Mi Sha 68k)
-var _next_extend_score: int = 500000  # More frequent extends
-var _next_bomb_score: int = 25000     # More frequent bombs
-var _next_medal_score: int = 100000   # Medal upgrade threshold
+# Medal system variables
+var medal_level: int = 0
 
-# Scoring multipliers and bonuses
+# Scoring multipliers
 var base_score_multiplier: float = 1.0
 var chain_bonus_multiplier: float = 1.0
 var medal_bonus_multiplier: float = 1.0
@@ -36,31 +34,41 @@ var medal_bonus_multiplier: float = 1.0
 var dev_mode: bool = false
 var dev_invincibility: bool = false
 var dev_audio_muted: bool = false
+
+# Internal variables
 var _backslash_was_pressed: bool = false
+var _next_bomb_score: int = 25000     # More frequent bombs
+var _next_extend_score: int = 500000  # More frequent extends
+var _next_medal_score: int = 100000   # Medal upgrade threshold
+
 
 func _ready() -> void:
 	# Start in windowed mode; fullscreen can cause issues on some platforms/drivers
 	# Use Command+F (macOS) or Alt+Enter (others) to toggle fullscreen from the editor.
 	add_to_group("game")
+
+	# Initialize GameViewport with proper settings
+	_setup_game_viewport()
+
 	_spawn_player()
 	# Use StageController instead of random spawns
 	stage_controller = STAGE_CONTROLLER_SCRIPT.new()
 	$GameViewport.add_child(stage_controller)
-	
+
 	# Create enemy container for proper spawning
 	var enemy_container = Node2D.new()
 	enemy_container.name = "Enemies"
 	$GameViewport.add_child(enemy_container)
-	
+
 	# Create bullet container for proper spawning
 	var bullet_container = Node2D.new()
 	bullet_container.name = "Bullets"
 	$GameViewport.add_child(bullet_container)
-	
+
 	stage_controller.enemy_killed.connect(_on_enemy_killed)
 	if stage_controller.has_signal("boss_defeated"):
 		stage_controller.boss_defeated.connect(_on_boss_defeated)
-	
+
 	# Wait a frame to ensure containers are ready
 	await get_tree().process_frame
 	stage_controller.start_run()
@@ -81,59 +89,121 @@ func _ready() -> void:
 	if tm and tm.has_signal("tick"):
 		# HUD listens to tick itself; no need to connect here
 		pass
+
+	# Connect GameViewport to display after a frame
+	call_deferred("_connect_viewport_display")
+
 	# Enable post-processing after first frame
 	call_deferred("_enable_postfx")
 
+	# Optimize rendering pipeline
+	call_deferred("_optimize_rendering_pipeline")
+
+func _setup_game_viewport() -> void:
+	# Configure GameViewport for proper rendering
+	$GameViewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	$GameViewport.size = Vector2i(320, 180)
+	$GameViewport.transparent_bg = false
+	print("GameViewport configured: size=", $GameViewport.size,
+		" update_mode=", $GameViewport.render_target_update_mode)
+
+func _connect_viewport_display() -> void:
+	# Wait for viewport to be ready
+	await get_tree().process_frame
+
+	# Connect GameViewport to display
+	var viewport_texture = $GameViewport.get_texture()
+	if viewport_texture:
+		$GameDisplay.texture = viewport_texture
+		print("GameViewport texture connected to display: ", viewport_texture)
+	else:
+		print("ERROR: GameViewport texture is null!")
+		# Retry after another frame
+		call_deferred("_connect_viewport_display")
+
 func _enable_postfx() -> void:
+	# Wait for GameViewport to be fully ready
+	await get_tree().process_frame
+	await get_tree().process_frame
+
 	# Order: build dither first, then CRT reads from it
 	_enable_dither()
 	await _enable_crt()
+
+	# Always show the post-processed view (shaders permanently enabled)
+	$GameDisplay.visible = false
+	$PostFX/CRT.visible = true
+	$PostDitherViewport/DitherPass.visible = true
+	# Ensure viewport updates are always enabled for shaders
+	$PostDitherViewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	print("Post-processing permanently enabled - shaders active")
 
 func _enable_dither() -> void:
 	var dither_node := $PostDitherViewport/DitherPass
 	var src_viewport := $GameViewport
 	var dither_viewport := $PostDitherViewport
+
 	if not (is_instance_valid(dither_node)
 		and is_instance_valid(src_viewport)
 		and is_instance_valid(dither_viewport)):
+		print("ERROR: Dither nodes not found!")
 		return
+
+	# Configure dither viewport
+	dither_viewport.size = Vector2i(320, 180)
+	dither_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	dither_viewport.transparent_bg = false
+
+	# Wait for source viewport to be ready
+	await get_tree().process_frame
+
 	# Render GameViewport into PostDitherViewport via a ColorRect using our
 	# dither shader that samples an explicit uniform.
 	var tex: Texture2D = src_viewport.get_texture()
+	if tex == null:
+		print("ERROR: GameViewport texture is null; retrying dither setup...")
+		# Retry after another frame
+		call_deferred("_enable_dither")
+		return
+
 	var mat := ShaderMaterial.new()
 	mat.shader = DITHER_SHADER
 	# Bind source texture into the explicit sampler uniform
-	if tex == null:
-		push_error("GameViewport texture is null; cannot apply dither shader.")
-		return
 	mat.set_shader_parameter("tex", tex)
-	# Much more subtle dither effect
+	# More subtle dither effect for better visibility
 	mat.set_shader_parameter("grayscale", false)
-	mat.set_shader_parameter("dither_strength", 0.1)
-	mat.set_shader_parameter("min_dither_brightness", 0.3)
-	mat.set_shader_parameter("color_a", Color(0, 0, 0, 1))
-	mat.set_shader_parameter("color_b", Color(1, 1, 1, 1))
+	mat.set_shader_parameter("dither_strength", 0.2)  # Reduced for better visibility
+	mat.set_shader_parameter("min_dither_brightness", 0.05)
+	mat.set_shader_parameter("color_a", Color(0.05, 0.05, 0.05, 1))
+	mat.set_shader_parameter("color_b", Color(0.95, 0.95, 0.95, 1))
 	mat.set_shader_parameter("bayer_mode", 4)
-	mat.set_shader_parameter("dither_repeat", 0.5)
+	mat.set_shader_parameter("dither_repeat", 1.0)
 	dither_node.material = mat
-	# Ensure the dither output renders into PostDitherViewport
-	dither_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+
+	print("Dither shader setup complete with texture: ", tex)
 	return
 
 func _enable_crt() -> void:
 	var crt := $PostFX/CRT
 	var dither_viewport := $PostDitherViewport
+
 	if not is_instance_valid(crt) or not is_instance_valid(dither_viewport):
-		print("ERROR: CRT or GameViewport not found!")
+		print("ERROR: CRT or DitherViewport not found!")
 		return
-	# Wait more frames for SubViewport to be fully ready
-	for i in 5:
-		await get_tree().process_frame
+
+	# Wait for dither viewport to be ready
+	await get_tree().process_frame
+	await get_tree().process_frame
+
 	print("Setting up CRT with viewport: ", dither_viewport.get_path())
+
 	# Use the dithered SubViewport's texture as input to CRT
 	var viewport_texture: Texture2D = dither_viewport.get_texture()
-	# Ensure the dither viewport updates
-	dither_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	if viewport_texture == null:
+		print("ERROR: Dither viewport texture is null; retrying CRT setup...")
+		# Retry after another frame
+		call_deferred("_enable_crt")
+		return
 
 	# Create CRT shader material
 	var mat := ShaderMaterial.new()
@@ -141,19 +211,19 @@ func _enable_crt() -> void:
 		mat.shader = CRT_SHADER
 		# Set the viewport texture as the input
 		mat.set_shader_parameter("tex", viewport_texture)
-		# Very subtle CRT effect
+		# Very subtle CRT effect for better visibility
 		mat.set_shader_parameter("mask_type", 0)  # No mask
 		mat.set_shader_parameter("curve", 0.0)    # No curve
-		mat.set_shader_parameter("sharpness", 0.3) # Low sharpness
+		mat.set_shader_parameter("sharpness", 0.9) # Higher sharpness for better visibility
 		mat.set_shader_parameter("color_offset", 0.0) # No offset
-		mat.set_shader_parameter("mask_brightness", 0.2)
-		mat.set_shader_parameter("scanline_brightness", 0.1)
-		mat.set_shader_parameter("min_scanline_thickness", 0.5) # Thin scanlines
+		mat.set_shader_parameter("mask_brightness", 1.0) # Full brightness
+		mat.set_shader_parameter("scanline_brightness", 0.9) # Higher scanline brightness
+		mat.set_shader_parameter("min_scanline_thickness", 0.9) # Thicker scanlines
 		mat.set_shader_parameter("aspect", 0.5625)  # 180/320 = 0.5625
 		mat.set_shader_parameter("wobble_strength", 0.0)
 		crt.material = mat
 		crt.visible = true
-		print("CRT setup complete!")
+		print("CRT setup complete with texture: ", viewport_texture)
 	else:
 		print("ERROR: CRT_SHADER not loaded!")
 
@@ -167,10 +237,8 @@ func _process(_delta: float) -> void:
 	if backslash_pressed and not _backslash_was_pressed:
 		_toggle_dev_mode()
 	_backslash_was_pressed = backslash_pressed
-	
-	# Toggle shaders with F1 key
-	if Input.is_action_just_pressed("ui_focus_next"):  # F1 key
-		_toggle_shaders()
+
+	# Shaders are now always enabled - no toggle needed
 
 	# Bomb input (fallback to X key if action not present)
 	var has_bomb_action := InputMap.has_action("bomb")
@@ -189,12 +257,74 @@ func _spawn_player() -> void:
 	player.global_position = Vector2(viewport_size.x / 2.0, viewport_size.y - 80.0)
 	player.hit.connect(_on_player_hit)
 	$GameViewport.add_child(player)
+	print("Player spawned at position: ", player.global_position, " in GameViewport")
+	
+	# Wait a frame then do additional debugging
+	await get_tree().process_frame
+	
+	# Debug player position and visibility extensively
+	if is_instance_valid(player):
+		print("=== PLAYER DEBUG INFO ===")
+		print("Player global_position: ", player.global_position)
+		print("Player local position: ", player.position)
+		print("Player visible: ", player.visible)
+		print("Player z_index: ", player.z_index)
+		print("Player modulate: ", player.modulate)
+		print("GameViewport size: ", $GameViewport.size)
+		print("GameViewport children count: ", $GameViewport.get_child_count())
+		
+		if player.has_node("Sprite2D"):
+			var sprite = player.get_node("Sprite2D")
+			print("Sprite visible: ", sprite.visible, " scale: ", sprite.scale, " texture: ", sprite.texture != null)
+			print("Sprite global_position: ", sprite.global_position)
+			print("Sprite modulate: ", sprite.modulate)
+		
+		# Count all ColorRect children (our fallbacks)
+		var rect_count = 0
+		for child in player.get_children():
+			if child is ColorRect:
+				rect_count += 1
+				print("Found ColorRect fallback: size=", child.size, " color=", child.color, " z_index=", child.z_index)
+		print("Total ColorRect fallbacks: ", rect_count)
+		print("========================")
+
+	# Debug: Check if player sprite is visible
+	if player.has_node("Sprite2D"):
+		var sprite = player.get_node("Sprite2D")
+		print("Player sprite visible: ", sprite.visible, " scale: ", sprite.scale, " texture: ", sprite.texture != null)
+		print("Player position: ", player.global_position, " GameViewport size: ", $GameViewport.size)
+	else:
+		print("Player missing Sprite2D node!")
+	
+	# Force player to be visible
+	call_deferred("_force_player_visibility")
+	
 	# Spawn invulnerability window
 	if player and player.has_method("start_invulnerability"):
 		player.call_deferred("start_invulnerability", 1.2)
 
 	# Apply dev mode settings to new player
 	_apply_dev_invincibility_state()
+
+func _force_player_visibility() -> void:
+	"""Force the player to be visible"""
+	if player and is_instance_valid(player):
+		if player.has_node("Sprite2D"):
+			var sprite = player.get_node("Sprite2D")
+			sprite.visible = true
+			sprite.modulate = Color.WHITE
+			if sprite.scale.x < 0.1 or sprite.scale.y < 0.1:
+				sprite.scale = Vector2(2.0, 2.0)  # Force a large scale
+			print("FORCED player sprite visibility: visible=", sprite.visible, " scale=", sprite.scale)
+		else:
+			print("Player has no Sprite2D - creating fallback")
+			# Create a very obvious fallback
+			var fallback = ColorRect.new()
+			fallback.size = Vector2(32, 32)
+			fallback.color = Color.RED
+			fallback.position = Vector2(-16, -16)
+			player.add_child(fallback)
+			print("Created RED fallback for player")
 
 func _respawn_player() -> void:
 	if game_over or lives <= 0:
@@ -221,23 +351,24 @@ func _on_enemy_killed(points: int) -> void:
 	# Enhanced scoring system with chain bonuses and medal multipliers
 	var final_score = _calculate_enhanced_score(points)
 	score += final_score
-	
+
 	# Update chain system
 	_update_chain_system()
-	
+
 	# Update medal system
 	_check_medal_upgrade()
-	
+
 	# Update displays
 	_update_score_label()
 	_update_chain_display()
 	_update_medal_display()
-	
+
 	# Check for rewards
 	_check_extends()
 	_check_bomb_restore()
-	
-	print("Enemy killed: Base points: ", points, " Final score: ", final_score, " Chain: ", chain_count, " Medal: ", medal_level)
+
+	print("Enemy killed: Base points: ", points, " Final score: ", final_score,
+			" Chain: ", chain_count, " Medal: ", medal_level)
 
 func _on_enemy_hit_player() -> void:
 	_on_player_hit()
@@ -253,7 +384,7 @@ func _on_player_hit() -> void:
 
 	# Reset chain on player hit (common in shmup games)
 	_reset_chain()
-	
+
 	lives -= 1
 	var rm := get_node_or_null("/root/RankManager")
 	if rm and rm.has_method("on_player_died"):
@@ -285,9 +416,9 @@ func _use_bomb() -> void:
 		return
 	if bombs <= 0:
 		return
-	
+
 	print("Using bomb. Bombs before: ", bombs)  # Debug log
-	
+
 	# Play bomb sound
 	var audio_manager = get_node_or_null("/root/AudioManager")
 	if audio_manager and audio_manager.has_method("play_bomb_use"):
@@ -338,7 +469,7 @@ func _check_bomb_restore() -> void:
 		var audio_manager = get_node_or_null("/root/AudioManager")
 		if audio_manager and audio_manager.has_method("play_bomb_restore"):
 			audio_manager.play_bomb_restore()
-		
+
 		bombs = min(bombs + 1, 3)  # Cap at 3 bombs
 		_next_bomb_score += 25000  # Next bomb at +25k score (more frequent)
 		print("Bombs after restore: ", bombs, " Next bomb at: ", _next_bomb_score)  # Debug log
@@ -373,41 +504,41 @@ func _update_bomb_display() -> void:
 # Enhanced scoring system functions
 func _calculate_enhanced_score(base_points: int) -> int:
 	var final_score = base_points
-	
+
 	# Apply chain bonus (up to 3x multiplier)
 	chain_bonus_multiplier = 1.0 + (chain_count * 0.1)  # +10% per kill in chain
 	chain_bonus_multiplier = min(chain_bonus_multiplier, 3.0)  # Cap at 3x
 	final_score = int(final_score * chain_bonus_multiplier)
-	
+
 	# Apply medal bonus (up to 2x multiplier)
 	medal_bonus_multiplier = 1.0 + (medal_level * 0.25)  # +25% per medal level
 	medal_bonus_multiplier = min(medal_bonus_multiplier, 2.0)  # Cap at 2x
 	final_score = int(final_score * medal_bonus_multiplier)
-	
+
 	# Apply distance bonus (close-range kills get more points)
 	var distance_bonus = _calculate_distance_bonus()
 	final_score += distance_bonus
-	
+
 	return final_score
 
 func _update_chain_system() -> void:
 	var current_time = Time.get_unix_time_from_system()
-	
+
 	# Check if chain should continue or reset
 	if current_time - last_kill_time <= chain_timeout:
 		chain_count += 1
 	else:
 		chain_count = 1  # Reset chain
-	
+
 	# Update max chain if needed
 	if chain_count > max_chain:
 		max_chain = chain_count
-	
+
 	last_kill_time = current_time
 
 func _check_medal_upgrade() -> void:
 	var new_medal_level = 0
-	
+
 	# Medal levels based on score thresholds
 	if score >= 1000000:  # 1M points
 		new_medal_level = 3  # Platinum
@@ -417,7 +548,7 @@ func _check_medal_upgrade() -> void:
 		new_medal_level = 1  # Silver
 	else:
 		new_medal_level = 0  # Bronze
-	
+
 	# Check if medal level increased
 	if new_medal_level > medal_level:
 		medal_level = new_medal_level
@@ -425,11 +556,11 @@ func _check_medal_upgrade() -> void:
 
 func _show_medal_upgrade(new_medal_level: int) -> void:
 	var medal_names = ["Bronze", "Silver", "Gold", "Platinum"]
-	
+
 	if is_instance_valid(hud) and hud.has_method("show_popup"):
 		var message = medal_names[new_medal_level] + " Medal!"
 		hud.call_deferred("show_popup", message)
-	
+
 	# Play medal upgrade sound
 	var audio_manager = get_node_or_null("/root/AudioManager")
 	if audio_manager and audio_manager.has_method("play_medal_upgrade"):
@@ -454,20 +585,20 @@ func _on_boss_defeated() -> void:
 	var boss_bonus = 50000  # Base boss bonus
 	var chain_bonus = chain_count * 1000  # Bonus based on current chain
 	var medal_bonus = medal_level * 5000  # Bonus based on medal level
-	
+
 	var total_boss_bonus = boss_bonus + chain_bonus + medal_bonus
 	score += total_boss_bonus
-	
+
 	# Show boss defeated popup
 	if is_instance_valid(hud) and hud.has_method("show_popup"):
 		var message = "Boss Defeated! +" + str(total_boss_bonus) + " pts"
 		hud.call_deferred("show_popup", message)
-	
+
 	# Update displays
 	_update_score_label()
 	_update_chain_display()
 	_update_medal_display()
-	
+
 	print("Boss defeated! Bonus: ", total_boss_bonus, " Chain: ", chain_count, " Medal: ", medal_level)
 
 func _calculate_distance_bonus() -> int:
@@ -475,16 +606,16 @@ func _calculate_distance_bonus() -> int:
 	# Close-range kills get bonus points (risk-reward system)
 	if not is_instance_valid(player):
 		return 0
-	
+
 	var screen_center = Vector2(160, 90)  # Half of 320x180
 	var player_pos = player.global_position
 	var distance = player_pos.distance_to(screen_center)
 	var max_distance = 100.0  # Maximum distance for full bonus
-	
+
 	# Closer to center = more bonus points (up to 1000 points)
 	var distance_ratio = 1.0 - (distance / max_distance)
 	distance_ratio = clamp(distance_ratio, 0.0, 1.0)
-	
+
 	return int(distance_ratio * 1000)
 
 func _is_player_stuck() -> bool:
@@ -492,16 +623,14 @@ func _is_player_stuck() -> bool:
 	# This can be used for emergency bomb restoration
 	if not is_instance_valid(player):
 		return false
-	
-	var screen_center = Vector2(160, 90)
+
 	var player_pos = player.global_position
-	var _distance = player_pos.distance_to(screen_center)
-	
+
 	# Player is considered "stuck" if too close to screen edges
 	var screen_bounds = Vector2(320, 180)
 	var edge_threshold = 20.0
-	
-	return (player_pos.x <= edge_threshold or 
+
+	return (player_pos.x <= edge_threshold or
 			player_pos.x >= screen_bounds.x - edge_threshold or
 			player_pos.y <= edge_threshold or
 			player_pos.y >= screen_bounds.y - edge_threshold)
@@ -512,7 +641,7 @@ func _emergency_bomb_restore() -> void:
 		print("Emergency bomb restoration!")
 		bombs = 1
 		_update_bomb_display()
-		
+
 		# Play emergency sound
 		var audio_manager = get_node_or_null("/root/AudioManager")
 		if audio_manager and audio_manager.has_method("play_bomb_restore"):
@@ -585,19 +714,19 @@ func _apply_dev_invincibility_state() -> void:
 	if is_instance_valid(player) and player.has_method("set_dev_invincibility"):
 		player.call_deferred("set_dev_invincibility", dev_invincibility)
 
-func _toggle_shaders() -> void:
-	# Toggle shaders on/off
-	var crt = $PostFX/CRT
-	var dither = $PostDitherViewport/DitherPass
-	
-	if crt and dither:
-		var shaders_enabled = crt.visible
-		crt.visible = !shaders_enabled
-		dither.visible = !shaders_enabled
-		
-		print("Shaders: ", "OFF" if shaders_enabled else "ON")
-		
-		# Show status in HUD if available
-		if is_instance_valid(hud) and hud.has_method("show_popup"):
-			var status = "ENABLED" if !shaders_enabled else "DISABLED"
-			hud.call_deferred("show_popup", "Shaders: %s" % status, Color.YELLOW)
+
+func _optimize_rendering_pipeline() -> void:
+	# Optimize rendering settings for shader-enabled performance
+	var game_viewport = $GameViewport
+	var dither_viewport = $PostDitherViewport
+
+	# Set optimal viewport settings for shader pipeline
+	game_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	game_viewport.transparent_bg = false
+
+	# Configure dither viewport for shader performance
+	dither_viewport.size = Vector2i(320, 180)
+	dither_viewport.transparent_bg = false
+	dither_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+
+	print("Rendering pipeline optimized for shader-enabled performance")

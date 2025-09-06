@@ -2,12 +2,12 @@ extends CharacterBody2D
 
 signal hit
 
-@export var speed: float = 160.0  # Reduced from 400.0 for playable speed
-@export var fire_cooldown_s: float = 0.12  # Increased from 0.08 for better pacing
-@export var sprite_target_height_px: float = 20.0
+const BULLET_SCENE: PackedScene = preload("res://scenes/bullet/Bullet.tscn")
+
+@export var speed: float = 160.0
+@export var fire_cooldown_s: float = 0.12
 @export var focus_speed_multiplier: float = 0.4
 @export var invuln_blink_interval_s: float = 0.08
-const BULLET_SCENE: PackedScene = preload("res://scenes/bullet/Bullet.tscn")
 
 var _can_fire: bool = true
 var _alive: bool = true
@@ -21,66 +21,108 @@ func _ready() -> void:
 	if has_node("Hurtbox"):
 		$Hurtbox.add_to_group("player_hurtbox")
 		$Hurtbox.area_entered.connect(_on_hurtbox_area_entered)
-	
+
+	# Use SpriteManager to setup sprite
 	if has_node("Sprite2D"):
 		var spr: Sprite2D = $Sprite2D
-		if spr and spr.texture:
-			var tex_size: Vector2i = spr.texture.get_size()
-			if tex_size.y > 0:
-				var s: float = sprite_target_height_px / float(tex_size.y)
-				spr.scale = Vector2(s, s)
+		print("BEFORE SpriteManager - Player sprite: visible=", spr.visible, " scale=", spr.scale, " texture=", spr.texture != null)
+		if spr.texture:
+			print("Texture size: ", spr.texture.get_size())
+		SpriteManager.auto_setup_player_sprite(spr)
+		print("AFTER SpriteManager - Player sprite: visible=", spr.visible, " scale=", spr.scale, " modulate=", spr.modulate)
+		
+		# FORCE VISIBILITY - Emergency override
+		spr.visible = true
+		spr.modulate = Color.CYAN  # Make it bright cyan to be unmistakable
+		if spr.scale.x < 0.5:
+			spr.scale = Vector2(2.0, 2.0)  # Force large scale
+			print("FORCED large scale: ", spr.scale)
+		print("Player sprite setup via SpriteManager.")
+	else:
+		print("Player missing Sprite2D node! Creating fallback.")
+		_create_fallback_sprite()
+
+	# ABSOLUTE EMERGENCY VISIBILITY - Add a guaranteed visible marker
+	var emergency_marker = ColorRect.new()
+	emergency_marker.size = Vector2(40, 40)
+	emergency_marker.color = Color.WHITE
+	emergency_marker.position = Vector2(-20, -20)
+	emergency_marker.z_index = 2000  # Top of everything
+	add_child(emergency_marker)
+	print("EMERGENCY: Added white marker at z_index 2000")
+
+
+func _create_fallback_sprite() -> void:
+	# Create a simple colored rectangle as a fallback
+	var fallback_rect = ColorRect.new()
+	fallback_rect.size = Vector2(24, 24)  # Larger size
+	fallback_rect.color = Color.RED  # Bright red to be obvious
+	fallback_rect.position = Vector2(-12, -12)
+	add_child(fallback_rect)
+	print("Created RED fallback sprite for player.")
+	
+	# Also add a second fallback for absolute visibility
+	var emergency_rect = ColorRect.new()
+	emergency_rect.size = Vector2(32, 32)
+	emergency_rect.color = Color.YELLOW
+	emergency_rect.position = Vector2(-16, -16)
+	emergency_rect.z_index = 1000  # Force to top
+	add_child(emergency_rect)
+	print("Created EMERGENCY YELLOW fallback with z_index 1000")
+
 
 func _physics_process(_delta: float) -> void:
 	if not _alive: return
-	
+
 	var input_vector := Vector2.ZERO
 	input_vector.x = Input.get_action_strength("ui_right") - Input.get_action_strength("ui_left")
 	input_vector.y = Input.get_action_strength("ui_down") - Input.get_action_strength("ui_up")
 	if input_vector.length() > 1.0:
 		input_vector = input_vector.normalized()
-	
-	var focusing := (InputMap.has_action("focus") and Input.is_action_pressed("focus")) or Input.is_key_pressed(KEY_SHIFT)
+
+	var focusing := (InputMap.has_action("focus") and
+		Input.is_action_pressed("focus")) or Input.is_key_pressed(KEY_SHIFT)
 	var effective_speed: float = speed * (focus_speed_multiplier if focusing else 1.0)
 	velocity = input_vector * effective_speed
 	move_and_slide()
-	
+
 	var rect := get_viewport().get_visible_rect()
 	global_position.x = clampf(global_position.x, 16.0, rect.size.x - 16.0)
 	global_position.y = clampf(global_position.y, 16.0, rect.size.y - 16.0)
 	global_position = global_position.round()
-	
+
 	if Input.is_action_pressed("ui_accept"):
 		_shoot()
 
 func _shoot() -> void:
 	if not _can_fire or not _alive: return
 	_can_fire = false
-	
+
 	# Play shooting sound
 	var audio_manager = get_node_or_null("/root/AudioManager")
 	if audio_manager and audio_manager.has_method("play_player_shot"):
 		audio_manager.play_player_shot()
-	
+
 	var root := get_tree().current_scene
 	var container := root.get_node_or_null("GameViewport/Bullets") if root else null
 	var bullets_fired: int = 0
-	
+
 	# Main shot pattern
 	var patterns := _get_shot_pattern_dirs(_shot_level)
 	for dir in patterns:
 		_spawn_bullet(global_position + Vector2(0, -20), dir, container, root)
 		bullets_fired += 1
-	
+
 	# Options add extra straight shots
 	var offsets := _get_option_offsets(_option_count)
 	for off in offsets:
 		_spawn_bullet(global_position + off, Vector2.UP, container, root)
 		bullets_fired += 1
-	
+
 	var rm := get_node_or_null("/root/RankManager")
 	if rm and rm.has_method("on_shot_fired"):
 		rm.on_shot_fired(float(max(1, bullets_fired)))
-	
+
 	await get_tree().create_timer(fire_cooldown_s, false).timeout
 	_can_fire = true
 
@@ -96,8 +138,10 @@ func _get_shot_pattern_dirs(level: int) -> Array:
 		1: [Vector2.UP],
 		2: [Vector2.UP, Vector2.UP.rotated(deg_to_rad(-10)), Vector2.UP.rotated(deg_to_rad(10))],
 		3: [Vector2.UP.rotated(deg_to_rad(-12)), Vector2.UP, Vector2.UP.rotated(deg_to_rad(12))],
-		4: [Vector2.UP.rotated(deg_to_rad(-15)), Vector2.UP.rotated(deg_to_rad(-5)), Vector2.UP.rotated(deg_to_rad(5)), Vector2.UP.rotated(deg_to_rad(15))],
-		5: [Vector2.UP.rotated(deg_to_rad(-18)), Vector2.UP.rotated(deg_to_rad(-9)), Vector2.UP, Vector2.UP.rotated(deg_to_rad(9)), Vector2.UP.rotated(deg_to_rad(18))]
+		4: [Vector2.UP.rotated(deg_to_rad(-15)), Vector2.UP.rotated(deg_to_rad(-5)),
+			Vector2.UP.rotated(deg_to_rad(5)), Vector2.UP.rotated(deg_to_rad(15))],
+		5: [Vector2.UP.rotated(deg_to_rad(-18)), Vector2.UP.rotated(deg_to_rad(-9)),
+			Vector2.UP, Vector2.UP.rotated(deg_to_rad(9)), Vector2.UP.rotated(deg_to_rad(18))]
 	}
 	return patterns.get(clamp(level, 1, 5), [Vector2.UP])
 
@@ -137,10 +181,10 @@ func start_invulnerability(duration_s: float = 1.2) -> void:
 func increase_power_level() -> void:
 	# Increase shot level (max 5)
 	_shot_level = min(_shot_level + 1, 5)
-	
+
 	# Increase option count (max 4)
 	_option_count = min(_option_count + 1, 4)
-	
+
 	# Play power-up sound
 	var audio_manager = get_node_or_null("/root/AudioManager")
 	if audio_manager and audio_manager.has_method("play_power_up"):
@@ -150,8 +194,18 @@ func increase_power_level() -> void:
 func set_dev_invincibility(enabled: bool) -> void:
 	_dev_invincibility = enabled
 	# If enabling dev invincibility, make sure sprite is visible
-	if enabled and has_node("Sprite2D"):
-		$Sprite2D.visible = true
-		$Sprite2D.modulate = Color.CYAN  # Tint cyan to show dev mode
-	elif not enabled and has_node("Sprite2D"):
-		$Sprite2D.modulate = Color.WHITE  # Reset to normal color
+	if enabled:
+		if has_node("Sprite2D"):
+			$Sprite2D.visible = true
+			$Sprite2D.modulate = Color.CYAN  # Tint cyan to show dev mode
+		# Also handle fallback sprites
+		for child in get_children():
+			if child is ColorRect:
+				child.color = Color.MAGENTA  # Different color for dev mode fallback
+	elif not enabled:
+		if has_node("Sprite2D"):
+			$Sprite2D.modulate = Color.WHITE  # Reset to normal color
+		# Reset fallback sprites
+		for child in get_children():
+			if child is ColorRect:
+				child.color = Color.CYAN  # Reset fallback color

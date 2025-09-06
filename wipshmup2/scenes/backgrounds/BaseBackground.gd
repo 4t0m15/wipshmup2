@@ -9,7 +9,7 @@ func _ready():
 func _on_scroll_timer_timeout():
 	# Move the background down to create scrolling effect
 	position.y += scroll_speed * 0.05
-	
+
 	# Reset position when it goes off screen
 	if position.y > 200:
 		position.y = -200

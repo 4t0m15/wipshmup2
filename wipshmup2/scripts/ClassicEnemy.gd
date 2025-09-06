@@ -6,24 +6,22 @@ const GameUtils = preload("res://scripts/GameUtils.gd")
 signal killed(points: int)
 signal hit_player
 
-enum EnemyType { FIGHTER, BOMBER, DESTROYER, SUBMARINE, TURRET, CONVOY, ATTACKER }
 enum Movement { STRAIGHT_DOWN, SIDE_TO_SIDE, DIVE_ATTACK, FORMATION, ESCORT, PATROL, ASCEND, SURFACE }
 enum FirePattern { NONE, STRAIGHT_SHOT, SPREAD_3, SPREAD_5, ALTERNATING, BOMB_DROP, TRIPLE_SHOT }
 
 const ENEMY_BULLET_SCENE: PackedScene = preload("res://scenes/bullet/EnemyBullet.tscn")
 
-@export var enemy_type: int = EnemyType.FIGHTER
-@export var speed: float = 35.0  # Reduced from 80.0 for playable speed
+@export var enemy_type: String = "fighter"
+@export var speed: float = 35.0
 @export var hp: int = 1
 @export var points: int = 100
-@export var sprite_target_height_px: float = 18.0
 @export var movement: int = Movement.STRAIGHT_DOWN
 @export var movement_amplitude: float = 32.0
-@export var movement_speed: float = 25.0  # Reduced from 60.0 for playable speed
+@export var movement_speed: float = 25.0
 @export var patrol_distance: float = 80.0
 @export var fire_pattern: int = FirePattern.STRAIGHT_SHOT
-@export var fire_interval: float = 2.5  # Increased from 2.0 for better pacing
-@export var bullet_speed: float = 80.0  # Reduced from 180.0 for playable speed
+@export var fire_interval: float = 2.5
+@export var bullet_speed: float = 80.0
 @export var fire_delay: float = 0.0
 @export var formation_offset: Vector2 = Vector2.ZERO
 @export var formation_leader: Node2D = null
@@ -73,11 +71,11 @@ func _ready() -> void:
 
 	if has_node("Sprite2D"):
 		var spr: Sprite2D = $Sprite2D
-		if spr and spr.texture:
-			var tex_size: Vector2i = spr.texture.get_size()
-			if tex_size.y > 0:
-				var s: float = sprite_target_height_px / float(tex_size.y)
-				spr.scale = Vector2(s, s)
+		SpriteManager.auto_setup_enemy_sprite(spr, enemy_type)
+		print("ClassicEnemy sprite setup via SpriteManager for type: ", enemy_type)
+	else:
+		print("ClassicEnemy missing Sprite2D node!")
+
 
 	if movement == Movement.DIVE_ATTACK:
 		var player = _get_cached_player()
@@ -156,7 +154,7 @@ func _apply_movement_pattern(delta: float) -> void:
 			position.y -= speed * delta
 
 func _check_bounds_and_cleanup() -> void:
-	if GameUtils.should_cleanup(position, enemy_type == EnemyType.TURRET):
+	if GameUtils.should_cleanup(position, enemy_type == "turret"):
 		queue_free()
 
 func take_damage(amount: int, source: String = "shot") -> void:
@@ -220,7 +218,7 @@ func _fire_loop() -> void:
 
 func _fire_straight_shot() -> void:
 	var direction = Vector2.DOWN
-	if enemy_type == EnemyType.TURRET:
+	if enemy_type == "turret":
 		var player = _get_cached_player()
 		if player:
 			direction = (player.global_position - global_position).normalized()

@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scenes/backgrounds/LaunchPad.gd" id="1_launch_script"]
-[ext_resource type="Texture2D" path="res://assets/LaunchPad_N.png" id="2_launch_pad"]
+[ext_resource type="Texture2D" path="res://assets/Base/LaunchPad_N2.png" id="2_launch_pad"]
 
 [sub_resource type="Timer" id="1_glow_timer"]
 wait_time = 0.1

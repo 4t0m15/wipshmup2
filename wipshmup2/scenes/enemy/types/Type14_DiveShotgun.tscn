@@ -1,15 +1,26 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=4 format=3 uid="uid://type14_dive_shotgun"]
 
-[ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
+[ext_resource type="Script" path="res://scripts/ClassicEnemy.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/Ships/C_Fighter_S_frame_003.png" id="2_tex"]
 
-[node name="Type14_DiveShotgun" instance=ExtResource("1_base")]
+[sub_resource type="CircleShape2D" id="1_shape"]
+radius = 8.0
+
+[node name="Type14_DiveShotgun" type="Area2D"]
+script = ExtResource("1_script")
+enemy_type = 0  # FIGHTER
 speed = 160.0
 hp = 2
 points = 220
-movement = 5
-fire = 9
-fire_interval_s = 1.8
-bullets_per_burst = 5
+movement = 2  # DIVE_ATTACK
+fire_pattern = 2  # SPREAD_5
+fire_interval = 1.8
 bullet_speed = 360.0
 
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_tex")
+modulate = Color(1, 0.6, 0.6, 1)
+scale = Vector2(1.0, 1.0)
 
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1_shape")

@@ -1,8 +1,13 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=4 format=3 uid="uid://type06_dive_aimed"]
 
-[ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
+[ext_resource type="Script" path="res://scripts/ClassicEnemy.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/Ships/C_Fighter_M_frame_003.png" id="2_tex"]
 
-[node name="Type06_DiveAimed" instance=ExtResource("1_base")]
+[sub_resource type="CircleShape2D" id="1_shape"]
+radius = 9.0
+
+[node name="Type06_DiveAimed" type="Area2D"]
+script = ExtResource("1_script")
 enemy_type = 3  # SUBMARINE
 speed = 40.0
 hp = 3
@@ -12,4 +17,10 @@ fire_pattern = 2  # SPREAD_5
 fire_interval = 2.0
 bullet_speed = 150.0
 
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_tex")
+modulate = Color(0.6, 1, 0.8, 1)
+scale = Vector2(1.1, 1.1)
 
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1_shape")

@@ -1,0 +1,72 @@
+[gd_scene load_steps=12 format=3 uid="uid://test_enemy_sprites"]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/Type01_StraightAimed.tscn" id="1_type01"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/Type02_SineFan.tscn" id="2_type02"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/Type03_ZigzagShotgun.tscn" id="3_type03"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/Type04_DiagonalLeftRing.tscn" id="4_type04"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/Type05_DiagonalRightRing.tscn" id="5_type05"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/Type06_DiveAimed.tscn" id="6_type06"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/Type07_ChaserDrone.tscn" id="7_type07"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/Type08_HeavyBomber.tscn" id="8_type08"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/Type09_WeavingInterceptor.tscn" id="9_type09"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/Type10_DivingAssault.tscn" id="10_type10"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/Type11_PatrolGunship.tscn" id="11_type11"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/Type12_KamikazeStriker.tscn" id="12_type12"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/Type13_FormationLeader.tscn" id="13_type13"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/FormationFighter.tscn" id="14_formation_fighter"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/FormationBomber.tscn" id="15_formation_bomber"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/EscortFighter.tscn" id="16_escort_fighter"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/types/GroundBuilding.tscn" id="17_ground_building"]
+
+[node name="TestEnemySprites" type="Node2D"]
+
+[node name="Type01_StraightAimed" parent="." instance=ExtResource("1_type01")]
+position = Vector2(50, 50)
+
+[node name="Type02_SineFan" parent="." instance=ExtResource("2_type02")]
+position = Vector2(100, 50)
+
+[node name="Type03_ZigzagShotgun" parent="." instance=ExtResource("3_type03")]
+position = Vector2(150, 50)
+
+[node name="Type04_DiagonalLeftRing" parent="." instance=ExtResource("4_type04")]
+position = Vector2(200, 50)
+
+[node name="Type05_DiagonalRightRing" parent="." instance=ExtResource("5_type05")]
+position = Vector2(250, 50)
+
+[node name="Type06_DiveAimed" parent="." instance=ExtResource("6_type06")]
+position = Vector2(300, 50)
+
+[node name="Type07_ChaserDrone" parent="." instance=ExtResource("7_type07")]
+position = Vector2(350, 50)
+
+[node name="Type08_HeavyBomber" parent="." instance=ExtResource("8_type08")]
+position = Vector2(50, 100)
+
+[node name="Type09_WeavingInterceptor" parent="." instance=ExtResource("9_type09")]
+position = Vector2(100, 100)
+
+[node name="Type10_DivingAssault" parent="." instance=ExtResource("10_type10")]
+position = Vector2(150, 100)
+
+[node name="Type11_PatrolGunship" parent="." instance=ExtResource("11_type11")]
+position = Vector2(200, 100)
+
+[node name="Type12_KamikazeStriker" parent="." instance=ExtResource("12_type12")]
+position = Vector2(250, 100)
+
+[node name="Type13_FormationLeader" parent="." instance=ExtResource("13_type13")]
+position = Vector2(300, 100)
+
+[node name="FormationFighter" parent="." instance=ExtResource("14_formation_fighter")]
+position = Vector2(350, 100)
+
+[node name="FormationBomber" parent="." instance=ExtResource("15_formation_bomber")]
+position = Vector2(50, 150)
+
+[node name="EscortFighter" parent="." instance=ExtResource("16_escort_fighter")]
+position = Vector2(100, 150)
+
+[node name="GroundBuilding" parent="." instance=ExtResource("17_ground_building")]
+position = Vector2(150, 150)

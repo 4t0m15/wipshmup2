@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scenes/boss/type0/Type0.gd" id="1"]
-[ext_resource type="Texture2D" path="res://images/boss_type0.svg" id="2"]
+[ext_resource type="Texture2D" path="res://assets/Ships/C_Destroyer_frame_008.png" id="2"]
 
 [sub_resource type="RectangleShape2D" id="1_1"]
 size = Vector2(64, 28)
@@ -11,7 +11,7 @@ script = ExtResource("1")
 monitoring = true
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-scale = Vector2(0.08, 0.08)
+scale = Vector2(0.8, 0.8)
 texture = ExtResource("2")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]

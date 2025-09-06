@@ -1,17 +1,26 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=4 format=3 uid="uid://type08_sweeper_cross"]
 
-[ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
+[ext_resource type="Script" path="res://scripts/ClassicEnemy.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/Ships/C_Fighter_M_frame_002.png" id="2_tex"]
 
-[node name="Type08_SweeperCross" instance=ExtResource("1_base")]
+[sub_resource type="CircleShape2D" id="1_shape"]
+radius = 10.0
+
+[node name="Type08_SweeperCross" type="Area2D"]
+script = ExtResource("1_script")
+enemy_type = 1  # BOMBER
 speed = 130.0
 hp = 2
 points = 190
-movement = 7
-frequency_hz = 1.2
-horizontal_speed = 160.0
-fire = 5
-fire_interval_s = 2.0
-bullets_per_burst = 6
+movement = 1  # SIDE_TO_SIDE
+fire_pattern = 2  # SPREAD_5
+fire_interval = 2.0
 bullet_speed = 300.0
 
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_tex")
+modulate = Color(0.8, 0.8, 1, 1)
+scale = Vector2(1.1, 1.1)
 
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1_shape")

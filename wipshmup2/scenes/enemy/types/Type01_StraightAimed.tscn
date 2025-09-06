@@ -1,15 +1,24 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=4 format=3 uid="uid://type01_straight_aimed"]
 
-[ext_resource type="PackedScene" path="res://scenes/enemy/PatternEnemyBase.tscn" id="1_base"]
+[ext_resource type="Script" path="res://scripts/ClassicEnemy.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/Ships/C_Fighter_S_frame_001.png" id="2_tex"]
 
-[node name="Type01_StraightAimed" instance=ExtResource("1_base")]
-enemy_type = 0
+[sub_resource type="CircleShape2D" id="1_shape"]
+radius = 8.0
+
+[node name="Type01_StraightAimed" type="Area2D"]
+script = ExtResource("1_script")
+enemy_type = "fighter"
 speed = 80.0
 hp = 1
 points = 100
-movement = 0
-fire_pattern = 0
+movement = 0  # STRAIGHT_DOWN
+fire_pattern = 0  # STRAIGHT_SHOT
 fire_interval = 2.0
 bullet_speed = 180.0
 
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_tex")
 
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1_shape")
