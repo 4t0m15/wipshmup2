@@ -85,6 +85,29 @@ theme_override_colors/font_color = Color(0.9, 1, 0.7, 1)
 theme_override_colors/font_outline_color = Color(0.2, 0.5, 0.1, 0.8)
 theme_override_constants/outline_size = 1
 
+[node name="StreakLabel" type="Label" parent="TopBar/HBox"]
+text = "Streak: 0"
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(1, 0.8, 0.4, 1)
+theme_override_colors/font_outline_color = Color(0.5, 0.3, 0.1, 0.8)
+theme_override_constants/outline_size = 1
+
+[node name="StreakTimer" type="MarginContainer" parent="."]
+offset_top = 16.0
+offset_right = 320.0
+offset_bottom = 20.0
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_right = 4
+
+[node name="ProgressBar" type="ProgressBar" parent="StreakTimer"]
+layout_mode = 2
+max_value = 1.0
+value = 1.0
+fill_mode = 0
+show_percentage = false
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(1, 1, 1, 0.8)
+
 
 
 [node name="CenterOverlay" type="Control" parent="."]

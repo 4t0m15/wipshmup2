@@ -25,50 +25,35 @@ func _ready() -> void:
 	# Use SpriteManager to setup sprite
 	if has_node("Sprite2D"):
 		var spr: Sprite2D = $Sprite2D
-		print("BEFORE SpriteManager - Player sprite: visible=", spr.visible, " scale=", spr.scale, " texture=", spr.texture != null)
+		print("BEFORE SpriteManager - Player sprite: visible=", spr.visible, " scale=", spr.scale)
+		print("Texture present: ", spr.texture != null)
 		if spr.texture:
 			print("Texture size: ", spr.texture.get_size())
 		SpriteManager.auto_setup_player_sprite(spr)
-		print("AFTER SpriteManager - Player sprite: visible=", spr.visible, " scale=", spr.scale, " modulate=", spr.modulate)
-		
-		# FORCE VISIBILITY - Emergency override
+		print("AFTER SpriteManager - Player sprite: visible=", spr.visible)
+		print("Scale: ", spr.scale, " modulate=", spr.modulate)
+
+		# FORCE VISIBILITY - Make sprite clearly visible
 		spr.visible = true
-		spr.modulate = Color.CYAN  # Make it bright cyan to be unmistakable
-		if spr.scale.x < 0.5:
-			spr.scale = Vector2(2.0, 2.0)  # Force large scale
-			print("FORCED large scale: ", spr.scale)
+		spr.modulate = Color.WHITE  # Reset to normal white instead of cyan
+		# Let SpriteManager handle the scaling properly
 		print("Player sprite setup via SpriteManager.")
 	else:
 		print("Player missing Sprite2D node! Creating fallback.")
 		_create_fallback_sprite()
 
-	# ABSOLUTE EMERGENCY VISIBILITY - Add a guaranteed visible marker
-	var emergency_marker = ColorRect.new()
-	emergency_marker.size = Vector2(40, 40)
-	emergency_marker.color = Color.WHITE
-	emergency_marker.position = Vector2(-20, -20)
-	emergency_marker.z_index = 2000  # Top of everything
-	add_child(emergency_marker)
-	print("EMERGENCY: Added white marker at z_index 2000")
+	# Remove the emergency marker since it's making the player look wrong
+	# The actual player sprite should be visible now with proper scale
 
 
 func _create_fallback_sprite() -> void:
-	# Create a simple colored rectangle as a fallback
+	# Create a simple colored rectangle as a fallback - remove the extra fallbacks
 	var fallback_rect = ColorRect.new()
-	fallback_rect.size = Vector2(24, 24)  # Larger size
-	fallback_rect.color = Color.RED  # Bright red to be obvious
-	fallback_rect.position = Vector2(-12, -12)
+	fallback_rect.size = Vector2(16, 16)  # Reasonable size
+	fallback_rect.color = Color.WHITE  # White should be visible through dither
+	fallback_rect.position = Vector2(-8, -8)
 	add_child(fallback_rect)
-	print("Created RED fallback sprite for player.")
-	
-	# Also add a second fallback for absolute visibility
-	var emergency_rect = ColorRect.new()
-	emergency_rect.size = Vector2(32, 32)
-	emergency_rect.color = Color.YELLOW
-	emergency_rect.position = Vector2(-16, -16)
-	emergency_rect.z_index = 1000  # Force to top
-	add_child(emergency_rect)
-	print("Created EMERGENCY YELLOW fallback with z_index 1000")
+	print("Created WHITE fallback sprite for player.")
 
 
 func _physics_process(_delta: float) -> void:

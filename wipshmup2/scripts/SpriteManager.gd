@@ -20,7 +20,7 @@ const TARGET_SIZES = {
 
 # Sprite scaling presets for different entity types
 const SCALE_PRESETS = {
-	"player": Vector2(1.5, 1.5),
+	"player": Vector2(0.2, 0.2),  # Much smaller scale for large sprite sheet
 	"enemy_fighter": Vector2(1.2, 1.2),
 	"enemy_bomber": Vector2(1.0, 1.0),
 	"enemy_turret": Vector2(1.0, 1.0),

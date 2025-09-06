@@ -1,0 +1,71 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/BackgroundManager.gd" id="1_bg_manager"]
+[ext_resource type="Script" path="res://scripts/BackgroundTestController.gd" id="2_test_controller"]
+
+[node name="BackgroundTest" type="Node2D"]
+script = ExtResource("2_test_controller")
+
+[node name="BackgroundManager" type="Node2D" parent="."]
+script = ExtResource("1_bg_manager")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Control" type="Control" parent="UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/Control"]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 300.0
+offset_bottom = 200.0
+
+[node name="Title" type="Label" parent="UI/Control/VBoxContainer"]
+text = "Background Test Controls"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="UI/Control/VBoxContainer"]
+
+[node name="EnvironmentLabel" type="Label" parent="UI/Control/VBoxContainer"]
+text = "Environment: Space Deep"
+
+[node name="HSeparator2" type="HSeparator" parent="UI/Control/VBoxContainer"]
+
+[node name="Button1" type="Button" parent="UI/Control/VBoxContainer"]
+text = "Space Deep"
+
+[node name="Button2" type="Button" parent="UI/Control/VBoxContainer"]
+text = "Asteroid Field"
+
+[node name="Button3" type="Button" parent="UI/Control/VBoxContainer"]
+text = "Nebula"
+
+[node name="Button4" type="Button" parent="UI/Control/VBoxContainer"]
+text = "Planet Orbit"
+
+[node name="Button5" type="Button" parent="UI/Control/VBoxContainer"]
+text = "Star System"
+
+[node name="Button6" type="Button" parent="UI/Control/VBoxContainer"]
+text = "Base Approach"
+
+[node name="Button7" type="Button" parent="UI/Control/VBoxContainer"]
+text = "Combat Zone"
+
+[node name="HSeparator3" type="HSeparator" parent="UI/Control/VBoxContainer"]
+
+[node name="IntensityLabel" type="Label" parent="UI/Control/VBoxContainer"]
+text = "Intensity: 1.0"
+
+[node name="IntensitySlider" type="HSlider" parent="UI/Control/VBoxContainer"]
+min_value = 0.1
+max_value = 2.0
+step = 0.1
+value = 1.0
+
+[node name="HSeparator4" type="HSeparator" parent="UI/Control/VBoxContainer"]
+
+[node name="AutoCycleButton" type="Button" parent="UI/Control/VBoxContainer"]
+text = "Auto Cycle (OFF)"

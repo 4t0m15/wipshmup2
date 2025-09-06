@@ -258,10 +258,10 @@ func _spawn_player() -> void:
 	player.hit.connect(_on_player_hit)
 	$GameViewport.add_child(player)
 	print("Player spawned at position: ", player.global_position, " in GameViewport")
-	
+
 	# Wait a frame then do additional debugging
 	await get_tree().process_frame
-	
+
 	# Debug player position and visibility extensively
 	if is_instance_valid(player):
 		print("=== PLAYER DEBUG INFO ===")
@@ -578,6 +578,9 @@ func _reset_chain() -> void:
 	# Reset chain count when player gets hit
 	chain_count = 0
 	_update_chain_display()
+	# Also reset the HUD timer bar
+	if is_instance_valid(hud) and hud.has_method("reset_streak_timer"):
+		hud.call("reset_streak_timer")
 	print("Chain reset due to player hit")
 
 func _on_boss_defeated() -> void:

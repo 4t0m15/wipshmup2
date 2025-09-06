@@ -3,11 +3,16 @@ extends CanvasLayer
 var _accum_time_s: float = 0.0
 var _accum_ticks: int = 0
 var _rainbow_time: float = 0.0
+var _streak_timer: float = 0.0
+var _streak_timeout: float = 2.0  # Should match the timeout in Main.gd
+var _streak_active: bool = false
 
 @onready var _score_label: Label = $TopBar/HBox/ScoreLabel
 @onready var _lives_label: Label = $TopBar/HBox/LivesLabel
 @onready var _tps_label: Label = $TopBar/HBox/TPSLabel
 @onready var _bombs_label: Label = $TopBar/HBox/BombsLabel
+@onready var _streak_label: Label = $TopBar/HBox/StreakLabel
+@onready var _streak_timer_bar: ProgressBar = $StreakTimer/ProgressBar
 @onready var _overlay_dim: ColorRect = $CenterOverlay/OverlayDim
 @onready var _msg_panel: PanelContainer = $CenterOverlay/MessagePanel
 @onready var _msg_label: Label = $CenterOverlay/MessagePanel/VBox/MessageLabel
@@ -34,11 +39,33 @@ func _ready() -> void:
 		add_child(_dev_info_label)
 	else:
 		_dev_info_label = get_node("DevInfo")
+	
+	# Initialize streak timer bar
+	if is_instance_valid(_streak_timer_bar):
+		_streak_timer_bar.visible = false
 
 func _process(delta: float) -> void:
 	_rainbow_time += delta * 3.0  # Speed up the rainbow effect
 	if is_instance_valid(_shiba_label):
 		_shiba_label.add_theme_color_override("font_color", _get_rainbow_color(_rainbow_time))
+	
+	# Update streak timer
+	if _streak_active and _streak_timer > 0.0:
+		_streak_timer -= delta
+		var progress = max(0.0, _streak_timer / _streak_timeout)
+		_streak_timer_bar.value = progress
+		
+		# Change color based on remaining time
+		if progress > 0.5:
+			_streak_timer_bar.modulate = Color(0.4, 1.0, 0.4, 1.0)  # Green
+		elif progress > 0.25:
+			_streak_timer_bar.modulate = Color(1.0, 1.0, 0.4, 1.0)  # Yellow
+		else:
+			_streak_timer_bar.modulate = Color(1.0, 0.4, 0.4, 1.0)  # Red
+		
+		if _streak_timer <= 0.0:
+			_streak_active = false
+			_streak_timer_bar.visible = false
 
 func _get_rainbow_color(time: float) -> Color:
 	# Create rainbow effect using HSV color space
@@ -75,9 +102,34 @@ func set_bombs(value: int) -> void:
 	var text := "Bombs: %d" % max(0, value)
 	_bombs_label.text = text
 
-func set_chain(_current_chain: int, _max_chain: int) -> void:
-	# Placeholder for chain display - can be implemented later
-	pass
+func set_chain(current_chain: int, max_chain: int) -> void:
+	if current_chain > 0:
+		_streak_label.text = "Streak: %d (Best: %d)" % [current_chain, max_chain]
+		# Add visual emphasis for longer streaks
+		if current_chain >= 10:
+			_streak_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.2, 1.0))  # Red-orange for high streaks
+		elif current_chain >= 5:
+			_streak_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2, 1.0))  # Orange for medium streaks
+		else:
+			_streak_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4, 1.0))  # Default yellow-orange
+		
+		# Start/reset the streak timer
+		_streak_timer = _streak_timeout
+		_streak_active = true
+		_streak_timer_bar.visible = true
+		_streak_timer_bar.value = 1.0
+		_streak_timer_bar.modulate = Color(0.4, 1.0, 0.4, 1.0)  # Start with green
+	else:
+		_streak_label.text = "Streak: 0 (Best: %d)" % max_chain
+		_streak_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1.0))  # Gray when no streak
+		# Hide the timer bar when no streak
+		_streak_active = false
+		_streak_timer_bar.visible = false
+
+func reset_streak_timer() -> void:
+	# Called when streak is broken due to timeout or player getting hit
+	_streak_active = false
+	_streak_timer_bar.visible = false
 
 func set_medal(_medal_level: int) -> void:
 	# Placeholder for medal display - can be implemented later
