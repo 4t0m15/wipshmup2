@@ -1,14 +1,9 @@
-[gd_scene load_steps=10 format=3 uid="uid://c6kbxfx42hul1"]
+[gd_scene load_steps=4 format=3 uid="uid://c6kbxfx42hul1"]
 
 [ext_resource type="Script" uid="uid://f7x5uq6o2is6" path="res://scenes/main/Main.gd" id="1_9m0k2"]
 [ext_resource type="PackedScene" path="res://scenes/main/HUD.tscn" id="2_hud"]
 [ext_resource type="AudioStream" uid="uid://b7k2yqd8vp3xd" path="res://retro-waves-139640.mp3" id="3_bgm"]
-[ext_resource type="Texture2D" uid="uid://bv7re1j7m86ji" path="res://assets/Space/Galaxy_frame_001.png" id="4_galaxy"]
-[ext_resource type="Texture2D" uid="uid://d3uotmrfdxr3p" path="res://assets/Space/Sun.png" id="5_sun"]
-[ext_resource type="Texture2D" uid="uid://dmye4x1306x7u" path="res://assets/Space/Planet_1.png" id="6_planet1"]
-[ext_resource type="Texture2D" uid="uid://dpmcwivcfhdbk" path="res://assets/Space/Planet_2.png" id="7_planet2"]
-[ext_resource type="Texture2D" uid="uid://qt8m4324ww0o" path="res://assets/Space/Asteroid_frame_001.png" id="8_asteroid"]
-[ext_resource type="Texture2D" uid="uid://b72tbm6talogl" path="res://assets/Space/SpaceJunk_frame_001.png" id="9_spacejunk"]
+[ext_resource type="Script" uid="uid://c5wet1aor8jhv" path="res://scripts/SpaceBackground.gd" id="4_space_bg_script"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_9m0k2")
@@ -28,41 +23,14 @@ anchor_bottom = 1.0
 color = Color(0.2, 0.1, 0.3, 1)
 
 [node name="SpaceBackground" type="Node2D" parent="GameViewport"]
-
-[node name="Galaxy" type="Sprite2D" parent="GameViewport/SpaceBackground"]
-position = Vector2(160, 90)
-scale = Vector2(0.08, 0.08)
-texture = ExtResource("4_galaxy")
-
-[node name="Sun" type="Sprite2D" parent="GameViewport/SpaceBackground"]
-position = Vector2(280, 40)
-scale = Vector2(0.06, 0.06)
-texture = ExtResource("5_sun")
-
-[node name="Planet1" type="Sprite2D" parent="GameViewport/SpaceBackground"]
-position = Vector2(40, 140)
-scale = Vector2(0.04, 0.04)
-texture = ExtResource("6_planet1")
-
-[node name="Planet2" type="Sprite2D" parent="GameViewport/SpaceBackground"]
-position = Vector2(280, 160)
-scale = Vector2(0.03, 0.03)
-texture = ExtResource("7_planet2")
-
-[node name="Asteroid1" type="Sprite2D" parent="GameViewport/SpaceBackground"]
-position = Vector2(80, 60)
-scale = Vector2(0.05, 0.05)
-texture = ExtResource("8_asteroid")
-
-[node name="Asteroid2" type="Sprite2D" parent="GameViewport/SpaceBackground"]
-position = Vector2(240, 80)
-scale = Vector2(0.04, 0.04)
-texture = ExtResource("8_asteroid")
-
-[node name="SpaceJunk1" type="Sprite2D" parent="GameViewport/SpaceBackground"]
-position = Vector2(120, 120)
-scale = Vector2(0.03, 0.03)
-texture = ExtResource("9_spacejunk")
+script = ExtResource("4_space_bg_script")
+enable_star_field = null
+star_count = null
+star_speed_range = null
+enable_planets = null
+planet_count = null
+planet_speed_range = null
+update_frequency = null
 
 [node name="SpawnTimer" type="Timer" parent="GameViewport"]
 wait_time = 1.2
