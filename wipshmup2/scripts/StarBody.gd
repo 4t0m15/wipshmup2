@@ -67,54 +67,103 @@ func _ready():
 		sprite = Sprite2D.new()
 		add_child(sprite)
 
+
 func initialize(
+
 		texture: Texture2D,
-		speed_range: Vector2,
+
+		speed_range_in: Vector2,
+
 		alpha_range: Vector2,
+
 		direction_variation_y: Vector2,
+
 		lod_slow: int,
+
 		lod_medium: int,
+
 		lod_fast: int,
+
 		viewport_size: Vector2
+
 	) -> void:
+
 	"""
+
 	Configure the star with fresh randomized parameters.
+
 	"""
+
 	_viewport_size = viewport_size
-	_speed_range = speed_range
+
+	_speed_range = speed_range_in
+
 	_alpha_range = alpha_range
+
 	_lod_slow = max(1, lod_slow)
+
 	_lod_medium = max(1, lod_medium)
+
 	_lod_fast = max(1, lod_fast)
 
+
+
 	if not sprite:
+
 		sprite = Sprite2D.new()
+
 		add_child(sprite)
+
+
 
 	sprite.texture = texture
 
+
+
 	# Randomize scale
+
 	var jitter = 1.0 + randf_range(-random_scale_jitter, random_scale_jitter)
+
 	sprite.scale = base_scale * jitter
 
+
+
 	# Randomize speed
-	speed = randf_range(speed_range.x, speed_range.y)
+
+	speed = randf_range(speed_range_in.x, speed_range_in.y)
+
+
 
 	# Direction (always primarily left with slight vertical variance)
+
 	direction = Vector2(-1.0, randf_range(direction_variation_y.x, direction_variation_y.y))
 
+
+
 	# Alpha
+
 	alpha = randf_range(alpha_range.x, alpha_range.y)
+
 	sprite.modulate = Color(1, 1, 1, alpha)
 
+
+
 	# Assign position
+
 	position = Vector2(
+
 		randf_range(-viewport_size.x * 0.5, viewport_size.x * 1.5),
+
 		randf_range(-viewport_size.y * 0.5, viewport_size.y * 1.5)
+
 	)
 
+
+
 	# Determine LOD bucket
-	lod_mod = compute_star_lod(speed, speed_range, _lod_slow, _lod_medium, _lod_fast)
+
+	lod_mod = compute_star_lod(speed, speed_range_in, _lod_slow, _lod_medium, _lod_fast)
+
 
 func reconfigure_for_reuse() -> void:
 	"""
