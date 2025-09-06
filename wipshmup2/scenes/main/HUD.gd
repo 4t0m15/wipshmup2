@@ -43,7 +43,7 @@ func _process(delta: float) -> void:
 func _get_rainbow_color(time: float) -> Color:
 	# Create rainbow effect using HSV color space
 	var hue = fmod(time, 1.0)  # Cycle through hue from 0 to 1
-	return Color.from_hsv(hue, 1.0, 1.0)  # Full saturation and value for vibrant colors
+	return Color.from_hsv(hue, 1.0, 1.0, 1.0)  # Full saturation and value for vibrant colors
 
 func set_score(value: int) -> void:
 	_score_label.text = "Score: %d" % value
