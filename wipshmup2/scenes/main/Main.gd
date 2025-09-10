@@ -221,6 +221,15 @@ func _enable_crt() -> void:
 		mat.set_shader_parameter("min_scanline_thickness", 0.9) # Thicker scanlines
 		mat.set_shader_parameter("aspect", 0.5625)  # 180/320 = 0.5625
 		mat.set_shader_parameter("wobble_strength", 0.0)
+		# Enable global color adjustments by default for better testing visibility
+		mat.set_shader_parameter("brightness", 0.08)
+		mat.set_shader_parameter("contrast", 1.15)
+		mat.set_shader_parameter("saturation", 1.2)
+		mat.set_shader_parameter("hue_shift_degrees", 0.0)
+		mat.set_shader_parameter("tint_color", Color(1.0, 1.0, 1.0))
+		mat.set_shader_parameter("tint_strength", 0.0)
+		mat.set_shader_parameter("invert", false)
+		mat.set_shader_parameter("gamma", 1.0)
 		crt.material = mat
 		crt.visible = true
 		print("CRT setup complete with texture: ", viewport_texture)

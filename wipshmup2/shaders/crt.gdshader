@@ -83,6 +83,17 @@ uniform float wobble_strength : hint_range(0.0, 1.0) = 0.0;
 
 varying flat float wobble;
 
+// --- Global color adjustment uniforms (optional) ---
+// Defaults keep original look; set via script to enable by default.
+uniform float brightness : hint_range(-1.0, 1.0) = 0.0;
+uniform float contrast   : hint_range(0.0, 2.0)   = 1.0;
+uniform float saturation : hint_range(0.0, 2.0)   = 1.0;
+uniform float hue_shift_degrees : hint_range(-180.0, 180.0) = 0.0;
+uniform vec4  tint_color : source_color = vec4(1.0);
+uniform float tint_strength : hint_range(0.0, 1.0) = 0.0;
+uniform bool  invert = false;
+uniform float gamma : hint_range(0.1, 4.0) = 1.0;
+
 void vertex()
 {
 	wobble = cos(TIME * TAU * 15.0) * wobble_strength / 8192.0;
@@ -128,6 +139,25 @@ vec3 srgb_to_linear(vec3 col)
 		col / 12.92,
 		lessThan(col, vec3(0.04045))
 	);
+}
+
+
+// Utility: RGB <-> HSV conversion for hue shifting
+vec3 rgb2hsv(vec3 c)
+{
+    vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0);
+    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+    float d = q.x - min(q.w, q.y);
+    float e = 1.0e-10;
+    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+
+vec3 hsv2rgb(vec3 c)
+{
+    vec3 p = abs(fract(c.xxx + vec3(0.0, 2.0/3.0, 1.0/3.0)) * 6.0 - 3.0);
+    vec3 rgb = c.z * mix(vec3(1.0), clamp(p - 1.0, 0.0, 1.0), c.y);
+    return rgb;
 }
 
 
@@ -248,6 +278,8 @@ vec4 generate_mask(vec2 fragcoord)
 {
 	switch (mask_type)
 	{
+		case 0: // Null
+			return vec4(1.0);
 		case 1: // Dots
 			const vec3 pattern[] = {vec3(1,0,0), vec3(0,1,0), vec3(0,0,1), vec3(0,0,0)};
 
@@ -288,13 +320,16 @@ vec4 generate_mask(vec2 fragcoord)
 			return vec4(pattern[icoords.y * 4 + icoords.x], 0.375);
 			
 		default:
-			return vec4(0.5);
+			return vec4(1.0);
 	}
 }
 
 // Add phosphor mask/grill
 vec3 mask(vec3 linear_color, vec2 fragcoord)
 {
+	if (mask_type == 0) {
+		return linear_color; // fully bypass mask when disabled
+	}
 	// Get the pattern for the mask. Mask.w equals avg. brightness of the mask
 	vec4 mask = generate_mask(fragcoord);
 	
@@ -330,11 +365,38 @@ void fragment()
 	// Sample the scanlines
 	vec3 col = scanlines(warped_coords);
 
-	// Apply phosphor mask
+	// Apply phosphor mask (bypassed when mask_type == 0)
 	col = mask(col, FRAGCOORD.xy);
 
 	// Convert back to srgb
 	col = linear_to_srgb(col);
 
-	COLOR.rgb = col;
+	// Apply global color adjustments in sRGB space
+	vec3 adj = col;
+
+	// brightness / contrast
+	adj = clamp(adj + vec3(brightness), 0.0, 1.0);
+	adj = clamp((adj - 0.5) * contrast + 0.5, 0.0, 1.0);
+
+	// saturation
+	float luma = dot(adj, vec3(0.2126, 0.7152, 0.0722));
+	adj = mix(vec3(luma), adj, saturation);
+
+	// hue shift via HSV rotation (avoid matrix constructors for portability)
+	vec3 hsv = rgb2hsv(adj);
+	hsv.x = fract(hsv.x + (hue_shift_degrees / 360.0));
+	adj = clamp(hsv2rgb(hsv), 0.0, 1.0);
+
+	// tint
+	adj = mix(adj, adj * tint_color.rgb, tint_strength);
+
+	// invert
+	if (invert) {
+		adj = 1.0 - adj;
+	}
+
+	// gamma correction (user adjustable)
+	adj = pow(max(adj, vec3(0.0)), vec3(1.0 / gamma));
+
+	COLOR.rgb = adj;
 }

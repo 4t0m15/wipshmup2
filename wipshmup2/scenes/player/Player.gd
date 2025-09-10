@@ -33,10 +33,9 @@ func _ready() -> void:
 		print("AFTER SpriteManager - Player sprite: visible=", spr.visible)
 		print("Scale: ", spr.scale, " modulate=", spr.modulate)
 
-		# FORCE VISIBILITY - Make sprite clearly visible
+		# FORCE VISIBILITY - Make sprite clearly visible (keep SpriteManager color)
 		spr.visible = true
-		spr.modulate = Color.WHITE  # Reset to normal white instead of cyan
-		# Let SpriteManager handle the scaling properly
+		# Let SpriteManager handle the modulate color for differentiation
 		print("Player sprite setup via SpriteManager.")
 	else:
 		print("Player missing Sprite2D node! Creating fallback.")

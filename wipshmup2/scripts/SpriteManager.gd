@@ -20,7 +20,7 @@ const TARGET_SIZES = {
 
 # Sprite scaling presets for different entity types
 const SCALE_PRESETS = {
-	"player": Vector2(0.2, 0.2),  # Much smaller scale for large sprite sheet
+	"player": Vector2(0.35, 0.35),  # Larger player scale for better visibility
 	"enemy_fighter": Vector2(1.2, 1.2),
 	"enemy_bomber": Vector2(1.0, 1.0),
 	"enemy_turret": Vector2(1.0, 1.0),
@@ -30,15 +30,22 @@ const SCALE_PRESETS = {
 	"powerup": Vector2(1.0, 1.0)
 }
 
-# Color modulation presets for different enemy types
+# Color modulation presets for clear differentiation
 const COLOR_PRESETS = {
+	# Player: vivid green
+	"player": Color(0.3, 1.0, 0.4, 1.0),
+	# Enemies (explicit enemy_* keys used by auto_setup_enemy_sprite)
+	"enemy_fighter": Color(1.0, 0.35, 0.35, 1.0),
+	"enemy_bomber": Color(1.0, 0.6, 0.2, 1.0),
+	"enemy_turret": Color(1.0, 0.85, 0.25, 1.0),
+	# Fallbacks / general roles
 	"default": Color.WHITE,
-	"fighter": Color.WHITE,
-	"bomber": Color(0.7, 0.7, 1, 1),
-	"turret": Color(0.8, 0.8, 1, 1),
-	"escort": Color(0.8, 1, 0.8, 1),
-	"kamikaze": Color(1, 0.4, 0.4, 1),
-	"boss": Color.WHITE
+	"fighter": Color(1.0, 0.35, 0.35, 1.0),
+	"bomber": Color(1.0, 0.6, 0.2, 1.0),
+	"turret": Color(1.0, 0.85, 0.25, 1.0),
+	"escort": Color(1.0, 0.5, 0.8, 1.0),
+	"kamikaze": Color(1, 0.2, 0.2, 1),
+	"boss": Color(0.8, 0.4, 1.0, 1.0)
 }
 
 static func setup_sprite(sprite: Sprite2D, entity_type: String, target_height: float = -1.0) -> void:
@@ -69,8 +76,14 @@ static func setup_sprite(sprite: Sprite2D, entity_type: String, target_height: f
 			# Fallback to preset scale
 			sprite.scale = SCALE_PRESETS.get(entity_type, Vector2(1.0, 1.0))
 	
-	# Apply color modulation
-	sprite.modulate = COLOR_PRESETS.get(entity_type, Color.WHITE)
+	# Apply color modulation (normalize keys like enemy_*)
+	var key := entity_type
+	if not COLOR_PRESETS.has(key):
+		if key.begins_with("enemy_"):
+			# try both specific enemy_* and generic role
+			var role := key.replace("enemy_", "")
+			key = ("enemy_" + role) if COLOR_PRESETS.has("enemy_" + role) else role
+	sprite.modulate = COLOR_PRESETS.get(key, Color.WHITE)
 	sprite.visible = true
 	
 	# Debug information
