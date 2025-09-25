@@ -6,6 +6,8 @@ const STAGE_CONTROLLER_SCRIPT: Script = preload("res://scripts/StageController.g
 const CRT_SHADER: Shader = preload("res://shaders/crt.gdshader")
 const DITHER_SHADER: Shader = preload("res://shaders/dither_viewport.gdshader")
 
+@export var enable_postfx: bool = false
+
 # Game state variables
 var stage_controller: Node
 var player: Node
@@ -93,8 +95,11 @@ func _ready() -> void:
 	# Connect GameViewport to display after a frame
 	call_deferred("_connect_viewport_display")
 
-	# Enable post-processing after first frame
-	call_deferred("_enable_postfx")
+	# Enable post-processing after first frame if it's explicitly allowed.
+	if enable_postfx:
+		call_deferred("_enable_postfx")
+	else:
+		call_deferred("_disable_postfx")
 
 	# Optimize rendering pipeline
 	call_deferred("_optimize_rendering_pipeline")
@@ -127,8 +132,12 @@ func _enable_postfx() -> void:
 	await get_tree().process_frame
 
 	# Order: build dither first, then CRT reads from it
-	_enable_dither()
-	await _enable_crt()
+	var dither_ready := await _enable_dither()
+	var crt_ready := await _enable_crt()
+	if not (dither_ready and crt_ready):
+		print("Post-processing pipeline incomplete - falling back to direct viewport display")
+		_disable_postfx()
+		return
 
 	# Always show the post-processed view (shaders permanently enabled)
 	$GameDisplay.visible = false
@@ -138,7 +147,7 @@ func _enable_postfx() -> void:
 	$PostDitherViewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	print("Post-processing permanently enabled - shaders active")
 
-func _enable_dither() -> void:
+func _enable_dither() -> bool:
 	var dither_node := $PostDitherViewport/DitherPass
 	var src_viewport := $GameViewport
 	var dither_viewport := $PostDitherViewport
@@ -147,7 +156,7 @@ func _enable_dither() -> void:
 		and is_instance_valid(src_viewport)
 		and is_instance_valid(dither_viewport)):
 		print("ERROR: Dither nodes not found!")
-		return
+		return false
 
 	# Configure dither viewport
 	dither_viewport.size = Vector2i(320, 180)
@@ -164,7 +173,7 @@ func _enable_dither() -> void:
 		print("ERROR: GameViewport texture is null; retrying dither setup...")
 		# Retry after another frame
 		call_deferred("_enable_dither")
-		return
+		return false
 
 	var mat := ShaderMaterial.new()
 	mat.shader = DITHER_SHADER
@@ -181,15 +190,15 @@ func _enable_dither() -> void:
 	dither_node.material = mat
 
 	print("Dither shader setup complete with texture: ", tex)
-	return
+	return true
 
-func _enable_crt() -> void:
+func _enable_crt() -> bool:
 	var crt := $PostFX/CRT
 	var dither_viewport := $PostDitherViewport
 
 	if not is_instance_valid(crt) or not is_instance_valid(dither_viewport):
 		print("ERROR: CRT or DitherViewport not found!")
-		return
+		return false
 
 	# Wait for dither viewport to be ready
 	await get_tree().process_frame
@@ -203,7 +212,7 @@ func _enable_crt() -> void:
 		print("ERROR: Dither viewport texture is null; retrying CRT setup...")
 		# Retry after another frame
 		call_deferred("_enable_crt")
-		return
+		return false
 
 	# Create CRT shader material
 	var mat := ShaderMaterial.new()
@@ -233,9 +242,23 @@ func _enable_crt() -> void:
 		crt.material = mat
 		crt.visible = true
 		print("CRT setup complete with texture: ", viewport_texture)
+		return true
 	else:
 		print("ERROR: CRT_SHADER not loaded!")
+		return false
 
+func _disable_postfx() -> void:
+	# Fallback to raw viewport output so gameplay stays visible
+	var viewport_texture := $GameViewport.get_texture()
+	if viewport_texture and $GameDisplay.texture != viewport_texture:
+		$GameDisplay.texture = viewport_texture
+	$GameDisplay.visible = true
+	$PostFX/CRT.visible = false
+	$PostFX/CRT.material = null
+	$PostDitherViewport/DitherPass.visible = false
+	$PostDitherViewport/DitherPass.material = null
+	$PostDitherViewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	print("Post-processing disabled; using raw GameViewport output")
 func _process(_delta: float) -> void:
 	if game_over and Input.is_action_just_pressed("ui_accept"):
 		_reset_scoring_system()
