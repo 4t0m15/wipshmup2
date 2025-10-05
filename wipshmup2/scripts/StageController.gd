@@ -133,6 +133,71 @@ func _spawn_wave_v(shape_count: int, speed: float, hp: int) -> void:
 		_spawn_enemy(ENEMY_SCENE, Vector2(center - spread * offset, -32 - 16 * i), speed, hp)
 		_spawn_enemy(ENEMY_SCENE, Vector2(center + spread * offset, -32 - 16 * i), speed, hp)
 
+# New layout helpers for more interesting waves
+func _spawn_wave_arc(
+	count: int,
+	radius: float,
+	y: float,
+	enemy_type: PackedScene = ENEMY_SCENE,
+	margin: float = 24.0,
+	inverted: bool = false
+) -> void:
+	var width := get_viewport().get_visible_rect().size.x
+	var step := (width - margin * 2.0) / float(max(count - 1, 1))
+	for i in count:
+		var x := margin + step * float(i)
+		var t := float(i) / float(max(count - 1, 1))
+		var angle := PI * t
+		var y_offset := sin(angle) * radius
+		if inverted:
+			y_offset = -y_offset
+		_spawn_enemy(enemy_type, Vector2(x, -y - y_offset))
+
+func _spawn_wave_circle(
+	count: int,
+	center_x: float,
+	radius: float,
+	base_y: float = 48.0,
+	enemy_type: PackedScene = ENEMY_SCENE
+) -> void:
+	# Place enemies along a semicircle so they enter the screen in a curved band
+	for i in count:
+		var t := float(i) / float(max(count - 1, 1))
+		var angle := PI * t
+		var x := center_x + cos(angle) * radius
+		var y := -base_y - sin(angle) * radius
+		_spawn_enemy(enemy_type, Vector2(x, y))
+
+func _spawn_wall_with_gap(
+	count: int,
+	y: float,
+	gap_center_x: float,
+	gap_width: float,
+	enemy_type: PackedScene = ENEMY_SCENE,
+	margin: float = 16.0
+) -> void:
+	var width := get_viewport().get_visible_rect().size.x
+	var step := (width - margin * 2.0) / float(max(count - 1, 1))
+	for i in count:
+		var x := margin + step * float(i)
+		if abs(x - gap_center_x) <= gap_width * 0.5:
+			continue
+		_spawn_enemy(enemy_type, Vector2(x, -y))
+
+func _spawn_alternating_side_stream(
+	enemy_type: PackedScene,
+	pairs: int,
+	interval: float = 0.35,
+	row_spacing: float = 18.0
+) -> void:
+	var rect := get_viewport().get_visible_rect()
+	var left_x := -32.0
+	var right_x := rect.size.x + 32.0
+	for i in pairs:
+		_spawn_enemy(enemy_type, Vector2(left_x, -32.0 - row_spacing * float(i)))
+		_spawn_enemy(enemy_type, Vector2(right_x, -48.0 - row_spacing * float(i)))
+		await get_tree().create_timer(interval, false).timeout
+
 func _spawn_group(
 	count: int, enemy_type: PackedScene, start_x: float,
 	spacing: float = 60.0
@@ -205,82 +270,107 @@ func _spawn_boss(boss_scene: PackedScene, y_pos: float = 48.0) -> void:
 
 # Simplified stage implementations
 func _run_stage_1() -> void:
+	# Open with a classic line
 	_spawn_wave_line(5, 50.0, 60.0, 1)
-	await get_tree().create_timer(4.0, false).timeout
-	_spawn_wave_v(3, 50.0, 1)
-	await get_tree().create_timer(6.0, false).timeout
+	await get_tree().create_timer(2.5, false).timeout
+	# Add a graceful arc band across the screen
+	_spawn_wave_arc(7, 32.0, 56.0, TYPE02)
+	await get_tree().create_timer(2.5, false).timeout
+	# Alternating streams from left/right using zigzag enemies
+	await _spawn_alternating_side_stream(TYPE03, 3, 0.35, 20.0)
+	await get_tree().create_timer(1.5, false).timeout
+	# Small cohesive group
 	_spawn_group(3, TYPE01, 200.0)
-	await get_tree().create_timer(4.0, false).timeout
+	await get_tree().create_timer(2.5, false).timeout
 	_spawn_boss(GLIATH_SCENE)
 
 func _run_stage_2() -> void:
-	_spawn_group(4, TYPE02, 150.0)
-	await get_tree().create_timer(3.0, false).timeout
+	# Checker entry then a wall with a safe gap
+	_spawn_wave_arc(6, 26.0, 52.0, TYPE09)
+	await get_tree().create_timer(2.0, false).timeout
+	var rect := get_viewport().get_visible_rect()
+	var gap_x := rect.size.x * 0.5
+	_spawn_wall_with_gap(9, 60.0, gap_x, 72.0, TYPE02)
+	await get_tree().create_timer(2.0, false).timeout
+	# Side pressure
 	_spawn_from_side(TYPE03, "left")
 	_spawn_from_side(TYPE03, "right")
-	await get_tree().create_timer(4.0, false).timeout
+	await get_tree().create_timer(2.5, false).timeout
+	# Formation push
 	_spawn_formation(Vector2(300, -50), FORMATION_FIGHTER, TYPE01, 3)
-	await get_tree().create_timer(6.0, false).timeout
+	await get_tree().create_timer(4.0, false).timeout
 	_spawn_boss(TYPE0_SCENE, 56.0)
 
 func _run_stage_3() -> void:
-	_spawn_wave_line(6, 60.0, 60.0, 2)  # Reduced from 140.0
-	await get_tree().create_timer(1.5, false).timeout
+	# Broad line then circular sweep
+	_spawn_wave_line(6, 60.0, 60.0, 2)
+	await get_tree().create_timer(1.2, false).timeout
+	var cx := get_viewport().get_visible_rect().size.x * 0.5
+	_spawn_wave_circle(7, cx, 70.0, 52.0, TYPE04)
+	await get_tree().create_timer(1.8, false).timeout
+	# Flanking groups
 	_spawn_group(3, TYPE04, 200.0)
 	_spawn_group(3, TYPE05, 400.0)
-	await get_tree().create_timer(2.5, false).timeout
+	await get_tree().create_timer(2.0, false).timeout
+	# Escort formation
 	_spawn_formation(Vector2(250, -60), FORMATION_BOMBER, ESCORT_FIGHTER, 4)
-	await get_tree().create_timer(3.0, false).timeout
+	await get_tree().create_timer(2.5, false).timeout
 	_spawn_boss(IRONCASKET_SCENE, 52.0)
 
 func _run_stage_4() -> void:
-	_spawn_wave_v(4, 50.0, 2)  # Reduced from 120.0
-	await get_tree().create_timer(1.0, false).timeout
-	_spawn_group(4, TYPE06, 150.0)
-	await get_tree().create_timer(2.0, false).timeout
+	_spawn_wave_v(4, 50.0, 2)
+	await get_tree().create_timer(0.8, false).timeout
+	await _spawn_alternating_side_stream(TYPE06, 4, 0.3, 18.0)
+	await get_tree().create_timer(1.6, false).timeout
 	_spawn_from_side(TYPE07, "left", 20.0)
 	_spawn_from_side(TYPE07, "right", -20.0)
-	await get_tree().create_timer(2.5, false).timeout
+	await get_tree().create_timer(2.0, false).timeout
 	_spawn_boss(GRAFZEPPELIN_SCENE, 54.0)
 
 func _run_stage_5() -> void:
-	_spawn_wave_line(7, 70.0, 65.0, 2)  # Reduced from 160.0
-	await get_tree().create_timer(1.0, false).timeout
+	_spawn_wave_line(7, 70.0, 65.0, 2)
+	await get_tree().create_timer(0.8, false).timeout
+	_spawn_wave_arc(9, 36.0, 64.0, TYPE08, 20.0, true)
+	await get_tree().create_timer(1.6, false).timeout
 	_spawn_group(3, TYPE08, 200.0)
 	_spawn_group(3, TYPE09, 400.0)
-	await get_tree().create_timer(2.0, false).timeout
+	await get_tree().create_timer(1.8, false).timeout
 	_spawn_formation(Vector2(300, -70), FORMATION_FIGHTER, TYPE10, 4)
-	await get_tree().create_timer(3.0, false).timeout
+	await get_tree().create_timer(2.2, false).timeout
 	_spawn_boss(FORTRESS_SCENE, 52.0)
 
 func _run_stage_6() -> void:
-	_spawn_wave_v(5, 60.0, 3)  # Reduced from 140.0
-	await get_tree().create_timer(1.0, false).timeout
-	_spawn_group(4, TYPE11, 150.0)
-	_spawn_group(4, TYPE12, 450.0)
-	await get_tree().create_timer(2.0, false).timeout
+	_spawn_wave_v(5, 60.0, 3)
+	await get_tree().create_timer(0.8, false).timeout
+	var w := get_viewport().get_visible_rect().size.x
+	_spawn_wall_with_gap(11, 68.0, w * 0.33, 64.0, TYPE11)
+	_spawn_wall_with_gap(11, 84.0, w * 0.67, 64.0, TYPE12)
+	await get_tree().create_timer(1.8, false).timeout
 	_spawn_formation(Vector2(250, -80), FORMATION_BOMBER, ESCORT_FIGHTER, 5)
-	await get_tree().create_timer(3.0, false).timeout
+	await get_tree().create_timer(2.2, false).timeout
 	_spawn_boss(CROSSSINKER_SCENE, 54.0)
 
 func _run_stage_7() -> void:
-	_spawn_wave_line(8, 80.0, 75.0, 3)  # Reduced from 180.0
-	await get_tree().create_timer(1.0, false).timeout
-	_spawn_group(4, TYPE13, 200.0)
-	await get_tree().create_timer(2.0, false).timeout
+	_spawn_wave_line(8, 80.0, 75.0, 3)
+	await get_tree().create_timer(0.8, false).timeout
+	var w2 := get_viewport().get_visible_rect().size.x
+	_spawn_wave_circle(9, w2 * 0.5, 80.0, 56.0, TYPE13)
+	await get_tree().create_timer(1.6, false).timeout
 	_spawn_from_side(TYPE07, "left", 30.0)
 	_spawn_from_side(TYPE07, "right", -30.0)
-	await get_tree().create_timer(2.5, false).timeout
+	await get_tree().create_timer(2.0, false).timeout
 	_spawn_boss(BLOCKADE_SCENE, 52.0)
 
 func _run_stage_8() -> void:
-	_spawn_wave_v(6, 65.0, 3)  # Reduced from 160.0
-	await get_tree().create_timer(1.0, false).timeout
+	_spawn_wave_v(6, 65.0, 3)
+	await get_tree().create_timer(0.8, false).timeout
+	await _spawn_alternating_side_stream(TYPE08, 5, 0.28, 16.0)
+	await get_tree().create_timer(1.6, false).timeout
 	_spawn_group(5, TYPE08, 150.0)
 	_spawn_group(5, TYPE09, 450.0)
-	await get_tree().create_timer(2.0, false).timeout
+	await get_tree().create_timer(1.8, false).timeout
 	_spawn_formation(Vector2(300, -90), FORMATION_FIGHTER, TYPE10, 5)
-	await get_tree().create_timer(3.0, false).timeout
+	await get_tree().create_timer(2.2, false).timeout
 	_spawn_boss(BB_SCENE, 50.0)
 	await get_tree().create_timer(2.0, false).timeout
 	_spawn_boss(FGR_SCENE, 50.0)

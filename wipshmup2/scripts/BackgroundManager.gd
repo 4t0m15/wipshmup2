@@ -67,7 +67,7 @@ func _create_environment(env_type: EnvironmentType):
 
 	background_changed.emit(EnvironmentType.keys()[env_type])
 
-func _add_layer(texture_path: String, scroll_speed: float, modulate: Color, scale: Vector2, position: Vector2):
+func _add_layer(texture_path: String, scroll_speed: float, color_modulate: Color, sprite_scale: Vector2, sprite_position: Vector2):
 	var texture := load(texture_path)
 	if not texture:
 		print("BackgroundManager: Warning - Could not load texture: ", texture_path)
@@ -75,9 +75,9 @@ func _add_layer(texture_path: String, scroll_speed: float, modulate: Color, scal
 
 	var sprite := Sprite2D.new()
 	sprite.texture = texture
-	sprite.position = position
-	sprite.scale = scale
-	sprite.modulate = modulate
+	sprite.position = sprite_position
+	sprite.scale = sprite_scale
+	sprite.modulate = color_modulate
 	sprite.z_index = -10
 	add_child(sprite)
 
@@ -89,8 +89,10 @@ func _add_layer(texture_path: String, scroll_speed: float, modulate: Color, scal
 
 func _clear_layers():
 	for layer in layers:
-		if layer.has("sprite") and is_instance_valid(layer.sprite):
-			layer.sprite.queue_free()
+		if layer.has("sprite"):
+			var sprite: Sprite2D = layer["sprite"]
+			if is_instance_valid(sprite):
+				sprite.queue_free()
 	layers.clear()
 
 func change_environment(env_type: EnvironmentType):

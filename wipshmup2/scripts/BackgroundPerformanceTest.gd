@@ -32,7 +32,7 @@ func _ready():
 	if enable_stress_test:
 		_start_stress_test()
 
-func _process(delta: float):
+func _process(delta: float) -> void:
 	_frame_count += 1
 
 	var current_time = Time.get_ticks_msec() / 1000.0
@@ -52,7 +52,7 @@ func _process(delta: float):
 	if enable_stress_test:
 		_apply_stress_test(delta)
 
-func _log_performance_metrics(current_time: float):
+func _log_performance_metrics(current_time: float) -> void:
 	"""Log current performance metrics"""
 	var fps = _frame_count / (current_time - _start_time)
 	var memory_usage = OS.get_static_memory_usage()
@@ -60,10 +60,10 @@ func _log_performance_metrics(current_time: float):
 	_fps_samples.append(fps)
 	_memory_samples.append(memory_usage)
 
-	print("Time: %.1fs | FPS: %.1f | Memory: %d KB | Frames: %d" % [
+	print("Time: %.1fs | FPS: %.1f | Memory: %.1f KB | Frames: %d" % [
 		current_time - _start_time,
 		fps,
-		memory_usage / 1024,
+		memory_usage / 1024.0,
 		_frame_count
 	])
 
@@ -76,7 +76,7 @@ func _log_performance_metrics(current_time: float):
 		var layers_count = _parallax_background.layers.size() if _parallax_background.has_method("get") else 0
 		print("  Parallax Layers: ", layers_count)
 
-func _start_stress_test():
+func _start_stress_test() -> void:
 	"""Start stress testing by adding more background elements"""
 	print("Starting stress test...")
 
@@ -92,7 +92,7 @@ func _start_stress_test():
 		_space_background._create_star_field()
 		_space_background._create_planets()
 
-func _apply_stress_test(delta: float):
+func _apply_stress_test(_delta: float) -> void:
 	"""Apply stress test modifications during runtime"""
 	var current_time = Time.get_ticks_msec() / 1000.0
 	var elapsed = current_time - _start_time
@@ -112,7 +112,7 @@ func _apply_stress_test(delta: float):
 				Vector2(0.1 + new_layer_count * 0.1, 0.1 + new_layer_count * 0.1)
 			)
 
-func _end_test():
+func _end_test() -> void:
 	"""End the performance test and print summary"""
 	print("\n=== Background Performance Test Results ===")
 
@@ -124,7 +124,7 @@ func _end_test():
 		avg_fps /= _fps_samples.size()
 
 	# Calculate average memory usage
-	var avg_memory = 0
+	var avg_memory := 0.0
 	if _memory_samples.size() > 0:
 		for memory in _memory_samples:
 			avg_memory += memory
@@ -139,8 +139,8 @@ func _end_test():
 	print("Average FPS: %.1f" % avg_fps)
 	print("Min FPS: %.1f" % min_fps)
 	print("Max FPS: %.1f" % max_fps)
-	print("Average Memory: %d KB" % (avg_memory / 1024))
-	print("Peak Memory: %d KB" % (_memory_samples.max() / 1024 if _memory_samples.size() > 0 else 0))
+	print("Average Memory: %.1f KB" % (avg_memory / 1024.0))
+	print("Peak Memory: %.1f KB" % (_memory_samples.max() / 1024.0 if _memory_samples.size() > 0 else 0.0))
 
 	# Performance assessment
 	print("\n=== Performance Assessment ===")
@@ -154,12 +154,12 @@ func _end_test():
 		print("✗ POOR: Significant performance issues detected")
 
 	# Memory assessment
-	var peak_memory_mb = (_memory_samples.max() / 1024 / 1024) if _memory_samples.size() > 0 else 0
-	if peak_memory_mb < 100:
+	var peak_memory_mb = (_memory_samples.max() / 1024.0 / 1024.0) if _memory_samples.size() > 0 else 0.0
+	if peak_memory_mb < 100.0:
 		print("✓ EXCELLENT: Low memory usage")
-	elif peak_memory_mb < 200:
+	elif peak_memory_mb < 200.0:
 		print("✓ GOOD: Reasonable memory usage")
-	elif peak_memory_mb < 500:
+	elif peak_memory_mb < 500.0:
 		print("⚠ ACCEPTABLE: High memory usage")
 	else:
 		print("✗ POOR: Excessive memory usage")
@@ -177,7 +177,7 @@ func get_performance_summary() -> Dictionary:
 			avg_fps += fps
 		avg_fps /= _fps_samples.size()
 
-	var avg_memory = 0
+	var avg_memory := 0.0
 	if _memory_samples.size() > 0:
 		for memory in _memory_samples:
 			avg_memory += memory
@@ -189,6 +189,6 @@ func get_performance_summary() -> Dictionary:
 		"average_fps": avg_fps,
 		"min_fps": _fps_samples.min() if _fps_samples.size() > 0 else 0.0,
 		"max_fps": _fps_samples.max() if _fps_samples.size() > 0 else 0.0,
-		"average_memory_kb": avg_memory / 1024,
-		"peak_memory_kb": (_memory_samples.max() / 1024) if _memory_samples.size() > 0 else 0
+		"average_memory_kb": avg_memory / 1024.0,
+		"peak_memory_kb": (_memory_samples.max() / 1024.0) if _memory_samples.size() > 0 else 0.0
 	}

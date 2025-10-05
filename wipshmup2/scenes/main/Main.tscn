@@ -2,14 +2,18 @@
 
 [ext_resource type="Script" path="res://scenes/main/Main.gd" id="1_9m0k2"]
 [ext_resource type="PackedScene" path="res://scenes/main/HUD.tscn" id="2_hud"]
+[ext_resource type="PackedScene" path="res://scenes/backgrounds/SpaceBackground.tscn" id="3_space_bg"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_9m0k2")
 
 [node name="GameViewport" type="Node2D" parent="."]
 
+[node name="SpaceBackground" parent="GameViewport" instance=ExtResource("3_space_bg")]
+
 [node name="Enemies" type="Node2D" parent="GameViewport"]
 
 [node name="Bullets" type="Node2D" parent="GameViewport"]
 
 [node name="HUD" parent="." instance=ExtResource("2_hud")]
+

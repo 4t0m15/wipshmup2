@@ -10,6 +10,10 @@ func _ready() -> void:
 	if has_node("Hurtbox"):
 		var hurtbox := $Hurtbox
 		hurtbox.add_to_group("player_hurtbox")
+		hurtbox.monitoring = true
+		hurtbox.monitorable = true
+		hurtbox.collision_layer = 1
+		hurtbox.collision_mask = 1
 		# Ensure hurtbox tracks the player position
 		hurtbox.position = Vector2.ZERO
 	print("Simple player ready")

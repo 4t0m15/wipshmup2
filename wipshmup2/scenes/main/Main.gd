@@ -1,25 +1,26 @@
 extends Node2D
 
-# WORKING VERSION WITH PROPER SYSTEMS
+# Scene references
+const PLAYER_SCENE: PackedScene = preload("res://scenes/player/Player.tscn")
+const STAGE_CONTROLLER_SCRIPT: Script = preload("res://scripts/StageController.gd")
+const SPACE_BACKGROUND_SCRIPT: Script = preload("res://scripts/SpaceBackground.gd")
+const ITEM_DROP_MANAGER_SCRIPT: Script = preload("res://scripts/ItemDropManager.gd")
 
 var player: Node
 var hud: Node
-var stage_controller: Node
-var background_manager: Node
+var stage_controller: StageController
+var space_background: Node
 var item_drop_manager: Node
-var game_over: bool = false
-var lives: int = 3
-var bombs: int = 3
-var score: int = 0
-var shot_cooldown: float = 0.1  # 100ms between shots (seconds)
-var player_hurtbox: Area2D
-var bullet_timer: Timer
-var game_viewport: Node
 
-# Scene references
-const STAGE_CONTROLLER_SCRIPT: Script = preload("res://scripts/StageController.gd")
-const BACKGROUND_MANAGER_SCRIPT: Script = preload("res://scripts/BackgroundManager.gd")
-const ITEM_DROP_MANAGER_SCRIPT: Script = preload("res://scripts/ItemDropManager.gd")
+var game_over := false
+var lives := 3
+var bombs := 3
+var score := 0
+
+var shot_cooldown := 0.1
+var bullet_timer: Timer
+var player_hurtbox: Area2D
+var game_viewport: Node
 
 func _ready() -> void:
 	print("=== GAME START WITH SYSTEMS ===")
@@ -32,21 +33,13 @@ func _ready() -> void:
 	bullet_timer.one_shot = true
 	add_child(bullet_timer)
 
-	game_viewport = get_node_or_null("GameViewport")
+	game_viewport = $GameViewport if has_node("GameViewport") else self
 
-	# Setup background system
 	_setup_background()
-
-	# Setup item drop system
 	_setup_item_drops()
-
-	# Spawn player
 	_spawn_player()
-
-	# Setup stage controller for enemies
 	_setup_stage_controller()
 
-	# Setup HUD
 	hud = $HUD
 	_update_score_label()
 	_update_lives_display()
@@ -55,30 +48,21 @@ func _ready() -> void:
 	print("Game initialized with all systems")
 
 func _setup_background() -> void:
-	"""Setup the background system"""
-	# Try to create a simple starfield background first
-	_create_simple_starfield()
-
-	# Then try the complex background manager
-	background_manager = BACKGROUND_MANAGER_SCRIPT.new()
-	background_manager.name = "BackgroundManager"
-	var container = game_viewport if game_viewport else self
-	container.add_child(background_manager)
-
-	# Move background manager to be behind everything else
-	container.move_child(background_manager, 0)
-
-	print("Background system initialized")
+	space_background = game_viewport.get_node_or_null("SpaceBackground") if game_viewport else null
+	if space_background and space_background.get_script() == SPACE_BACKGROUND_SCRIPT:
+		print("Space background initialized")
+	else:
+		print("SpaceBackground missing; using fallback starfield")
+		_create_simple_starfield()
+		space_background = null
 
 func _create_simple_starfield() -> void:
-	"""Create a simple starfield background"""
 	var starfield = Node2D.new()
 	starfield.name = "SimpleStarfield"
 	var container = game_viewport if game_viewport else self
 	container.add_child(starfield)
 	container.move_child(starfield, 0)
 
-	# Create some simple stars
 	for i in range(80):
 		var star = ColorRect.new()
 		star.size = Vector2(1, 1)
@@ -89,58 +73,56 @@ func _create_simple_starfield() -> void:
 	print("Simple starfield created")
 
 func _setup_item_drops() -> void:
-	"""Setup the item drop system"""
 	item_drop_manager = ITEM_DROP_MANAGER_SCRIPT.new()
 	add_child(item_drop_manager)
-
-	# Connect item collection signals
 	item_drop_manager.item_collected.connect(_on_item_collected)
 	print("Item drop system initialized")
 
 func _setup_stage_controller() -> void:
-	"""Setup the stage controller for enemy spawning"""
 	stage_controller = STAGE_CONTROLLER_SCRIPT.new()
-	add_child(stage_controller)
+	var container = game_viewport if game_viewport else self
+	container.add_child(stage_controller)
 
-	# Connect enemy signals
 	stage_controller.enemy_killed.connect(_on_enemy_killed)
 	if stage_controller.has_signal("boss_defeated"):
 		stage_controller.boss_defeated.connect(_on_boss_defeated)
 	if stage_controller.has_signal("enemy_spawned"):
 		stage_controller.enemy_spawned.connect(_on_enemy_spawned)
 
-	# Start the stage system
 	stage_controller.start_run()
-
 	print("Stage controller initialized")
 
+	# Connect any bullets that already exist in the scene (e.g. preloaded tutorials)
+	for bullet in get_tree().get_nodes_in_group("enemy_bullet"):
+		_connect_enemy_bullet(bullet)
+
 func _spawn_player() -> void:
-	# Load the proper player scene
-	const PLAYER_SCENE: PackedScene = preload("res://scenes/player/Player.tscn")
 	player = PLAYER_SCENE.instantiate()
+	player.position = Vector2(160, 150)
+	var container = game_viewport if game_viewport else self
+	container.add_child(player)
 
-	# Position player
-	player.position = Vector2(160, 150)  # Center bottom
-
-	# Add to main scene
-	add_child(player)
-
-	# Ensure we have a hurtbox for enemy bullets
 	player_hurtbox = player.get_node_or_null("Hurtbox")
 	if player_hurtbox:
 		player_hurtbox.add_to_group("player_hurtbox")
+		player_hurtbox.monitoring = true
+		player_hurtbox.monitorable = true
+		player_hurtbox.collision_layer = 1
+		player_hurtbox.collision_mask = 1
 	else:
 		player_hurtbox = Area2D.new()
 		player_hurtbox.name = "Hurtbox"
 		var collision_shape = CollisionShape2D.new()
-		var shape = CircleShape2D.new()
-		shape.radius = 6.0
-		collision_shape.shape = shape
+		collision_shape.shape = CircleShape2D.new()
+		(collision_shape.shape as CircleShape2D).radius = 6.0
 		player_hurtbox.add_child(collision_shape)
 		player.add_child(player_hurtbox)
 		player_hurtbox.add_to_group("player_hurtbox")
+		player_hurtbox.monitoring = true
+		player_hurtbox.monitorable = true
+		player_hurtbox.collision_layer = 1
+		player_hurtbox.collision_mask = 1
 
-	# Connect player damage signals
 	if player.has_signal("damaged"):
 		player.connect("damaged", Callable(self, "_on_player_damaged"))
 	if player.has_signal("hit"):
@@ -148,29 +130,24 @@ func _spawn_player() -> void:
 
 	print("Player spawned at: ", player.position)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if game_over and Input.is_action_just_pressed("ui_accept"):
 		get_tree().reload_current_scene()
+		return
 
-	# Simple movement
 	if player and is_instance_valid(player):
 		var input_vector := Vector2.ZERO
 		input_vector.x = Input.get_action_strength("ui_right") - Input.get_action_strength("ui_left")
 		input_vector.y = Input.get_action_strength("ui_down") - Input.get_action_strength("ui_up")
-
-		player.position += input_vector * 200.0 * _delta
-
-		# Keep player on screen
+		player.position += input_vector * 200.0 * delta
 		player.position.x = clamp(player.position.x, 16.0, 304.0)
 		player.position.y = clamp(player.position.y, 16.0, 164.0)
 
-	# Handle shooting (Space key) with cooldown
 	if Input.is_key_pressed(KEY_SPACE) and player and is_instance_valid(player):
 		if bullet_timer.is_stopped():
 			_fire_bullet()
 			bullet_timer.start()
 
-	# Handle bombs (Shift key)
 	if Input.is_action_just_pressed("ui_cancel") and bombs > 0:
 		_use_bomb()
 

@@ -20,7 +20,7 @@ func _ready() -> void:
 	add_to_group("enemy")
 	monitoring = true
 	collision_layer = 1
-	collision_mask = 0
+	collision_mask = 1
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
 	print("Enemy ", name, " ready, monitoring: ", monitoring, " groups: ", get_groups())
@@ -72,8 +72,8 @@ func _validate_collision_setup() -> void:
 	if collision_layer != 1:
 		collision_layer = 1
 
-	if collision_mask != 0:
-		collision_mask = 0
+	if collision_mask != 1:
+		collision_mask = 1
 
 	# Ensure we're in the enemy group
 	if not is_in_group("enemy"):
