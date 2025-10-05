@@ -20,7 +20,7 @@ const TARGET_SIZES = {
 
 # Sprite scaling presets for different entity types
 const SCALE_PRESETS = {
-	"player": Vector2(0.35, 0.35),  # Larger player scale for better visibility
+	"player": Vector2(1.0, 1.0),  # Full size for better visibility
 	"enemy_fighter": Vector2(1.2, 1.2),
 	"enemy_bomber": Vector2(1.0, 1.0),
 	"enemy_turret": Vector2(1.0, 1.0),
@@ -54,26 +54,36 @@ static func setup_sprite(sprite: Sprite2D, entity_type: String, target_height: f
 		push_warning("SpriteManager: Invalid sprite or missing texture")
 		return
 	
-	# SPECIAL CASE: Don't aggressively auto-scale player; keep readable size.
-	# The player texture can be large which made auto height-scaling shrink it to ~sub‑pixel size
-	# after post-processing. Use the explicit preset scale for the player.
-	if entity_type == "player":
-		sprite.scale = SCALE_PRESETS.get("player", Vector2(1.5, 1.5))
-	else:
-		# Use provided target height or get from presets
-		var height = target_height if target_height > 0 else TARGET_SIZES.get(entity_type, 20.0)
-		# Calculate scale based on texture size
-		var tex_size = sprite.texture.get_size()
-		if tex_size.y > 0:
-			var scale_factor = height / float(tex_size.y)
-			# If computed scale would be too tiny, fall back to preset to keep visibility
-			if scale_factor < 0.25:
-				push_warning("SpriteManager: Computed scale (" + str(scale_factor) + ") too small for " + entity_type + ", using preset")
-				sprite.scale = SCALE_PRESETS.get(entity_type, Vector2(1.0, 1.0))
-			else:
-				sprite.scale = Vector2(scale_factor, scale_factor)
+	# Check if sprite already has a reasonable scale set (from scene file)
+	var current_scale = sprite.scale
+	var is_already_scaled = current_scale.x > 0.5 and current_scale.y > 0.5
+	
+	# Only apply scaling if the sprite is at default scale (1,1) or very small
+	if not is_already_scaled:
+		# SPECIAL CASE: Don't aggressively auto-scale player; keep readable size.
+		# The player texture can be large which made auto height-scaling shrink it to ~sub‑pixel size
+		# after post-processing. Use the explicit preset scale for the player.
+		if entity_type == "player":
+			sprite.scale = SCALE_PRESETS.get("player", Vector2(1.0, 1.0))
 		else:
-			# Fallback to preset scale
+			# Use provided target height or get from presets
+			var height = target_height if target_height > 0 else TARGET_SIZES.get(entity_type, 20.0)
+			# Calculate scale based on texture size
+			var tex_size = sprite.texture.get_size()
+			if tex_size.y > 0:
+				var scale_factor = height / float(tex_size.y)
+				# If computed scale would be too tiny, fall back to preset to keep visibility
+				if scale_factor < 0.25:
+					push_warning("SpriteManager: Computed scale (" + str(scale_factor) + ") too small for " + entity_type + ", using preset")
+					sprite.scale = SCALE_PRESETS.get(entity_type, Vector2(1.0, 1.0))
+				else:
+					sprite.scale = Vector2(scale_factor, scale_factor)
+			else:
+				# Fallback to preset scale
+				sprite.scale = SCALE_PRESETS.get(entity_type, Vector2(1.0, 1.0))
+	else:
+		# Sprite already has a good scale, just ensure it's not too small
+		if current_scale.x < 0.1 or current_scale.y < 0.1:
 			sprite.scale = SCALE_PRESETS.get(entity_type, Vector2(1.0, 1.0))
 	
 	# Apply color modulation (normalize keys like enemy_*)
@@ -87,7 +97,7 @@ static func setup_sprite(sprite: Sprite2D, entity_type: String, target_height: f
 	sprite.visible = true
 	
 	# Debug information
-	print("SpriteManager: Setup ", entity_type, " sprite - scale: ", sprite.scale)
+	print("SpriteManager: Setup ", entity_type, " sprite - scale: ", sprite.scale, " (was: ", current_scale, ")")
 
 static func get_optimal_scale(entity_type: String) -> Vector2:
 	"""Get the optimal scale for an entity type"""
@@ -116,17 +126,17 @@ static func validate_sprite_visibility(sprite: Sprite2D) -> bool:
 	return true
 
 # Auto-setup function for common entity types
-static func auto_setup_player_sprite(sprite: Sprite2D) -> void:
+func auto_setup_player_sprite(sprite: Sprite2D) -> void:
 	setup_sprite(sprite, "player")
 
-static func auto_setup_enemy_sprite(sprite: Sprite2D, enemy_type: String = "fighter") -> void:
+func auto_setup_enemy_sprite(sprite: Sprite2D, enemy_type: String = "fighter") -> void:
 	setup_sprite(sprite, "enemy_" + enemy_type)
 
-static func auto_setup_boss_sprite(sprite: Sprite2D) -> void:
+func auto_setup_boss_sprite(sprite: Sprite2D) -> void:
 	setup_sprite(sprite, "boss")
 
-static func auto_setup_bullet_sprite(sprite: Sprite2D) -> void:
+func auto_setup_bullet_sprite(sprite: Sprite2D) -> void:
 	setup_sprite(sprite, "bullet")
 
-static func auto_setup_explosion_sprite(sprite: Sprite2D) -> void:
+func auto_setup_explosion_sprite(sprite: Sprite2D) -> void:
 	setup_sprite(sprite, "explosion")

@@ -195,11 +195,11 @@ func wrap_if_past_left(extra_margin: float = 0.6) -> void:
 # -----------------------------
 # LOD Utilities
 # -----------------------------
-static func compute_star_lod(speed_value: float, speed_range: Vector2, slow_mod: int, medium_mod: int, fast_mod: int) -> int:
-	var span := speed_range.y - speed_range.x
+static func compute_star_lod(speed_value: float, speed_range_param: Vector2, slow_mod: int, medium_mod: int, fast_mod: int) -> int:
+	var span := speed_range_param.y - speed_range_param.x
 	if span <= 0.0001:
 		return fast_mod
-	var norm := (speed_value - speed_range.x) / span
+	var norm := (speed_value - speed_range_param.x) / span
 	if norm < 0.33:
 		return max(1, slow_mod)
 	elif norm < 0.66:

@@ -1,4 +1,5 @@
 extends Area2D
+signal hit_player
 
 @export var speed: float = 140.0  # Reduced from 320.0 for playable speed
 @export var damage: int = 1
@@ -39,10 +40,12 @@ func _physics_process(delta: float) -> void:
 
 func _on_area_entered(area: Area2D) -> void:
 	if area.is_in_group("player_hurtbox"):
+		hit_player.emit()
 		queue_free()
 
 func _on_body_entered(body: Node) -> void:
 	if body.is_in_group("player"):
+		hit_player.emit()
 		queue_free()
 
 func _on_screen_exited() -> void:

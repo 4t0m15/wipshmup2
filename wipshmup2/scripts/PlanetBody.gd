@@ -126,7 +126,7 @@ func reconfigure_for_reuse(texture: Texture2D = null) -> void:
 # -------------------------------------------------
 # Randomization helpers
 # -------------------------------------------------
-func _randomize_visuals_and_motion(first_time: bool) -> void:
+func _randomize_visuals_and_motion(_first_time: bool) -> void:
 	# Scale
 	var scale_val: float = randf_range(base_scale_range.x, base_scale_range.y)
 	if not sprite:
@@ -171,7 +171,7 @@ func _compute_and_set_lod() -> void:
 static func compute_planet_lod(
 		scale_x: float,
 		speed_value: float,
-		speed_range: Vector2,
+		speed_range_param: Vector2,
 		size_small_threshold: float,
 		size_medium_threshold: float,
 		mod_small: int,
@@ -185,9 +185,9 @@ static func compute_planet_lod(
 	elif scale_x < size_medium_threshold:
 		base_mod = mod_medium
 	# Adjust for speed if very slow
-	var span := speed_range.y - speed_range.x
+	var span := speed_range_param.y - speed_range_param.x
 	if span > 0.0001:
-		var speed_norm: float = (speed_value - speed_range.x) / span
+		var speed_norm: float = (speed_value - speed_range_param.x) / span
 		if speed_norm < slow_factor:
 			# Guarantee at least small mod (largest interval)
 			base_mod = max(base_mod, mod_small)

@@ -4,7 +4,7 @@ var _accum_time_s: float = 0.0
 var _accum_ticks: int = 0
 var _rainbow_time: float = 0.0
 var _streak_timer: float = 0.0
-var _streak_timeout: float = 2.0  # Should match the timeout in Main.gd
+var _streak_timeout: float = 2.0
 var _streak_active: bool = false
 
 @onready var _score_label: Label = $TopBar/HBox/ScoreLabel
@@ -19,27 +19,8 @@ var _streak_active: bool = false
 @onready var _hint_label: Label = $CenterOverlay/MessagePanel/VBox/HintLabel
 @onready var _popup_container: VBoxContainer = $Popups
 @onready var _shiba_label: Label = $ShibaLabel
-@onready var _dev_info_label: Label
 
 func _ready() -> void:
-	var tm := get_node_or_null("/root/TickManager")
-	if tm and tm.has_signal("tick"):
-		tm.tick.connect(_on_tick)
-
-	# Create dev info label if it doesn't exist
-	if not has_node("DevInfo"):
-		_dev_info_label = Label.new()
-		_dev_info_label.name = "DevInfo"
-		_dev_info_label.add_theme_font_size_override("font_size", 10)
-		_dev_info_label.add_theme_color_override("font_color", Color.CYAN)
-		_dev_info_label.add_theme_color_override("font_outline_color", Color.BLACK)
-		_dev_info_label.add_theme_constant_override("outline_size", 1)
-		_dev_info_label.position = Vector2(10, 40)
-		_dev_info_label.visible = false
-		add_child(_dev_info_label)
-	else:
-		_dev_info_label = get_node("DevInfo")
-	
 	# Initialize streak timer bar
 	if is_instance_valid(_streak_timer_bar):
 		_streak_timer_bar.visible = false
@@ -66,6 +47,15 @@ func _process(delta: float) -> void:
 		if _streak_timer <= 0.0:
 			_streak_active = false
 			_streak_timer_bar.visible = false
+	
+	# Simple TPS calculation
+	_accum_time_s += delta
+	_accum_ticks += 1
+	if _accum_time_s >= 1.0:
+		var tps: float = float(_accum_ticks) / _accum_time_s
+		_tps_label.text = "TPS: %d" % int(round(tps))
+		_accum_time_s = 0.0
+		_accum_ticks = 0
 
 func _get_rainbow_color(time: float) -> Color:
 	# Create rainbow effect using HSV color space
@@ -83,20 +73,6 @@ func set_lives(value: int) -> void:
 		else:
 			lives_text += "♡"  # Empty heart
 	_lives_label.text = "Lives: %s" % lives_text
-
-func show_message(text: String) -> void:
-	_msg_label.text = text
-	_msg_panel.visible = true
-	_overlay_dim.visible = true
-
-func show_game_over(is_shown: bool) -> void:
-	_msg_panel.visible = is_shown
-	_overlay_dim.visible = is_shown
-	if is_shown:
-		_msg_label.text = "Game Over"
-		_hint_label.text = "Press Enter to restart"
-	else:
-		_hint_label.text = ""
 
 func set_bombs(value: int) -> void:
 	var text := "Bombs: %d" % max(0, value)
@@ -131,18 +107,19 @@ func reset_streak_timer() -> void:
 	_streak_active = false
 	_streak_timer_bar.visible = false
 
-func set_medal(_medal_level: int) -> void:
-	# Placeholder for medal display - can be implemented later
-	pass
+func show_message(text: String) -> void:
+	_msg_label.text = text
+	_msg_panel.visible = true
+	_overlay_dim.visible = true
 
-func _on_tick(dt: float) -> void:
-	_accum_time_s += dt
-	_accum_ticks += 1
-	if _accum_time_s >= 1.0:
-		var tps: float = float(_accum_ticks) / _accum_time_s
-		_tps_label.text = "TPS: %d" % int(round(tps))
-		_accum_time_s = 0.0
-		_accum_ticks = 0
+func show_game_over(is_shown: bool) -> void:
+	_msg_panel.visible = is_shown
+	_overlay_dim.visible = is_shown
+	if is_shown:
+		_msg_label.text = "Game Over"
+		_hint_label.text = "Press Enter to restart"
+	else:
+		_hint_label.text = ""
 
 func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 	if not is_instance_valid(_popup_container):
@@ -194,12 +171,3 @@ func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 	await fade_out.finished
 	if is_instance_valid(panel):
 		panel.queue_free()
-
-func set_dev_info(dev_mode: bool, invincibility: bool, audio_muted: bool) -> void:
-	if is_instance_valid(_dev_info_label):
-		_dev_info_label.visible = dev_mode
-		if dev_mode:
-			_dev_info_label.text = "DEV MODE\nInvincible: %s\nAudio: %s" % [
-				"ON" if invincibility else "OFF",
-				"MUTED" if audio_muted else "ON"
-			]

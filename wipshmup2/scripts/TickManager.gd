@@ -10,10 +10,8 @@ var _cache_duration: float = 0.1  # Default cache duration
 var _last_cache_update: float = 0.0
 
 func _ready() -> void:
-	# Set as singleton for global access
-	if not get_tree().root.has_node("TickManager"):
-		get_tree().root.add_child(self)
-		name = "TickManager"
+	# TickManager is already an autoload, no need to add to root
+	pass
 
 func _process(delta: float) -> void:
 	_delta_time = delta * _time_scale

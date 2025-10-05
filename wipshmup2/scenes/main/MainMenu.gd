@@ -35,24 +35,28 @@ func _ready() -> void:
 	th.tween_property(_hint, "modulate:a", 1.0, 1.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func _unhandled_input(event: InputEvent) -> void:
+	var viewport = get_viewport()
+	if not viewport:
+		return
+		
 	# If popup is open, close it on accept/cancel and swallow input
 	if is_instance_valid(_popup_panel):
 		if event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_cancel"):
 			_popup_panel.queue_free()
 			_popup_panel = null
 			_update_focus()
-			get_viewport().set_input_as_handled()
+			viewport.set_input_as_handled()
 			return
 
 	if event.is_action_pressed("ui_left"):
 		_move_selection(-1)
-		get_viewport().set_input_as_handled()
+		viewport.set_input_as_handled()
 	elif event.is_action_pressed("ui_right"):
 		_move_selection(1)
-		get_viewport().set_input_as_handled()
+		viewport.set_input_as_handled()
 	elif event.is_action_pressed("ui_accept"):
 		_activate_current()
-		get_viewport().set_input_as_handled()
+		viewport.set_input_as_handled()
 
 func _move_selection(direction: int) -> void:
 	var now := Time.get_ticks_msec() / 1000.0
@@ -164,5 +168,3 @@ func _play_confirm_beep() -> void:
 	var am := get_node_or_null("/root/AudioManager")
 	if am and am.has_method("play_power_up"):
 		am.play_power_up()
-
-

@@ -135,7 +135,7 @@ func play_power_up() -> void:
 	var notes = [440.0, 554.37, 659.25, 880.0]  # A4, C#5, E5, A5
 	for i in range(notes.size()):
 		var timer = Timer.new()
-		timer.wait_time = i * 0.08
+		timer.wait_time = max(i * 0.08, 0.01)  # Ensure minimum wait time
 		timer.one_shot = true
 		add_child(timer)
 		timer.timeout.connect(func():
@@ -163,7 +163,7 @@ func play_medal_upgrade() -> void:
 	var notes = [659.25, 783.99, 1046.50, 1318.51]  # E5, G5, C6, E6
 	for i in range(notes.size()):
 		var timer = Timer.new()
-		timer.wait_time = i * 0.08
+		timer.wait_time = max(i * 0.08, 0.01)  # Ensure minimum wait time
 		timer.one_shot = true
 		add_child(timer)
 		timer.timeout.connect(func():

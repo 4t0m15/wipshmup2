@@ -4,6 +4,7 @@ extends Node
 signal enemy_killed(points: int)
 signal stage_completed(stage_number: int)
 signal boss_defeated()
+signal enemy_spawned(enemy: Area2D)
 
 const ENEMY_SCENE: PackedScene = preload("res://scenes/enemy/Enemy.tscn")
 const PE_BASE: PackedScene = preload("res://scenes/enemy/PatternEnemyBase.tscn")
@@ -114,6 +115,7 @@ func _spawn_enemy(scene: PackedScene, pos: Vector2, speed: float = 60.0, hp: int
 	print("Enemy scene: ", scene.resource_path if scene else "none")
 	
 	target.call_deferred("add_child", e)
+	emit_signal("enemy_spawned", e)
 
 func _spawn_wave_line(count: int, y: float, speed: float, hp: int, margin: float = 24.0) -> void:
 	var width := get_viewport().get_visible_rect().size.x
