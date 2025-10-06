@@ -110,10 +110,6 @@ func _spawn_enemy(scene: PackedScene, pos: Vector2, speed: float = 60.0, hp: int
 	var container := root.get_node_or_null("GameViewport/Enemies")
 	var target = container if container else root
 	
-	# Debug logging
-	print("Spawning enemy at: ", pos, " in container: ", str(target.get_path()) if target else "none")
-	print("Enemy scene: ", scene.resource_path if scene else "none")
-	
 	target.call_deferred("add_child", e)
 	emit_signal("enemy_spawned", e)
 

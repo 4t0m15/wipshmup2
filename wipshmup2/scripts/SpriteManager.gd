@@ -4,7 +4,7 @@ extends Node
 # This ensures all sprites are properly sized and visible
 
 func _ready():
-	print("SpriteManager autoload initialized")
+	pass
 
 # Target sizes for different entity types
 const TARGET_SIZES = {
@@ -95,9 +95,6 @@ static func setup_sprite(sprite: Sprite2D, entity_type: String, target_height: f
 			key = ("enemy_" + role) if COLOR_PRESETS.has("enemy_" + role) else role
 	sprite.modulate = COLOR_PRESETS.get(key, Color.WHITE)
 	sprite.visible = true
-	
-	# Debug information
-	print("SpriteManager: Setup ", entity_type, " sprite - scale: ", sprite.scale, " (was: ", current_scale, ")")
 
 static func get_optimal_scale(entity_type: String) -> Vector2:
 	"""Get the optimal scale for an entity type"""

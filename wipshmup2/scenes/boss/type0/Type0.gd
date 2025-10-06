@@ -17,6 +17,8 @@ func on_enter_phase(phase: int) -> void:
 			_start_phase1()
 		2:
 			_start_phase2()
+		3:
+			_start_phase3()
 
 func _physics_process(delta: float) -> void:
 	var view := get_viewport_rect()
@@ -69,3 +71,19 @@ func _phase2_task(self_node: Node2D, eye: Node2D, phase_snapshot: int) -> void:
 			# Brief dual lasers across the screen to force repositioning
 			await BP.fire_dual_lasers(self_node, eye, 90.0, 24.0, 0.25, 0.03, 1050.0)
 		await get_tree().create_timer(0.4, false).timeout
+
+func _start_phase3() -> void:
+	# Phase 3: Spiral from core + wavy streams from shoulders
+	var self_node: Node2D = self
+	var left: Node2D = $LeftShoulder
+	var right: Node2D = $RightShoulder
+	call_deferred("_phase3_task", self_node, left, right, current_phase)
+
+func _phase3_task(self_node: Node2D, left: Node2D, right: Node2D, phase_snapshot: int) -> void:
+	while _phase_task_running and is_instance_valid(self_node) and current_phase == phase_snapshot:
+		await BP.fire_spiral(self_node, self_node, 1, 28, 260.0, 12.0, 60.0)
+		if is_instance_valid(left):
+			await BP.fire_wave_stream(self_node, left, 0.8, 0.05, 100.0, 16.0, 2.0, 240.0)
+		if is_instance_valid(right):
+			await BP.fire_wave_stream(self_node, right, 0.8, 0.05, 80.0, 16.0, 2.0, 240.0)
+		await get_tree().create_timer(0.35, false).timeout

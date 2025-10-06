@@ -121,6 +121,74 @@ static func fire_rotating_rings(node: Node, origin_node: Node2D, bursts: int, bu
 		angle += rotation_step_degrees
 		await _await_seconds(node, iv)
 
+# New patterns
+static func fire_spiral(node: Node, origin_node: Node2D, turns: int = 2, bullets_per_turn: int = 24, speed: float = 120.0, angular_step_deg: float = 10.0, accel: float = 0.0) -> void:
+	if turns <= 0 or bullets_per_turn <= 0: return
+	var total: int = max(1, int(round(float(turns * bullets_per_turn) * _get_density_multiplier())))
+	var angle_deg: float = 0.0
+	for i in range(total):
+		if not is_instance_valid(origin_node): return
+		var dir := Vector2.RIGHT.rotated(deg_to_rad(angle_deg))
+		var bullet: Area2D = ENEMY_BULLET_SCENE.instantiate()
+		bullet.global_position = origin_node.global_position
+		bullet.set("direction", dir)
+		bullet.set("speed", speed * BASE_SPEED_MULT)
+		if accel != 0.0:
+			bullet.set("accel", accel)
+		var scene_tree: SceneTree = node.get_tree() if is_instance_valid(node) else Engine.get_main_loop() as SceneTree
+		if scene_tree and scene_tree.current_scene:
+			var container := scene_tree.current_scene.get_node_or_null("GameViewport/Bullets")
+			var target = container if container else scene_tree.current_scene
+			target.add_child(bullet)
+			bullet.monitoring = true
+			bullet.collision_layer = 0
+			bullet.collision_mask = 1
+		angle_deg += angular_step_deg
+		await _await_seconds(node, 0.02 / _get_cadence_multiplier())
+
+static func fire_accel_bloom(node: Node, origin: Vector2, petals: int = 12, speed: float = 90.0, accel: float = 40.0) -> void:
+	var count: int = max(1, int(round(float(petals) * _get_density_multiplier())))
+	var step: float = TAU / float(count)
+	for i in range(count):
+		var angle := step * float(i)
+		var dir := Vector2.RIGHT.rotated(angle)
+		var bullet: Area2D = ENEMY_BULLET_SCENE.instantiate()
+		bullet.global_position = origin
+		bullet.set("direction", dir)
+		bullet.set("speed", speed * BASE_SPEED_MULT)
+		bullet.set("accel", accel)
+		var scene_tree: SceneTree = node.get_tree() if is_instance_valid(node) else Engine.get_main_loop() as SceneTree
+		if scene_tree and scene_tree.current_scene:
+			var container := scene_tree.current_scene.get_node_or_null("GameViewport/Bullets")
+			var target = container if container else scene_tree.current_scene
+			target.add_child(bullet)
+			bullet.monitoring = true
+			bullet.collision_layer = 0
+			bullet.collision_mask = 1
+
+static func fire_wave_stream(node: Node, origin_node: Node2D, duration_s: float = 1.2, interval_s: float = 0.06, base_angle_deg: float = 90.0, wiggle_amp: float = 18.0, wiggle_freq: float = 2.0, speed: float = 120.0) -> void:
+	if duration_s <= 0.0: return
+	var elapsed := 0.0
+	var iv := interval_s / _get_cadence_multiplier()
+	while elapsed < duration_s:
+		if not is_instance_valid(origin_node): return
+		var b: Area2D = ENEMY_BULLET_SCENE.instantiate()
+		b.global_position = origin_node.global_position
+		b.set("direction", Vector2.RIGHT.rotated(deg_to_rad(base_angle_deg)))
+		b.set("speed", speed * BASE_SPEED_MULT)
+		b.set("wiggle_amp", wiggle_amp)
+		b.set("wiggle_freq", wiggle_freq)
+		var scene_tree: SceneTree = node.get_tree() if is_instance_valid(node) else Engine.get_main_loop() as SceneTree
+		if scene_tree and scene_tree.current_scene:
+			var container := scene_tree.current_scene.get_node_or_null("GameViewport/Bullets")
+			var target = container if container else scene_tree.current_scene
+			target.add_child(b)
+			b.monitoring = true
+			b.collision_layer = 0
+			b.collision_mask = 1
+		await _await_seconds(node, iv)
+		elapsed += iv
+
 static func fire_fixed_beam(node: Node, origin_node: Node2D, angle_degrees: float, duration_s: float, interval_s: float = 0.02, speed: float = 450.0) -> void:  # Reduced from 1100.0
 	if duration_s <= 0.0 or interval_s <= 0.0: return
 	var elapsed: float = 0.0

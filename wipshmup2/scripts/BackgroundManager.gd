@@ -1,3 +1,4 @@
+class_name BackgroundManager
 extends Node2D
 
 signal background_changed(environment_type: String)
@@ -17,7 +18,6 @@ var current_environment: EnvironmentType = EnvironmentType.SPACE_DEEP
 var layers: Array = []
 
 func _ready():
-	print("BackgroundManager: Initializing simplified background system")
 	_create_environment(EnvironmentType.SPACE_DEEP)
 
 func _process(delta: float) -> void:
@@ -30,7 +30,7 @@ func _process(delta: float) -> void:
 		sprite.position.y += layer["scroll_speed"] * delta
 		if sprite.position.y > 220:
 			sprite.position.y = -220
-
+#god i wished I knew how this worked so I could fix it fuck my life
 func _create_environment(env_type: EnvironmentType):
 	current_environment = env_type
 	_clear_layers()
@@ -70,7 +70,6 @@ func _create_environment(env_type: EnvironmentType):
 func _add_layer(texture_path: String, scroll_speed: float, color_modulate: Color, sprite_scale: Vector2, sprite_position: Vector2):
 	var texture := load(texture_path)
 	if not texture:
-		print("BackgroundManager: Warning - Could not load texture: ", texture_path)
 		return
 
 	var sprite := Sprite2D.new()

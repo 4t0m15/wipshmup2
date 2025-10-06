@@ -23,7 +23,6 @@ func _ready() -> void:
 	collision_mask = 1
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
-	print("Enemy ", name, " ready, monitoring: ", monitoring, " groups: ", get_groups())
 
 	# Safety check: ensure we have collision shape
 	if not has_node("CollisionShape2D"):
@@ -45,9 +44,6 @@ func _ready() -> void:
 	if has_node("Sprite2D"):
 		var spr: Sprite2D = $Sprite2D
 		SpriteManager.auto_setup_enemy_sprite(spr, enemy_type)
-		print("Enemy sprite setup via SpriteManager for type: ", enemy_type)
-	else:
-		print("Enemy missing Sprite2D node!")
 
 
 	# Validate collision setup after initialization
@@ -80,11 +76,8 @@ func _validate_collision_setup() -> void:
 		add_to_group("enemy")
 
 func take_damage(amount: int, source: String = "shot") -> void:
-	print("Enemy ", name, " taking damage: ", amount, " from ", source, " HP: ", hp)
-
 	# Respect invulnerability toggles per source
 	if (source == "shot" and ignore_shot_damage) or (source == "bomb" and ignore_bomb_damage):
-		print("Enemy ", name, " ignoring damage from ", source)
 		return
 
 	# Safety check: ensure we're still valid
@@ -93,10 +86,8 @@ func take_damage(amount: int, source: String = "shot") -> void:
 
 	hp -= amount
 	_last_damage_source = source
-	print("Enemy ", name, " HP after damage: ", hp)
 
 	if hp <= 0:
-		print("Enemy ", name, " killed!")
 		# Play enemy death sound
 		var audio_manager = get_node_or_null("/root/AudioManager")
 		if audio_manager and audio_manager.has_method("play_enemy_death"):

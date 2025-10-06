@@ -1,6 +1,8 @@
 extends BossBase
 
 const BP := preload("res://scripts/BulletPatterns.gd")
+func _init() -> void:
+	phases_total = 2
 
 @export var move_y: float = 52.0
 @export var move_speed: float = 25.0  # Reduced from 60.0 for playable speed

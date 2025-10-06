@@ -16,7 +16,6 @@ func _ready() -> void:
 		hurtbox.collision_mask = 1
 		# Ensure hurtbox tracks the player position
 		hurtbox.position = Vector2.ZERO
-	print("Simple player ready")
 
 func _physics_process(_delta: float) -> void:
 	if not _alive: return

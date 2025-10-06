@@ -2,6 +2,8 @@ extends BossBase
 
 const ENEMY_SCENE: PackedScene = preload("res://scenes/enemy/Enemy.tscn")
 const BP := preload("res://scripts/BulletPatterns.gd")
+func _init() -> void:
+	phases_total = 2
 
 @export var move_y: float = 48.0
 @export var move_speed: float = 35.0  # Reduced from 80.0 for playable speed
