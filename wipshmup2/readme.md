@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ## wipshmup2 - a shmup game inspired by Cho Ren Sha 68K, 1942, the TouHou Project series and Galaga/Galaxian.
 
 Credits: Harrison Allen for the base of my own CRT shader which is very heavily modified from his which can be found @ (https://godotshaders.com/shader/crt-with-luminance-preservation/)
@@ -241,3 +242,9 @@ controls: arrow keys to move x to deploy bomb and space to shoot
 ---
 
 *Thanks for reading! :)*
+=======
+need to redo this
+Campaign planning:
+    - No scoring just a ranking system based on ratios of k/d accuracy and enemies missed like a lot of fighting games
+    - Choice between animated cutscenes
+>>>>>>> 983d5e0 (changed readme)
