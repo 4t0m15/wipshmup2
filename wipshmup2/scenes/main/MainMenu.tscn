@@ -50,16 +50,16 @@ layout_mode = 2
 theme_override_constants/separation = 6
 alignment = 1
 
-[node name="Play" type="Button" parent="Canvas/MenuPanel/MenuList"]
-text = "Play"
+[node name="Freeplay" type="Button" parent="Canvas/MenuPanel/MenuList"]
+text = "Freeplay"
 focus_mode = 2
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.9, 1, 0.7, 1)
 theme_override_colors/font_outline_color = Color(0.2, 0.5, 0.1, 0.8)
 theme_override_constants/outline_size = 1
 
-[node name="Options" type="Button" parent="Canvas/MenuPanel/MenuList"]
-text = "Options"
+[node name="Campaign" type="Button" parent="Canvas/MenuPanel/MenuList"]
+text = "Campaign"
 focus_mode = 2
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.7, 0.9, 1, 1)
@@ -73,18 +73,6 @@ theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(1, 0.8, 0.4, 1)
 theme_override_colors/font_outline_color = Color(0.5, 0.3, 0.1, 0.8)
 theme_override_constants/outline_size = 1
-
-[node name="Hint" type="Label" parent="Canvas"]
-offset_left = 0.0
-offset_top = 168.0
-offset_right = 320.0
-offset_bottom = 180.0
-horizontal_alignment = 1
-theme_override_font_sizes/font_size = 8
-theme_override_colors/font_color = Color(0.9, 0.8, 1, 0.9)
-theme_override_colors/font_outline_color = Color(0.4, 0.2, 0.6, 0.8)
-theme_override_constants/outline_size = 1
-text = "Up/Down to select • Enter to confirm"
 
 [node name="BGM" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("3_bgm")

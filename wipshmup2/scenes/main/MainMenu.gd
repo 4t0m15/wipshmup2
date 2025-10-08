@@ -5,7 +5,6 @@ extends Node2D
 @onready var _buttons: Array[Button] = _collect_buttons()
 
 @onready var _title: Label = $Canvas/Title
-@onready var _hint: Label = $Canvas/Hint
 @onready var _menu_panel: PanelContainer = $Canvas/MenuPanel
 
 # Background/viewport pipeline
@@ -51,10 +50,10 @@ func _ready() -> void:
 		if not is_instance_valid(b):
 			continue
 		match b.name:
-			"Play":
-				b.pressed.connect(_on_play_pressed)
-			"Options":
-				b.pressed.connect(_on_options_pressed)
+			"Freeplay":
+				b.pressed.connect(_on_freeplay_pressed)
+			"Campaign":
+				b.pressed.connect(_on_campaign_pressed)
 			"Quit":
 				b.pressed.connect(_on_quit_pressed)
 
@@ -62,11 +61,6 @@ func _ready() -> void:
 	var tw := create_tween().set_loops()
 	tw.tween_property(_title, "modulate:a", 0.85, 1.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tw.tween_property(_title, "modulate:a", 1.0, 1.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-
-	# Looping opacity tween for hint
-	var th := create_tween().set_loops()
-	th.tween_property(_hint, "modulate:a", 0.7, 1.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	th.tween_property(_hint, "modulate:a", 1.0, 1.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 	# Looping subtle scale tween for menu panel
 	if is_instance_valid(_menu_panel):
@@ -125,19 +119,19 @@ func _create_focus_tween(b: Button) -> void:
 func _activate_current() -> void:
 	match _current_index:
 		0:
-			_on_play_pressed()
+			_on_freeplay_pressed()
 		1:
-			_on_options_pressed()
+			_on_campaign_pressed()
 		2:
 			_on_quit_pressed()
 
-func _on_play_pressed() -> void:
+func _on_freeplay_pressed() -> void:
 	_play_confirm_beep()
 	_transition_to_game()
 
-func _on_options_pressed() -> void:
-	_play_nav_beep()
-	_show_simple_popup("Options coming soon\n- Toggle Fullscreen (Alt+Enter)\n- Audio with dev beeps")
+func _on_campaign_pressed() -> void:
+	_play_confirm_beep()
+	_transition_to_campaign()
 
 func _on_quit_pressed() -> void:
 	_play_confirm_beep()
@@ -288,6 +282,15 @@ func _transition_to_game() -> void:
 	var tw := create_tween()
 	tw.tween_property(fade, "color:a", 1.0, 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	tw.finished.connect(func(): get_tree().change_scene_to_file("res://scenes/main/Main.tscn"))
+
+func _transition_to_campaign() -> void:
+	var fade := ColorRect.new()
+	fade.color = Color(0, 0, 0, 0)
+	fade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(fade)
+	var tw := create_tween()
+	tw.tween_property(fade, "color:a", 1.0, 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tw.finished.connect(func(): get_tree().change_scene_to_file("res://scenes/main/CampaignScreen.tscn"))
 
 func _play_nav_beep() -> void:
 	var am := get_node_or_null("/root/AudioManager")
