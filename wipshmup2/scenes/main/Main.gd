@@ -94,6 +94,9 @@ func _setup_stage_controller() -> void:
 		stage_controller.boss_defeated.connect(_on_boss_defeated)
 	if stage_controller.has_signal("enemy_spawned"):
 		stage_controller.enemy_spawned.connect(_on_enemy_spawned)
+	
+	# Monitor for boss spawns to show health bar
+	_start_boss_monitoring()
 
 	stage_controller.start_run()
 
@@ -133,11 +136,18 @@ func _spawn_player() -> void:
 	if player.has_signal("hit"):
 		player.connect("hit", Callable(self, "_on_player_hit"))
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
+	# Handle game over restart in _process (UI-related)
 	if game_over and Input.is_action_just_pressed("ui_accept"):
 		get_tree().reload_current_scene()
 		return
 
+func _physics_process(delta: float) -> void:
+	# Skip physics if game is over
+	if game_over:
+		return
+	
+	# Player movement - handled in physics process for consistent timing
 	if player and is_instance_valid(player):
 		var input_vector := Vector2.ZERO
 		input_vector.x = Input.get_action_strength("ui_right") - Input.get_action_strength("ui_left")
@@ -146,11 +156,13 @@ func _process(delta: float) -> void:
 		player.position.x = clamp(player.position.x, 16.0, 304.0)
 		player.position.y = clamp(player.position.y, 16.0, 164.0)
 
+	# Player shooting
 	if Input.is_key_pressed(KEY_SPACE) and player and is_instance_valid(player):
 		if bullet_timer.is_stopped():
 			_fire_bullet()
 			bullet_timer.start()
 
+	# Bomb usage
 	if Input.is_action_just_pressed("ui_cancel") and bombs > 0:
 		_use_bomb()
 
@@ -166,7 +178,7 @@ func _update_bomb_display() -> void:
 	if is_instance_valid(hud):
 		hud.call("set_bombs", bombs)
 
-func _on_enemy_killed(points: int) -> void:
+func _on_enemy_killed(points: int, enemy_position: Vector2) -> void:
 	"""Handle enemy killed event"""
 	score += points
 	_update_score_label()
@@ -184,11 +196,9 @@ func _on_enemy_killed(points: int) -> void:
 	if is_instance_valid(screen_shake):
 		screen_shake.shake(2.0, 0.06)
 
-	# Try to drop items when enemies are killed
+	# Try to drop items when enemies are killed using actual enemy position
 	if item_drop_manager:
-		# Get enemy position (approximate center of screen for now)
-		var enemy_pos = Vector2(160, 100)
-		item_drop_manager.try_drop_item(enemy_pos, points)
+		item_drop_manager.try_drop_item(enemy_position, points)
 
 	# Screen shake: low base intensity, scaled logarithmically by streak
 	if is_instance_valid(screen_shake):
@@ -325,3 +335,36 @@ func _get_shake_scale_from_streak() -> float:
 	var k: float = 0.18
 	var streak: float = float(chain_count)
 	return 1.0 + k * log(1.0 + max(streak, 0.0))
+
+func _start_boss_monitoring() -> void:
+	"""Monitor for boss spawns and connect to HUD"""
+	# Check periodically for new bosses
+	var check_timer = Timer.new()
+	check_timer.wait_time = 0.5
+	check_timer.autostart = true
+	check_timer.timeout.connect(_check_for_bosses)
+	add_child(check_timer)
+
+func _check_for_bosses() -> void:
+	"""Check if a boss has spawned and show health bar"""
+	if game_over:
+		return
+	
+	var bosses = get_tree().get_nodes_in_group("boss")
+	for boss in bosses:
+		if is_instance_valid(boss) and not boss.has_meta("health_bar_shown"):
+			# Mark this boss as having its health bar shown
+			boss.set_meta("health_bar_shown", true)
+			
+			# Show the boss health bar
+			if is_instance_valid(hud) and hud.has_method("show_boss_health"):
+				hud.show_boss_health(boss)
+			
+			# Connect to boss defeated signal to hide health bar
+			if boss.has_signal("defeated"):
+				boss.defeated.connect(_on_boss_health_depleted.bind(boss))
+
+func _on_boss_health_depleted(_boss: Node) -> void:
+	"""Handle when a boss is defeated"""
+	if is_instance_valid(hud) and hud.has_method("hide_boss_health"):
+		hud.hide_boss_health()

@@ -1,7 +1,7 @@
 class_name StageController
 extends Node
 
-signal enemy_killed(points: int)
+signal enemy_killed(points: int, position: Vector2)
 signal stage_completed(stage_number: int)
 signal boss_defeated()
 signal enemy_spawned(enemy: Area2D)
@@ -92,7 +92,9 @@ func _start_current_stage() -> void:
 func _connect_enemy_signals(enemy: Area2D) -> void:
 	if enemy.has_signal("killed"):
 		enemy.killed.connect(func(points: int):
-			emit_signal("enemy_killed", points)
+			# Capture enemy position when killed
+			var enemy_position: Vector2 = enemy.global_position if is_instance_valid(enemy) else Vector2(160, 100)
+			emit_signal("enemy_killed", points, enemy_position)
 			if typeof(RankManager) != TYPE_NIL and RankManager.has_method("on_enemy_killed"):
 				RankManager.on_enemy_killed(points)
 		)
