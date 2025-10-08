@@ -113,6 +113,7 @@ func _setup_stage_controller() -> void:
 		_connect_enemy_bullet(bullet)
 
 func _spawn_player() -> void:
+	print("[Main] Spawning player")
 	player = PLAYER_SCENE.instantiate()
 	player.position = Vector2(160, 150)
 	var container = game_viewport if game_viewport else self
@@ -120,12 +121,14 @@ func _spawn_player() -> void:
 
 	player_hurtbox = player.get_node_or_null("Hurtbox")
 	if player_hurtbox:
+		print("[Main] Found existing player hurtbox")
 		player_hurtbox.add_to_group("player_hurtbox")
 		player_hurtbox.monitoring = true
 		player_hurtbox.monitorable = true
-		player_hurtbox.collision_layer = 1
-		player_hurtbox.collision_mask = 1
+		player_hurtbox.collision_layer = 1   # Player layer
+		player_hurtbox.collision_mask = 2    # Enemy bullet layer
 	else:
+		print("[Main] Creating new player hurtbox")
 		player_hurtbox = Area2D.new()
 		player_hurtbox.name = "Hurtbox"
 		var collision_shape = CollisionShape2D.new()
@@ -136,13 +139,15 @@ func _spawn_player() -> void:
 		player_hurtbox.add_to_group("player_hurtbox")
 		player_hurtbox.monitoring = true
 		player_hurtbox.monitorable = true
-		player_hurtbox.collision_layer = 1
-		player_hurtbox.collision_mask = 1
+		player_hurtbox.collision_layer = 1   # Player layer
+		player_hurtbox.collision_mask = 2    # Enemy bullet layer
 
 	if player.has_signal("damaged"):
 		player.connect("damaged", Callable(self, "_on_player_damaged"))
+		print("[Main] Connected to player 'damaged' signal")
 	if player.has_signal("hit"):
 		player.connect("hit", Callable(self, "_on_player_hit"))
+		print("[Main] Connected to player 'hit' signal")
 
 func _process(delta: float) -> void:
 	# Handle game over restart in _process (UI-related)
@@ -286,11 +291,17 @@ func _use_bomb() -> void:
 		screen_shake.shake(1.2 * shake_mult, 0.16)
 
 func _on_player_damaged(amount: int) -> void:
+	print("[Main] _on_player_damaged called: amount=", amount, " current_lives=", lives, " game_over=", game_over)
+	
 	if game_over:
+		print("[Main] Game already over, ignoring damage")
 		return
+	
 	lives -= amount
 	lives = max(lives, 0)
+	print("[Main] Lives after damage: ", lives)
 	_update_lives_display()
+	
 	# Damage causes a subtle shake; still scaled by current streak for feedback
 	if is_instance_valid(screen_shake):
 		var shake_mult := _get_shake_scale_from_streak()
@@ -300,23 +311,43 @@ func _on_player_damaged(amount: int) -> void:
 	chain_count = 0
 	if is_instance_valid(hud) and hud.has_method("set_chain"):
 		hud.set_chain(0, max_chain)
+	
 	if lives <= 0:
+		print("[Main] No lives left, triggering game over")
 		_on_player_hit()
+	else:
+		print("[Main] Player has ", lives, " lives remaining")
 
 func _on_player_hit() -> void:
+	print("[Main] _on_player_hit called, game_over=", game_over)
+	
 	if game_over:
+		print("[Main] Game already over, ignoring hit")
 		return
+	
+	print("[Main] Setting game_over=true")
 	game_over = true
 	_update_lives_display()
+	
 	if hud and hud.has_method("show_game_over"):
+		print("[Main] Showing game over screen")
 		hud.show_game_over(true)
+	else:
+		print("[Main] ERROR: HUD or show_game_over method not found!")
 
 func _on_enemy_spawned(enemy: Area2D) -> void:
 	if not is_instance_valid(enemy):
+		print("[Main] _on_enemy_spawned called with invalid enemy")
 		return
+	
+	print("[Main] Enemy spawned, connecting signals")
+	
+	# Connect enemy hit_player signal if it exists
 	if enemy.has_signal("hit_player") and not enemy.is_connected("hit_player", Callable(self, "_on_enemy_hit_player")):
 		enemy.connect("hit_player", Callable(self, "_on_enemy_hit_player"))
+		print("[Main] Connected enemy hit_player signal")
 
+	# Monitor for bullets spawned by this enemy
 	var connect_child := func(node: Node):
 		if node.is_in_group("enemy_bullet"):
 			_connect_enemy_bullet(node)
@@ -326,21 +357,41 @@ func _on_enemy_spawned(enemy: Area2D) -> void:
 
 func _connect_enemy_bullet(bullet: Area2D) -> void:
 	if not bullet or not is_instance_valid(bullet):
+		print("[Main] _connect_enemy_bullet called with invalid bullet")
 		return
+	
+	# SIMPLIFIED: Only connect hit_player signal - no fallback logic
 	if bullet.has_signal("hit_player"):
 		# Avoid duplicate connections
-		if not bullet.is_connected("hit_player", Callable(self, "_on_enemy_hit_player")):
-			bullet.connect("hit_player", Callable(self, "_on_enemy_hit_player"))
+		if not bullet.is_connected("hit_player", Callable(self, "_on_enemy_bullet_hit_player")):
+			bullet.connect("hit_player", Callable(self, "_on_enemy_bullet_hit_player"))
+			print("[Main] Connected bullet hit_player signal at position: ", bullet.position)
+		else:
+			print("[Main] Bullet hit_player already connected")
 	else:
-		if not bullet.body_entered.is_connected(Callable(self, "_on_enemy_bullet_body_entered")):
-			bullet.body_entered.connect(Callable(self, "_on_enemy_bullet_body_entered"))
+		print("[Main] WARNING: Enemy bullet missing hit_player signal!")
 
-func _on_enemy_bullet_body_entered(body: Node) -> void:
-	if body.is_in_group("player") or body.is_in_group("player_hurtbox"):
-		_on_enemy_hit_player()
+func _on_enemy_bullet_hit_player() -> void:
+	print("[Main] _on_enemy_bullet_hit_player triggered!")
+	if player and is_instance_valid(player):
+		if player.has_method("take_damage"):
+			print("[Main] Calling player.take_damage(1)")
+			player.take_damage(1)
+		else:
+			print("[Main] ERROR: Player missing take_damage method!")
+	else:
+		print("[Main] ERROR: Player invalid when bullet hit!")
 
 func _on_enemy_hit_player() -> void:
-	_on_player_damaged(1)
+	print("[Main] _on_enemy_hit_player triggered (enemy collision)!")
+	if player and is_instance_valid(player):
+		if player.has_method("take_damage"):
+			print("[Main] Calling player.take_damage(1) from enemy")
+			player.take_damage(1)
+		else:
+			print("[Main] ERROR: Player missing take_damage method!")
+	else:
+		print("[Main] ERROR: Player invalid when enemy hit!")
 
 func _get_shake_scale_from_streak() -> float:
 	# Logarithmic scale: 1 + k * ln(1 + streak)

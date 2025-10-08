@@ -15,11 +15,19 @@ var _age: float = 0.0
 
 func _ready() -> void:
 	monitoring = true
+	monitorable = true
+	collision_layer = 2  # Enemy bullet layer
+	collision_mask = 1   # Detect player layer
 	add_to_group("enemy_bullet")
+	
+	print("[EnemyBullet] Created at position: ", position)
+	
 	if has_node("VisibleOnScreenNotifier2D"):
 		$VisibleOnScreenNotifier2D.screen_exited.connect(_on_screen_exited)
+	
+	# ONLY use area_entered for hit detection - no body_entered
 	area_entered.connect(_on_area_entered)
-	body_entered.connect(_on_body_entered)
+	
 	# Normalize sprite size to target height
 	if has_node("Sprite2D"):
 		var spr: Sprite2D = $Sprite2D
@@ -28,7 +36,6 @@ func _ready() -> void:
 			if tex_size.y > 0:
 				var s: float = sprite_target_height_px / float(tex_size.y)
 				spr.scale = Vector2(s, s)
-#fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 func _physics_process(delta: float) -> void:
 	_age += delta
 	var speed_mult: float = 1.0
@@ -60,14 +67,16 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 
 func _on_area_entered(area: Area2D) -> void:
+	# Debug: print ALL area collisions
+	print("[EnemyBullet] _on_area_entered triggered! area=", area.name, " groups=", area.get_groups(), " bullet_pos=", position)
+	
+	# ONLY detect player hurtbox - single detection path
 	if area.is_in_group("player_hurtbox"):
+		print("[EnemyBullet] HIT CONFIRMED! Emitting hit_player signal")
 		hit_player.emit()
 		queue_free()
-
-func _on_body_entered(body: Node) -> void:
-	if body.is_in_group("player"):
-		hit_player.emit()
-		queue_free()
+	else:
+		print("[EnemyBullet] Not player hurtbox, ignoring")
 
 func _on_screen_exited() -> void:
 	queue_free()

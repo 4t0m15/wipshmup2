@@ -235,7 +235,7 @@ func _setup_parallax_background():
 
 		add_child(parallax_background)
 
-
+ 
 
 		await get_tree().process_frame
 

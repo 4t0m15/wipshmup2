@@ -34,8 +34,20 @@ static func _spawn_bullet(node: Node, position: Vector2, direction: Vector2, spe
 		target.add_child(bullet)
 		# Ensure collision is properly enabled after adding to scene
 		bullet.monitoring = true
-		bullet.collision_layer = 0
-		bullet.collision_mask = 1
+		bullet.monitorable = true
+		bullet.collision_layer = 2  # Enemy bullet layer
+		bullet.collision_mask = 1   # Detect player layer
+		
+		# Connect hit_player signal to Main's handler
+		if bullet.has_signal("hit_player"):
+			var main = scene_tree.current_scene
+			if main.has_method("_on_enemy_bullet_hit_player"):
+				bullet.connect("hit_player", Callable(main, "_on_enemy_bullet_hit_player"))
+				print("[BulletPatterns] Spawned and connected bullet at ", position)
+			else:
+				print("[BulletPatterns] WARNING: Main missing _on_enemy_bullet_hit_player method!")
+		else:
+			print("[BulletPatterns] WARNING: Bullet missing hit_player signal!")
 	else:
 		bullet.queue_free()
 
@@ -141,8 +153,14 @@ static func fire_spiral(node: Node, origin_node: Node2D, turns: int = 2, bullets
 			var target = container if container else scene_tree.current_scene
 			target.add_child(bullet)
 			bullet.monitoring = true
-			bullet.collision_layer = 0
-			bullet.collision_mask = 1
+			bullet.monitorable = true
+			bullet.collision_layer = 2  # Enemy bullet layer
+			bullet.collision_mask = 1   # Detect player layer
+			# Connect signal
+			if bullet.has_signal("hit_player"):
+				var main = scene_tree.current_scene
+				if main.has_method("_on_enemy_bullet_hit_player"):
+					bullet.connect("hit_player", Callable(main, "_on_enemy_bullet_hit_player"))
 		angle_deg += angular_step_deg
 		await _await_seconds(node, 0.02 / _get_cadence_multiplier())
 
@@ -163,8 +181,14 @@ static func fire_accel_bloom(node: Node, origin: Vector2, petals: int = 12, spee
 			var target = container if container else scene_tree.current_scene
 			target.add_child(bullet)
 			bullet.monitoring = true
-			bullet.collision_layer = 0
-			bullet.collision_mask = 1
+			bullet.monitorable = true
+			bullet.collision_layer = 2  # Enemy bullet layer
+			bullet.collision_mask = 1   # Detect player layer
+			# Connect signal
+			if bullet.has_signal("hit_player"):
+				var main = scene_tree.current_scene
+				if main.has_method("_on_enemy_bullet_hit_player"):
+					bullet.connect("hit_player", Callable(main, "_on_enemy_bullet_hit_player"))
 
 static func fire_wave_stream(node: Node, origin_node: Node2D, duration_s: float = 1.2, interval_s: float = 0.06, base_angle_deg: float = 90.0, wiggle_amp: float = 18.0, wiggle_freq: float = 2.0, speed: float = 120.0) -> void:
 	if duration_s <= 0.0: return
@@ -184,8 +208,14 @@ static func fire_wave_stream(node: Node, origin_node: Node2D, duration_s: float 
 			var target = container if container else scene_tree.current_scene
 			target.add_child(b)
 			b.monitoring = true
-			b.collision_layer = 0
-			b.collision_mask = 1
+			b.monitorable = true
+			b.collision_layer = 2  # Enemy bullet layer
+			b.collision_mask = 1   # Detect player layer
+			# Connect signal
+			if b.has_signal("hit_player"):
+				var main = scene_tree.current_scene
+				if main.has_method("_on_enemy_bullet_hit_player"):
+					b.connect("hit_player", Callable(main, "_on_enemy_bullet_hit_player"))
 		await _await_seconds(node, iv)
 		elapsed += iv
 
