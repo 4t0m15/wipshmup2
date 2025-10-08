@@ -6,6 +6,7 @@ extends Node2D
 
 @onready var _title: Label = $Canvas/Title
 @onready var _menu_panel: PanelContainer = $Canvas/MenuPanel
+@onready var _quit_image_layer: CanvasLayer = $QuitImageLayer
 
 # Background/viewport pipeline
 @onready var _bg_node = $BG
@@ -135,6 +136,13 @@ func _on_campaign_pressed() -> void:
 
 func _on_quit_pressed() -> void:
 	_play_confirm_beep()
+	
+	# Show the quit image layer (above CRT filter)
+	if is_instance_valid(_quit_image_layer):
+		_quit_image_layer.visible = true
+	
+	# Wait 1 second, then quit
+	await get_tree().create_timer(1.0, false).timeout
 	get_tree().quit()
 
 # Viewport/CRT helpers

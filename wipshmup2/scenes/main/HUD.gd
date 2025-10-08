@@ -6,6 +6,7 @@ var _rainbow_time: float = 0.0
 var _streak_timer: float = 0.0
 var _streak_timeout: float = 2.0
 var _streak_active: bool = false
+var _rainbow_streak_active: bool = false
 
 @onready var _score_label: Label = $TopBar/HBox/ScoreLabel
 @onready var _lives_label: Label = $TopBar/HBox/LivesLabel
@@ -33,6 +34,10 @@ func _process(delta: float) -> void:
 	_rainbow_time += delta * 3.0  # Speed up the rainbow effect
 	if is_instance_valid(_shiba_label):
 		_shiba_label.add_theme_color_override("font_color", _get_rainbow_color(_rainbow_time))
+	
+	# Apply rainbow effect to streak label when active
+	if _rainbow_streak_active and is_instance_valid(_streak_label):
+		_streak_label.add_theme_color_override("font_color", _get_rainbow_color(_rainbow_time))
 	
 	# Update streak timer
 	if _streak_active and _streak_timer > 0.0:
@@ -88,10 +93,12 @@ func set_chain(current_chain: int, max_chain: int) -> void:
 		_streak_label.text = "Streak: %d (Best: %d)" % [current_chain, max_chain]
 		# Add visual emphasis for longer streaks
 		if current_chain >= 10:
-			_streak_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.2, 1.0))  # Red-orange for high streaks
+			_rainbow_streak_active = true  # Enable rainbow effect for 10+ kill streaks!
 		elif current_chain >= 5:
+			_rainbow_streak_active = false
 			_streak_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2, 1.0))  # Orange for medium streaks
 		else:
+			_rainbow_streak_active = false
 			_streak_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4, 1.0))  # Default yellow-orange
 		
 		# Start/reset the streak timer
@@ -102,6 +109,7 @@ func set_chain(current_chain: int, max_chain: int) -> void:
 		_streak_timer_bar.modulate = Color(0.4, 1.0, 0.4, 1.0)  # Start with green
 	else:
 		_streak_label.text = "Streak: 0 (Best: %d)" % max_chain
+		_rainbow_streak_active = false
 		_streak_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1.0))  # Gray when no streak
 		# Hide the timer bar when no streak
 		_streak_active = false
@@ -111,6 +119,7 @@ func reset_streak_timer() -> void:
 	# Called when streak is broken due to timeout or player getting hit
 	_streak_active = false
 	_streak_timer_bar.visible = false
+	_rainbow_streak_active = false
 	#this stops the streak only being reset by the player getting hit. Yes, this was actually a bug. god i suck.
 func show_message(text: String) -> void:
 	_msg_label.text = text

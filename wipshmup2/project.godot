@@ -11,9 +11,10 @@ config_version=5
 [application]
 
 config/name="wipshmup2"
-run/main_scene="res://scenes/main/MainMenu.tscn"
+run/main_scene="res://scenes/main/EpilepsyWarning.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 config/icon="res://icon.svg"
+run/max_fps=0
 
 [autoload]
 
@@ -30,6 +31,7 @@ window/size/viewport_height=180
 window/size/mode="windowed"
 window/stretch/mode="viewport"
 window/stretch/scale_mode="integer"
+window/vsync/vsync_mode=0
 
 [editor_plugins]
 
