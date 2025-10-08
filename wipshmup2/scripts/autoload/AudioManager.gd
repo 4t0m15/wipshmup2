@@ -7,6 +7,9 @@ var audio_players: Array[AudioStreamPlayer] = []
 var max_concurrent_sounds: int = 32
 var current_player_index: int = 0
 
+# Music player reference (set externally by scenes that have music)
+var music_player: AudioStreamPlayer = null
+
 # Sound effect parameters for procedural generation
 const PLAYER_SHOT_FREQ: float = 800.0
 const ENEMY_SHOT_FREQ: float = 400.0
@@ -171,3 +174,13 @@ func play_medal_upgrade() -> void:
 			timer.queue_free()
 		)
 		timer.start()
+
+## Music control for rank pressure system
+func set_music_pitch(pitch_scale: float) -> void:
+	"""Adjust the music pitch for tension feedback. Range: 0.5 to 2.0"""
+	if music_player and is_instance_valid(music_player):
+		music_player.pitch_scale = clamp(pitch_scale, 0.5, 2.0)
+
+func set_music_player(player: AudioStreamPlayer) -> void:
+	"""Set the music player reference for pitch control"""
+	music_player = player

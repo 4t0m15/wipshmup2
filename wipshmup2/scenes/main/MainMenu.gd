@@ -33,6 +33,13 @@ func _ready() -> void:
 
 	_setup_viewport_and_crt()
 	_start_environment_cycle()
+	
+	# Register BGM with AudioManager for pitch control
+	var bgm = get_node_or_null("BGM")
+	if bgm:
+		var audio_manager = get_node_or_null("/root/AudioManager")
+		if audio_manager and audio_manager.has_method("set_music_player"):
+			audio_manager.set_music_player(bgm)
 
 	# React to viewport resize to keep CRT aspect and container coverage correct
 	var vp := get_viewport()
@@ -46,6 +53,8 @@ func _ready() -> void:
 		match b.name:
 			"Play":
 				b.pressed.connect(_on_play_pressed)
+			"Options":
+				b.pressed.connect(_on_options_pressed)
 			"Quit":
 				b.pressed.connect(_on_quit_pressed)
 
@@ -69,7 +78,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	var viewport = get_viewport()
 	if not viewport:
 		return
-		
 
 	if event.is_action_pressed("ui_up"):
 		_move_selection(-1)
@@ -84,7 +92,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _move_selection(direction: int) -> void:
 	var now := Time.get_ticks_msec() / 1000.0
 	if now - _last_move_time < _move_cooldown:
-		return
+		return #this makes movement more fluid. maybe i should add a shop where you can disable all the stuff that improves UX but it more fun.
 	_last_move_time = now
 
 	_current_index = (_current_index + direction) % _buttons.size()
@@ -119,11 +127,17 @@ func _activate_current() -> void:
 		0:
 			_on_play_pressed()
 		1:
+			_on_options_pressed()
+		2:
 			_on_quit_pressed()
 
 func _on_play_pressed() -> void:
 	_play_confirm_beep()
 	_transition_to_game()
+
+func _on_options_pressed() -> void:
+	_play_nav_beep()
+	_show_simple_popup("Options coming soon\n- Toggle Fullscreen (Alt+Enter)\n- Audio with dev beeps")
 
 func _on_quit_pressed() -> void:
 	_play_confirm_beep()
@@ -284,3 +298,31 @@ func _play_confirm_beep() -> void:
 	var am := get_node_or_null("/root/AudioManager")
 	if am and am.has_method("play_power_up"):
 		am.play_power_up()
+
+func _show_simple_popup(msg: String) -> void:
+	# Create a simple popup label
+	var popup := Label.new()
+	popup.text = msg
+	popup.add_theme_font_size_override("font_size", 10)
+	popup.add_theme_color_override("font_color", Color(1.0, 0.9, 0.8, 1.0))
+	popup.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	popup.add_theme_constant_override("outline_size", 2)
+	popup.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	popup.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	popup.position = Vector2(60, 100)
+	popup.size = Vector2(200, 60)
+	popup.modulate.a = 0.0
+	add_child(popup)
+	
+	# Fade in
+	var tw_in := create_tween()
+	tw_in.tween_property(popup, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	
+	# Wait and fade out
+	await get_tree().create_timer(2.0, false).timeout
+	if is_instance_valid(popup):
+		var tw_out := create_tween()
+		tw_out.tween_property(popup, "modulate:a", 0.0, 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		await tw_out.finished
+		if is_instance_valid(popup):
+			popup.queue_free()

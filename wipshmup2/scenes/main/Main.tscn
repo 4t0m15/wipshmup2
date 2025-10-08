@@ -1,8 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://c6kbxfx42hul1"]
+[gd_scene load_steps=4 format=3 uid="uid://c6kbxfx42hul1"]
 
 [ext_resource type="Script" path="res://scenes/main/Main.gd" id="1_9m0k2"]
 [ext_resource type="PackedScene" path="res://scenes/main/HUD.tscn" id="2_hud"]
 [ext_resource type="PackedScene" path="res://scenes/backgrounds/SpaceBackground.tscn" id="3_space_bg"]
+[ext_resource type="AudioStream" path="res://retro-waves-139640.mp3" id="4_bgm"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_9m0k2")
@@ -16,4 +17,9 @@ script = ExtResource("1_9m0k2")
 [node name="Bullets" type="Node2D" parent="GameViewport"]
 
 [node name="HUD" parent="." instance=ExtResource("2_hud")]
+
+[node name="BGM" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("4_bgm")
+autoplay = true
+bus = &"Master"
 

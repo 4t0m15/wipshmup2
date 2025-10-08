@@ -25,7 +25,7 @@ controls: arrow keys to move x to deploy bomb and space to shoot
 │  │  │                    │  │                     │  │                     │       │   │
 │  │  │  ┌──────────────┐  │  │  ┌───────────────┐  │  │  ┌───────────────┐  │       │   │
 │  │  │  │   PLAYER     │  │  │  │  Score/Lives  │  │  │  │   Dither      │  │       │   │
-│  │  │  │ (Player.gd)  │  │  │  │  TPS Counter  │  │  │  │   Shader      │  │       │   │
+│  │  │  │ (Player.gd)  │  │  │  │  FPS Counter  │  │  │  │   Shader      │  │       │   │
 │  │  │  │              │  │  │  │  Game Over    │  │  │  │               │  │       │   │
 │  │  │  │ ┌─────────┐  │  │  │  │  Popups       │  │  │  │       ▼       │  │       │   │
 │  │  │  │ │Movement │  │  │  │  └───────────────┘  │  │  │   CRT Shader  │  │       │   │
@@ -66,21 +66,21 @@ controls: arrow keys to move x to deploy bomb and space to shoot
 │                                 AUTOLOAD SYSTEMS                                      │
 │                              (Global Singletons)                                      │
 │                                                                                       │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐   │
-│  │  AudioManager   │  │  RankManager    │  │ DifficultyConfig│  │  TickManager    │   │
-│  │   (Audio.gd)    │  │  (Rank.gd)      │  │   (Config.gd)   │  │  (Tick.gd)      │   │
-│  │                 │  │                 │  │                 │  │                 │   │
-│  │ ┌─────────────┐ │  │ ┌─────────────┐ │  │ ┌─────────────┐ │  │ ┌─────────────┐ │   │
-│  │ │Procedural   │ │  │ │Dynamic      │ │  │ │Configurable │ │  │ │Performance  │ │   │
-│  │ │Sound Effects│ │  │ │Difficulty   │ │  │ │Parameters   │ │  │ │Timing       │ │   │
-│  │ │Generation   │ │  │ │Scaling      │ │  │ │for Game     │ │  │ │System       │ │   │
-│  │ │             │ │  │ │             │ │  │ │Balance      │ │  │ │             │ │   │
-│  │ │• Beeps      │ │  │ │• Speed      │ │  │ │             │ │  │ │• Time       │ │   │
-│  │ │• Boops      │ │  │ │• HP         │ │  │ │• Min/Max    │ │  │ │• Delta      │ │   │
-│  │ │• Explosions │ │  │ │• Bullet     │ │  │ │  Rank       │ │  │ │• Caching    │ │   │
-│  │ │• Extends    │ │  │ │  Speed      │ │  │ │• Multiplier │ │  │ │             │ │   │
-│  │ └─────────────┘ │  │ │• Pattern    │ │  │ │  Caps       │ │  │ └─────────────┘ │   │
-│  └─────────────────┘  │ │  Density    │ │  │ └─────────────┘ │  └─────────────────┘   │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                        │
+│  │  AudioManager   │  │  RankManager    │  │ DifficultyConfig│                        │
+│  │   (Audio.gd)    │  │  (Rank.gd)      │  │   (Config.gd)   │                        │
+│  │                 │  │                 │  │                 │                        │
+│  │ ┌─────────────┐ │  │ ┌─────────────┐ │  │ ┌─────────────┐ │                        │
+│  │ │Procedural   │ │  │ │Dynamic      │ │  │ │Configurable │ │                        │
+│  │ │Sound Effects│ │  │ │Difficulty   │ │  │ │Parameters   │ │                        │
+│  │ │Generation   │ │  │ │Scaling      │ │  │ │for Game     │ │                        │
+│  │ │             │ │  │ │             │ │  │ │Balance      │ │                        │
+│  │ │• Beeps      │ │  │ │• Speed      │ │  │ │             │ │                        │
+│  │ │• Boops      │ │  │ │• HP         │ │  │ │• Min/Max    │ │                        │
+│  │ │• Explosions │ │  │ │• Bullet     │ │  │ │  Rank       │ │                        │
+│  │ │• Extends    │ │  │ │  Speed      │ │  │ │• Multiplier │ │                        │
+│  │ └─────────────┘ │  │ │• Pattern    │ │  │ │  Caps       │ │                        │
+│  └─────────────────┘  │ │  Density    │ │  │ └─────────────┘ │                        │
 │                       │ └─────────────┘ │  └─────────────────┘                        │
 │                       └─────────────────┘                                             │
 └───────────────────────────────────────────────────────────────────────────────────────┘
@@ -193,10 +193,10 @@ controls: arrow keys to move x to deploy bomb and space to shoot
        ▼                                       ▼
    Stage Progress                         HUD Popup
 
-    TickManager.tick ────────────────► HUD._on_tick()
+    Engine.get_frames_per_second() ──────► HUD._process()
                                               │
                                               ▼
-                                        TPS Display
+                                        FPS Display (000 format)
 ```
 
 ## Enemy Behavior Types

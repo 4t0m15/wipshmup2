@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 var _accum_time_s: float = 0.0
-var _accum_ticks: int = 0
+var _frame_count: int = 0
 var _rainbow_time: float = 0.0
 var _streak_timer: float = 0.0
 var _streak_timeout: float = 2.0
@@ -9,7 +9,7 @@ var _streak_active: bool = false
 
 @onready var _score_label: Label = $TopBar/HBox/ScoreLabel
 @onready var _lives_label: Label = $TopBar/HBox/LivesLabel
-@onready var _tps_label: Label = $TopBar/HBox/TPSLabel
+@onready var _fps_label: Label = $TopBar/HBox/TPSLabel
 @onready var _bombs_label: Label = $TopBar/HBox/BombsLabel
 @onready var _streak_label: Label = $TopBar/HBox/StreakLabel
 @onready var _streak_timer_bar: ProgressBar = $StreakTimer/ProgressBar
@@ -52,19 +52,20 @@ func _process(delta: float) -> void:
 			_streak_active = false
 			_streak_timer_bar.visible = false
 	
-	# Simple TPS calculation
+	# FPS calculation with leading zeros (car dashboard style)
 	_accum_time_s += delta
-	_accum_ticks += 1
+	_frame_count += 1
 	if _accum_time_s >= 1.0:
-		var tps: float = float(_accum_ticks) / _accum_time_s
-		_tps_label.text = "TPS: %d" % int(round(tps))
+		var fps: int = int(round(float(_frame_count) / _accum_time_s))
+		# Format with leading zeros (3 digits: 099, 007, etc.)
+		_fps_label.text = "FPS: %03d" % fps
 		_accum_time_s = 0.0
-		_accum_ticks = 0
+		_frame_count = 0
 
 func _get_rainbow_color(time: float) -> Color:
 	# Create rainbow effect using HSV color space
 	var hue = fmod(time, 1.0)  # Cycle through hue from 0 to 1
-	return Color.from_hsv(hue, 1.0, 1.0, 1.0)  # Full saturation and value for vibrant colors
+	return Color.from_hsv(hue, 1.0, 1.0)  # Full saturation and value for vibrant colors
 
 func set_score(value: int) -> void:
 	_score_label.text = "Score: %d" % value
@@ -73,9 +74,9 @@ func set_lives(value: int) -> void:
 	var lives_text = ""
 	for i in range(3):  # Show 3 heart slots
 		if i < value:
-			lives_text += "♥"  # Filled heart
+			lives_text += "X"  # Filled heart
 		else:
-			lives_text += "♡"  # Empty heart
+			lives_text += "O"  # Empty heart
 	_lives_label.text = "Lives: %s" % lives_text
 
 func set_bombs(value: int) -> void:
@@ -110,7 +111,7 @@ func reset_streak_timer() -> void:
 	# Called when streak is broken due to timeout or player getting hit
 	_streak_active = false
 	_streak_timer_bar.visible = false
-
+	#this stops the streak only being reset by the player getting hit. Yes, this was actually a bug. god i suck.
 func show_message(text: String) -> void:
 	_msg_label.text = text
 	_msg_panel.visible = true

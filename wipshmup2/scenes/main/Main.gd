@@ -11,11 +11,16 @@ var hud: Node
 var stage_controller: StageController
 var space_background: Node
 var item_drop_manager: Node
+var bgm_player: AudioStreamPlayer
 
 var game_over := false
 var lives := 3
 var bombs := 3
 var score := 0
+
+# Rank pressure system
+var rank_manager: Node
+var base_background_color: Color = Color.WHITE
 
 # Streak system for kills (used to scale screen shake)
 var chain_count: int = 0
@@ -56,6 +61,9 @@ func _ready() -> void:
 	_update_score_label()
 	_update_lives_display()
 	_update_bomb_display()
+	
+	# Setup rank pressure system
+	_setup_rank_pressure_system()
 
 func _setup_background() -> void:
 	space_background = game_viewport.get_node_or_null("SpaceBackground") if game_viewport else null
@@ -136,11 +144,15 @@ func _spawn_player() -> void:
 	if player.has_signal("hit"):
 		player.connect("hit", Callable(self, "_on_player_hit"))
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	# Handle game over restart in _process (UI-related)
 	if game_over and Input.is_action_just_pressed("ui_accept"):
 		get_tree().reload_current_scene()
 		return
+	
+	# Apply rank pressure system
+	if not game_over:
+		_apply_rank_pressure(delta)
 
 func _physics_process(delta: float) -> void:
 	# Skip physics if game is over
@@ -368,3 +380,49 @@ func _on_boss_health_depleted(_boss: Node) -> void:
 	"""Handle when a boss is defeated"""
 	if is_instance_valid(hud) and hud.has_method("hide_boss_health"):
 		hud.hide_boss_health()
+
+func _setup_rank_pressure_system() -> void:
+	"""Initialize the rank pressure system"""
+	# Get RankManager reference
+	rank_manager = get_node_or_null("/root/RankManager")
+	
+	# Get BGM player and register it with AudioManager
+	bgm_player = get_node_or_null("BGM")
+	if bgm_player:
+		var audio_manager = get_node_or_null("/root/AudioManager")
+		if audio_manager and audio_manager.has_method("set_music_player"):
+			audio_manager.set_music_player(bgm_player)
+	
+	# Store base background color
+	if is_instance_valid(space_background):
+		base_background_color = space_background.modulate
+
+func _apply_rank_pressure(delta: float) -> void:
+	"""Apply visual and audio pressure based on rank"""
+	if not rank_manager or not rank_manager.has_method("get_multiplier"):
+		return
+	
+	# Calculate danger level (0.0 to 1.0)
+	var min_rank: float = rank_manager.min_rank
+	var max_rank: float = rank_manager.max_rank
+	var current_rank: float = rank_manager.rank
+	var danger_level: float = clamp((current_rank - min_rank) / (max_rank - min_rank), 0.0, 1.0)
+	
+	# Visual pressure - background color modulation
+	if is_instance_valid(space_background) and danger_level > 0.7:
+		var pressure_color = Color(1.2, 0.9, 0.9)  # Reddish tint
+		space_background.modulate = base_background_color.lerp(pressure_color, (danger_level - 0.7) / 0.3)
+	elif is_instance_valid(space_background):
+		# Smoothly return to base color when danger is low
+		space_background.modulate = space_background.modulate.lerp(base_background_color, delta * 2.0)
+	
+	# Visual pressure - subtle continuous shake at high rank
+	if is_instance_valid(screen_shake) and danger_level > 0.7:
+		var shake_intensity = 2.0 * ((danger_level - 0.7) / 0.3)
+		screen_shake.shake(shake_intensity, 0.1)
+	
+	# Audio pressure - music pitch increases with danger
+	var audio_manager = get_node_or_null("/root/AudioManager")
+	if audio_manager and audio_manager.has_method("set_music_pitch"):
+		var target_pitch = lerp(1.0, 1.15, danger_level)
+		audio_manager.set_music_pitch(target_pitch)

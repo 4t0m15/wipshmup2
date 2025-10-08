@@ -285,9 +285,7 @@ func on_fetch_from_pool() -> void:
 	# Placeholder for any logic when taken from pool
 	pass
 
-# -----------------------------
 # Resets
-# -----------------------------
 func reset_state() -> void:
 	speed = 0.0
 	direction = Vector2.LEFT

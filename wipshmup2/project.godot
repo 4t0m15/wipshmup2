@@ -20,7 +20,6 @@ config/icon="res://icon.svg"
 AudioManager="*res://scripts/autoload/AudioManager.gd"
 DifficultyConfig="*res://scripts/DifficultyConfig.gd"
 RankManager="*res://scripts/RankManager.gd"
-TickManager="*res://scripts/TickManager.gd"
 ItemDropManager="*res://scripts/ItemDropManager.gd"
 SpriteManager="*res://scripts/SpriteManager.gd"
 
