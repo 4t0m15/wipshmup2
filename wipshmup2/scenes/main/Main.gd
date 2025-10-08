@@ -179,8 +179,8 @@ func _physics_process(delta: float) -> void:
 			_fire_bullet()
 			bullet_timer.start()
 
-	# Bomb usage
-	if Input.is_action_just_pressed("ui_cancel") and bombs > 0:
+	# Bomb usage (X key or Left Shift)
+	if Input.is_action_just_pressed("bomb") and bombs > 0:
 		_use_bomb()
 
 func _update_score_label() -> void:
@@ -273,9 +273,15 @@ func _use_bomb() -> void:
 
 	bombs -= 1
 	_update_bomb_display()
+	
+	print("[Main] BOMB USED! Remaining bombs: ", bombs)
+
+	# Create visual flash effect
+	_create_bomb_flash()
 
 	# Destroy all enemies
 	var enemies = get_tree().get_nodes_in_group("enemy")
+	print("[Main] Destroying ", enemies.size(), " enemies with bomb")
 	for enemy in enemies:
 		if enemy and is_instance_valid(enemy):
 			# Award points for bomb kills
@@ -285,10 +291,39 @@ func _use_bomb() -> void:
 				enemy.die()
 			else:
 				enemy.queue_free()
+	
+	# Destroy all enemy bullets
+	var bullets = get_tree().get_nodes_in_group("enemy_bullet")
+	print("[Main] Destroying ", bullets.size(), " enemy bullets with bomb")
+	for bullet in bullets:
+		if bullet and is_instance_valid(bullet):
+			bullet.queue_free()
 
+	# Screen shake for impact
 	if is_instance_valid(screen_shake):
 		var shake_mult := _get_shake_scale_from_streak()
-		screen_shake.shake(1.2 * shake_mult, 0.16)
+		screen_shake.shake(1.5 * shake_mult, 0.25)
+
+func _create_bomb_flash() -> void:
+	"""Create a white flash effect for bomb usage"""
+	var flash = ColorRect.new()
+	flash.name = "BombFlash"
+	flash.color = Color(1.0, 1.0, 1.0, 0.8)
+	flash.size = Vector2(320, 180)
+	flash.position = Vector2.ZERO
+	flash.z_index = 100  # Above everything
+	
+	# Add to HUD or main scene
+	if is_instance_valid(hud):
+		hud.add_child(flash)
+	else:
+		add_child(flash)
+	
+	# Fade out and remove
+	var tween = create_tween()
+	tween.tween_property(flash, "modulate:a", 0.0, 0.3)\
+		.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	tween.tween_callback(flash.queue_free)
 
 func _on_player_damaged(amount: int) -> void:
 	print("[Main] _on_player_damaged called: amount=", amount, " current_lives=", lives, " game_over=", game_over)

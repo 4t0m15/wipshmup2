@@ -2,9 +2,9 @@ class_name BossHealthBar
 extends Control
 
 # Visual settings
-@export var bar_height: float = 12.0
-@export var bar_padding: float = 4.0
-@export var phase_gap: float = 2.0
+@export var bar_height: float = 4.3
+@export var bar_padding: float = 1.4
+@export var phase_gap: float = 0.7
 
 # Colors
 @export var bg_color: Color = Color(0.1, 0.1, 0.15, 0.9)
@@ -27,7 +27,7 @@ var _boss_name: String = ""
 
 func _ready() -> void:
 	visible = false
-	custom_minimum_size = Vector2(300, 40)
+	custom_minimum_size = Vector2(144, 14)
 
 func _process(_delta: float) -> void:
 	if _boss and is_instance_valid(_boss):
@@ -52,7 +52,7 @@ func _draw() -> void:
 	draw_rect(rect, border_color, false, 2.0)
 	
 	# Calculate health bar area (below the name label)
-	var bar_start_y = 20.0
+	var bar_start_y = 7.0
 	var bar_width = size.x - (bar_padding * 2)
 	var bar_rect = Rect2(
 		Vector2(bar_padding, bar_start_y),

@@ -85,7 +85,7 @@ func set_lives(value: int) -> void:
 	_lives_label.text = "Lives: %s" % lives_text
 
 func set_bombs(value: int) -> void:
-	var text := "Bombs: %d" % max(0, value)
+	var text := "Bombs(X): %d" % max(0, value)
 	_bombs_label.text = text
 
 func set_chain(current_chain: int, max_chain: int) -> void:
@@ -199,7 +199,7 @@ func _create_boss_health_bar() -> void:
 	container.name = "BossHealthContainer"
 	container.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	container.position = Vector2(0, 30)  # Below the top bar
-	container.size = Vector2(320, 40)
+	container.size = Vector2(320, 14)
 	add_child(container)
 	
 	# Create the boss health bar
@@ -210,9 +210,9 @@ func _create_boss_health_bar() -> void:
 	var name_label = Label.new()
 	name_label.name = "NameLabel"
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.position = Vector2(0, 2)
-	name_label.size = Vector2(300, 16)
-	name_label.add_theme_font_size_override("font_size", 10)
+	name_label.position = Vector2(0, 0)
+	name_label.size = Vector2(144, 7)
+	name_label.add_theme_font_size_override("font_size", 5)
 	name_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6, 1.0))
 	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	name_label.add_theme_constant_override("outline_size", 1)
@@ -220,13 +220,13 @@ func _create_boss_health_bar() -> void:
 	
 	var health_container = Control.new()
 	health_container.name = "HealthContainer"
-	health_container.position = Vector2(0, 20)
-	health_container.size = Vector2(300, 16)
+	health_container.position = Vector2(0, 7)
+	health_container.size = Vector2(144, 7)
 	_boss_health_bar.add_child(health_container)
 	
 	# Position the boss health bar in the center
-	_boss_health_bar.position = Vector2(10, 0)
-	_boss_health_bar.size = Vector2(300, 40)
+	_boss_health_bar.position = Vector2(88, 0)
+	_boss_health_bar.size = Vector2(144, 14)
 	_boss_health_bar.visible = false
 	
 	container.add_child(_boss_health_bar)

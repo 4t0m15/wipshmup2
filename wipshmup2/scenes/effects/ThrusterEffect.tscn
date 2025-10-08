@@ -1,11 +1,7 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/effects/ThrusterEffect.gd" id="1_thruster_script"]
 [ext_resource type="Texture2D" path="res://assets/Ships/Thrusters_C_Fighter_M_Player_frame_001.png" id="2_thruster_texture"]
-
-[sub_resource type="Timer" id="1_flicker_timer"]
-wait_time = 0.05
-autostart = true
 
 [node name="ThrusterEffect" type="Node2D"]
 script = ExtResource("1_thruster_script")
