@@ -1,10 +1,10 @@
 class_name BossHealthBar
 extends Control
 
-# Visual settings
-@export var bar_height: float = 4.3
-@export var bar_padding: float = 1.4
-@export var phase_gap: float = 0.7
+# Visual settings - Enhanced for better clarity
+@export var bar_height: float = 6.0  # Increased from 4.3 for better visibility
+@export var bar_padding: float = 2.0  # Increased from 1.4
+@export var phase_gap: float = 1.0  # Increased from 0.7
 
 # Colors
 @export var bg_color: Color = Color(0.1, 0.1, 0.15, 0.9)
@@ -22,12 +22,12 @@ var _current_hp: int = 0
 var _current_phase: int = 1
 var _total_phases: int = 1
 var _boss_name: String = ""
-
+#woah
 @onready var _name_label: Label = $NameLabel
 
 func _ready() -> void:
 	visible = false
-	custom_minimum_size = Vector2(144, 14)
+	custom_minimum_size = Vector2(160, 20)  # Increased size for better readability
 
 func _process(_delta: float) -> void:
 	if _boss and is_instance_valid(_boss):
@@ -51,16 +51,16 @@ func _draw() -> void:
 	# Draw border
 	draw_rect(rect, border_color, false, 2.0)
 	
-	# Calculate health bar area (below the name label)
-	var bar_start_y = 7.0
+	# Calculate health bar area (below the name label) - Enhanced positioning
+	var bar_start_y = 10.0  # Increased from 7.0 for better spacing
 	var bar_width = size.x - (bar_padding * 2)
 	var bar_rect = Rect2(
 		Vector2(bar_padding, bar_start_y),
 		Vector2(bar_width, bar_height)
 	)
 	
-	# Draw health bar background
-	draw_rect(bar_rect, Color(0.2, 0.2, 0.25, 1.0))
+	# Draw health bar background with better contrast
+	draw_rect(bar_rect, Color(0.1, 0.1, 0.15, 1.0))  # Darker background for better contrast
 	
 	# Calculate health per phase
 	var hp_per_phase = float(_max_hp) / float(_total_phases)
@@ -96,14 +96,15 @@ func _draw() -> void:
 			
 			draw_rect(segment_rect, phase_color)
 	
-	# Draw phase separators
+	# Draw phase separators with better visibility
 	for i in range(1, _total_phases):
 		var sep_x = bar_padding + (segment_width * i)
+		# Draw thicker separator lines
 		draw_line(
 			Vector2(sep_x - 1, bar_start_y),
 			Vector2(sep_x - 1, bar_start_y + bar_height),
-			Color(0.1, 0.1, 0.15, 1.0),
-			phase_gap
+			Color(0.3, 0.3, 0.4, 1.0),  # Lighter color for better visibility
+			2.0  # Thicker line
 		)
 
 func show_boss_health(boss: Node) -> void:

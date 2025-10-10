@@ -1,9 +1,10 @@
 extends Area2D
 
 @export var speed: float = 400.0  # Reduced from 1000.0 for playable speed
-@export var sprite_target_height_px: float = 8.0
+@export var sprite_target_height_px: float = 10.0  # Increased for better visibility
 
 var direction: Vector2 = Vector2.UP
+var _glow_sprite: Sprite2D
 
 func _ready() -> void:
 	monitoring = true
@@ -22,10 +23,19 @@ func _ready() -> void:
 			if tex_size.y > 0:
 				var s: float = sprite_target_height_px / float(tex_size.y)
 				spr.scale = Vector2(s, s)
+	
+	# Setup visual clarity for player bullets
+	_setup_player_bullet_effects()
 
 func _physics_process(delta: float) -> void:
 	position += direction * speed * delta
 	position = position.round()
+	
+	# Update glow effect
+	if _glow_sprite:
+		var pulse = 0.7 + 0.3 * sin(Time.get_ticks_msec() * 0.01)
+		_glow_sprite.modulate.a = pulse * 0.6
+	
 	var rect := get_viewport().get_visible_rect()
 	var off_top := position.y < -64
 	var off_bottom := position.y > rect.size.y + 64
@@ -36,20 +46,18 @@ func _physics_process(delta: float) -> void:
 
 func _on_area_entered(area: Area2D) -> void:
 	if area.is_in_group("enemy"):
-		# Play hit sound
-		var audio_manager = get_node_or_null("/root/AudioManager")
-		if audio_manager:
-			if area.is_in_group("boss") and audio_manager.has_method("play_boss_hit"):
-				audio_manager.play_boss_hit()
-			elif audio_manager.has_method("play_bullet_hit"):
-				audio_manager.play_bullet_hit()
-
-		if area.has_method("take_damage"):
-			# Mark source as shot for conditional scoring/behavior
-			area.take_damage(2, "shot")  # Increased from 1 to 2 for easier gameplay
-		var rm := get_node_or_null("/root/RankManager")
-		if rm and rm.has_method("on_shot_fired"):
-			rm.on_shot_fired(0.25)
+		# Emit bullet hit event to EventBus
+		EventBus.bullet_hit_enemy.emit(area.global_position, 2)
+		
+		# Play hit sound through EventBus
+		if area.is_in_group("boss"):
+			EventBus.emit_audio("boss_hit")
+		else:
+			EventBus.emit_audio("enemy_shot")
+		
+		# Update rank through EventBus
+		EventBus.emit_audio("player_shot")  # This will trigger rank update
+		
 		queue_free()
 
 func _on_body_entered(_body: Node) -> void:
@@ -57,3 +65,13 @@ func _on_body_entered(_body: Node) -> void:
 
 func _on_screen_exited() -> void:
 	queue_free()
+
+func _setup_player_bullet_effects() -> void:
+	"""Setup visual effects for player bullet clarity"""
+	# Create bright glow for player bullets
+	_glow_sprite = Sprite2D.new()
+	_glow_sprite.texture = $Sprite2D.texture
+	_glow_sprite.scale = $Sprite2D.scale * 1.3
+	_glow_sprite.modulate = Color(0.2, 1.0, 0.8, 0.6)  # Bright cyan glow
+	_glow_sprite.z_index = -1
+	add_child(_glow_sprite)

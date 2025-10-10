@@ -3,15 +3,22 @@ signal hit_player
 
 @export var speed: float = 140.0  # Reduced from 320.0 for playable speed
 @export var damage: int = 1
-@export var sprite_target_height_px: float = 6.0
+@export var sprite_target_height_px: float = 8.0  # Increased from 6.0 for better visibility
 @export var accel: float = 0.0
 @export var angular_velocity_deg: float = 0.0
 @export var wiggle_amp: float = 0.0
 @export var wiggle_freq: float = 0.0
 @export var lifespan: float = -1.0
 
+# Visual clarity enhancements
+@export var danger_level: int = 1  # 1=low, 2=medium, 3=high danger
+@export var has_trail: bool = false
+@export var glow_intensity: float = 0.5
+
 var direction: Vector2 = Vector2.DOWN
 var _age: float = 0.0
+var _trail_particles: Array[Node2D] = []
+var _glow_sprite: Sprite2D
 
 func _ready() -> void:
 	monitoring = true
@@ -36,6 +43,9 @@ func _ready() -> void:
 			if tex_size.y > 0:
 				var s: float = sprite_target_height_px / float(tex_size.y)
 				spr.scale = Vector2(s, s)
+	
+	# Setup visual clarity enhancements
+	_setup_visual_effects()
 func _physics_process(delta: float) -> void:
 	_age += delta
 	var speed_mult: float = 1.0
@@ -56,6 +66,10 @@ func _physics_process(delta: float) -> void:
 		displacement += lateral * (wiggle_amp * sin(_age * TAU * wiggle_freq)) * delta
 	position += displacement
 	position = position.round()
+	
+	# Update visual effects
+	_update_visual_effects(delta)
+	
 	if lifespan > 0.0 and _age >= lifespan:
 		queue_free()
 	var viewport_rect := get_viewport_rect()
@@ -67,18 +81,63 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 
 func _on_area_entered(area: Area2D) -> void:
-	# Debug: print ALL area collisions
-	print("[EnemyBullet] _on_area_entered triggered! area=", area.name, " groups=", area.get_groups(), " bullet_pos=", position)
-	
 	# ONLY detect player hurtbox - single detection path
 	if area.is_in_group("player_hurtbox"):
-		print("[EnemyBullet] HIT CONFIRMED! Emitting hit_player signal")
-		hit_player.emit()
+		print("[EnemyBullet] HIT CONFIRMED! Emitting to EventBus")
+		EventBus.bullet_hit_player.emit(global_position)
 		queue_free()
-	else:
-		print("[EnemyBullet] Not player hurtbox, ignoring")
 
 func _on_screen_exited() -> void:
 	queue_free()
+
+func _setup_visual_effects() -> void:
+	"""Setup visual clarity enhancements for bullet visibility"""
+	# Create glow effect
+	_glow_sprite = Sprite2D.new()
+	_glow_sprite.texture = $Sprite2D.texture
+	_glow_sprite.scale = $Sprite2D.scale * 1.5
+	_glow_sprite.modulate = _get_danger_color()
+	_glow_sprite.z_index = -1
+	add_child(_glow_sprite)
+	
+	# Setup trail if enabled
+	if has_trail:
+		_create_trail_system()
+
+func _update_visual_effects(delta: float) -> void:
+	"""Update visual effects for better clarity"""
+	# Update glow pulsing
+	if _glow_sprite:
+		var pulse = 0.8 + 0.2 * sin(_age * 10.0)
+		_glow_sprite.modulate.a = pulse * glow_intensity
+		_glow_sprite.modulate = _get_danger_color() * Color(1, 1, 1, _glow_sprite.modulate.a)
+	
+	# Update trail
+	if has_trail and _trail_particles.size() > 0:
+		_update_trail_particles(delta)
+
+func _get_danger_color() -> Color:
+	"""Get color based on danger level for visual clarity"""
+	match danger_level:
+		1: return Color(0.8, 0.8, 1.0, 1.0)  # Light blue - low danger
+		2: return Color(1.0, 0.8, 0.2, 1.0)  # Yellow - medium danger  
+		3: return Color(1.0, 0.3, 0.3, 1.0)  # Red - high danger
+		_: return Color.WHITE
+
+func _create_trail_system() -> void:
+	"""Create particle trail for fast bullets"""
+	# Simple trail implementation - could be enhanced with proper particles
+	pass
+
+func _update_trail_particles(delta: float) -> void:
+	"""Update trail particle effects"""
+	# Trail particle update logic
+	pass
+
+func set_danger_level(level: int) -> void:
+	"""Set the danger level and update visual appearance"""
+	danger_level = clamp(level, 1, 3)
+	if _glow_sprite:
+		_glow_sprite.modulate = _get_danger_color()
 
 

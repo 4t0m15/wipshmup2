@@ -56,6 +56,9 @@ func _ready() -> void:
 	add_child(screen_shake)
 	var target_2d: Node2D = game_viewport if game_viewport is Node2D else self
 	screen_shake.set_target(target_2d)
+	
+	# Setup visual clarity systems
+	_setup_visual_clarity_systems()
 
 	hud = $HUD
 	_update_score_label()
@@ -412,6 +415,11 @@ func _on_enemy_bullet_hit_player() -> void:
 		if player.has_method("take_damage"):
 			print("[Main] Calling player.take_damage(1)")
 			player.take_damage(1)
+			
+			# Trigger hit-stop for better feedback
+			var hit_stop = get_node_or_null("/root/HitStop")
+			if hit_stop:
+				hit_stop.trigger_hit_stop(0.05, 1.0)
 		else:
 			print("[Main] ERROR: Player missing take_damage method!")
 	else:
@@ -419,6 +427,33 @@ func _on_enemy_bullet_hit_player() -> void:
 
 func _on_enemy_hit_player() -> void:
 	print("[Main] _on_enemy_hit_player triggered (enemy collision)!")
+	if player and is_instance_valid(player):
+		if player.has_method("take_damage"):
+			player.take_damage(1)
+			
+			# Trigger hit-stop for enemy collision
+			var hit_stop = get_node_or_null("/root/HitStop")
+			if hit_stop:
+				hit_stop.trigger_hit_stop(0.08, 1.2)
+
+func _setup_visual_clarity_systems() -> void:
+	"""Setup visual clarity enhancement systems"""
+	# Add danger indicator system
+	var danger_indicator = load("res://scripts/DangerIndicator.gd").new()
+	danger_indicator.name = "DangerIndicator"
+	add_child(danger_indicator)
+	
+	# Add hit-stop system
+	var hit_stop = load("res://scripts/HitStop.gd").new()
+	hit_stop.name = "HitStop"
+	add_child(hit_stop)
+	
+	# Add visual settings system
+	var visual_settings = load("res://scripts/VisualSettings.gd").new()
+	visual_settings.name = "VisualSettings"
+	add_child(visual_settings)
+	
+	print("[Main] Visual clarity systems initialized")
 	if player and is_instance_valid(player):
 		if player.has_method("take_damage"):
 			print("[Main] Calling player.take_damage(1) from enemy")

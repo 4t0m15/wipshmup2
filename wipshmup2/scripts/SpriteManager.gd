@@ -30,25 +30,97 @@ const SCALE_PRESETS = {
 	"powerup": Vector2(1.0, 1.0)
 }
 
-# Color modulation presets for clear differentiation
+# Enhanced color modulation presets for better visual clarity
 const COLOR_PRESETS = {
-	# Player: vivid green
-	"player": Color(0.3, 1.0, 0.4, 1.0),
-	# Enemies (explicit enemy_* keys used by auto_setup_enemy_sprite)
-	"enemy_fighter": Color(1.0, 0.35, 0.35, 1.0),
-	"enemy_bomber": Color(1.0, 0.6, 0.2, 1.0),
-	"enemy_turret": Color(1.0, 0.85, 0.25, 1.0),
+	# Player: bright cyan for maximum visibility
+	"player": Color(0.2, 1.0, 0.8, 1.0),
+	# Enemies with threat-based color coding
+	"enemy_fighter": Color(1.0, 0.3, 0.3, 1.0),  # Red - aggressive
+	"enemy_bomber": Color(1.0, 0.6, 0.2, 1.0),   # Orange - medium threat
+	"enemy_turret": Color(1.0, 0.8, 0.2, 1.0),   # Yellow - shooter
+	"enemy_escort": Color(1.0, 0.5, 0.8, 1.0),   # Pink - support
+	"enemy_kamikaze": Color(1.0, 0.2, 0.2, 1.0), # Dark red - high threat
+	"enemy_boss": Color(0.8, 0.4, 1.0, 1.0),     # Purple - boss
 	# Fallbacks / general roles
 	"default": Color.WHITE,
-	"fighter": Color(1.0, 0.35, 0.35, 1.0),
+	"fighter": Color(1.0, 0.3, 0.3, 1.0),
 	"bomber": Color(1.0, 0.6, 0.2, 1.0),
-	"turret": Color(1.0, 0.85, 0.25, 1.0),
+	"turret": Color(1.0, 0.8, 0.2, 1.0),
 	"escort": Color(1.0, 0.5, 0.8, 1.0),
-	"kamikaze": Color(1, 0.2, 0.2, 1),
+	"kamikaze": Color(1.0, 0.2, 0.2, 1.0),
 	"boss": Color(0.8, 0.4, 1.0, 1.0)
 }
 
+# Health-based color tinting for damaged enemies
+const HEALTH_COLORS = {
+	"healthy": Color(1.0, 1.0, 1.0, 1.0),      # White
+	"damaged": Color(1.0, 0.8, 0.6, 1.0),      # Light orange
+	"critical": Color(1.0, 0.4, 0.4, 1.0),     # Red
+	"dying": Color(0.8, 0.2, 0.2, 1.0)         # Dark red
+}
+
 static func setup_sprite(sprite: Sprite2D, entity_type: String, target_height: float = -1.0) -> void:
+	"""Setup sprite with enhanced visual clarity"""
+	if not sprite:
+		return
+	
+	# Apply size scaling
+	if target_height > 0.0:
+		var scale_preset = SCALE_PRESETS.get(entity_type, Vector2(1.0, 1.0))
+		var base_scale = scale_preset
+		if sprite.texture:
+			var tex_size = sprite.texture.get_size()
+			if tex_size.y > 0:
+				var scale_factor = target_height / float(tex_size.y)
+				sprite.scale = base_scale * scale_factor
+	
+	# Apply color modulation
+	var color = COLOR_PRESETS.get(entity_type, COLOR_PRESETS["default"])
+	sprite.modulate = color
+	
+	# Add subtle glow effect for better visibility
+	_add_glow_effect(sprite, entity_type)
+
+static func _add_glow_effect(sprite: Sprite2D, entity_type: String) -> void:
+	"""Add subtle glow effect for better visibility"""
+	# This would be implemented with a glow shader or duplicate sprite
+	# For now, we'll enhance the base color
+	var base_color = sprite.modulate
+	var glow_intensity = 0.1
+	
+	# Increase brightness slightly for better visibility
+	sprite.modulate = Color(
+		min(1.0, base_color.r + glow_intensity),
+		min(1.0, base_color.g + glow_intensity),
+		min(1.0, base_color.b + glow_intensity),
+		base_color.a
+	)
+
+static func apply_health_tint(sprite: Sprite2D, health_ratio: float) -> void:
+	"""Apply health-based color tinting to enemy sprites"""
+	if not sprite:
+		return
+	
+	var health_color: Color
+	if health_ratio > 0.7:
+		health_color = HEALTH_COLORS["healthy"]
+	elif health_ratio > 0.3:
+		health_color = HEALTH_COLORS["damaged"]
+	elif health_ratio > 0.1:
+		health_color = HEALTH_COLORS["critical"]
+	else:
+		health_color = HEALTH_COLORS["dying"]
+	
+	# Blend with original color
+	var original_color = sprite.modulate
+	sprite.modulate = Color(
+		(original_color.r + health_color.r) * 0.5,
+		(original_color.g + health_color.g) * 0.5,
+		(original_color.b + health_color.b) * 0.5,
+		original_color.a
+	)
+
+static func setup_sprite_legacy(sprite: Sprite2D, entity_type: String, target_height: float = -1.0) -> void:
 	"""Setup a sprite with proper scaling and color based on entity type"""
 	if not sprite or not sprite.texture:
 		push_warning("SpriteManager: Invalid sprite or missing texture")

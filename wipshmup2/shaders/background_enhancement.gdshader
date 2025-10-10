@@ -1,12 +1,20 @@
 shader_type canvas_item;
 
-// Enhanced background shader with atmospheric effects
+// Enhanced background shader with atmospheric effects and clarity controls
 uniform float time_scale : hint_range(0.0, 2.0) = 1.0;
 uniform float intensity : hint_range(0.0, 2.0) = 1.0;
 uniform vec4 atmosphere_color : source_color = vec4(0.1, 0.05, 0.2, 1.0);
 uniform float glow_strength : hint_range(0.0, 1.0) = 0.3;
 uniform float distortion_strength : hint_range(0.0, 0.1) = 0.02;
 uniform float color_shift : hint_range(0.0, 1.0) = 0.1;
+
+// Clarity enhancement uniforms
+uniform float dim_intensity : hint_range(0.0, 1.0) = 0.3;
+uniform float vignette_strength : hint_range(0.0, 1.0) = 0.2;
+uniform bool enable_dynamic_dim : hint_default(true) = true;
+uniform float combat_intensity : hint_range(0.0, 1.0) = 0.0;
+uniform float bullet_count_factor : hint_range(0.0, 1.0) = 0.0;
+uniform float contrast_boost : hint_range(0.0, 2.0) = 1.0;
 
 varying vec2 world_position;
 
@@ -39,6 +47,28 @@ void fragment() {
     
     // Apply intensity
     color.rgb *= intensity;
+    
+    // Apply dynamic dimming based on combat intensity
+    float final_dim = dim_intensity;
+    if (enable_dynamic_dim) {
+        // Increase dimming based on bullet count and combat intensity
+        float bullet_factor = bullet_count_factor * 0.3;
+        final_dim = mix(dim_intensity, min(0.8, dim_intensity + bullet_factor), combat_intensity);
+    }
+    
+    // Apply vignette effect for focus
+    vec2 center = vec2(0.5, 0.5);
+    float dist = distance(UV, center);
+    float vignette = 1.0 - smoothstep(0.0, 0.7, dist) * vignette_strength;
+    
+    // Apply contrast boost for better clarity
+    color.rgb = (color.rgb - 0.5) * contrast_boost + 0.5;
+    
+    // Combine effects
+    color.rgb *= (1.0 - final_dim) * vignette;
+    
+    // Clamp to valid range
+    color.rgb = clamp(color.rgb, 0.0, 1.0);
     
     COLOR = color;
 }

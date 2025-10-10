@@ -74,19 +74,45 @@ func _get_rainbow_color(time: float) -> Color:
 
 func set_score(value: int) -> void:
 	_score_label.text = "Score: %d" % value
+	
+	# Add visual feedback for score milestones
+	if value > 0 and value % 10000 == 0:
+		_show_score_milestone(value)
 
 func set_lives(value: int) -> void:
 	var lives_text = ""
 	for i in range(3):  # Show 3 heart slots
 		if i < value:
-			lives_text += "X"  # Filled heart
+			lives_text += "♥"  # Filled heart (better symbol)
 		else:
-			lives_text += "O"  # Empty heart
+			lives_text += "♡"  # Empty heart
 	_lives_label.text = "Lives: %s" % lives_text
+	
+	# Add visual warning when low on lives
+	if value <= 1:
+		_lives_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3, 1.0))  # Red warning
+		# Add pulsing effect for low lives
+		var tween = create_tween()
+		tween.tween_property(_lives_label, "modulate:a", 0.5, 0.3)
+		tween.tween_property(_lives_label, "modulate:a", 1.0, 0.3)
+		tween.set_loops()
+	else:
+		_lives_label.add_theme_color_override("font_color", Color(1, 0.4, 0.6, 1))  # Normal pink
 
 func set_bombs(value: int) -> void:
 	var text := "Bombs(X): %d" % max(0, value)
 	_bombs_label.text = text
+	
+	# Add visual warning when low on bombs
+	if value <= 1:
+		_bombs_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2, 1.0))  # Orange warning
+		# Add subtle pulsing for low bombs
+		var tween = create_tween()
+		tween.tween_property(_bombs_label, "modulate:a", 0.7, 0.4)
+		tween.tween_property(_bombs_label, "modulate:a", 1.0, 0.4)
+		tween.set_loops()
+	else:
+		_bombs_label.add_theme_color_override("font_color", Color(0.9, 1, 0.7, 1))  # Normal green
 
 func set_chain(current_chain: int, max_chain: int) -> void:
 	if current_chain > 0:
@@ -134,6 +160,11 @@ func show_game_over(is_shown: bool) -> void:
 		_hint_label.text = "Press Enter to restart"
 	else:
 		_hint_label.text = ""
+
+func _show_score_milestone(score: int) -> void:
+	"""Show visual feedback for score milestones"""
+	var milestone_text = "MILESTONE: %d" % score
+	show_popup(milestone_text, Color(1.0, 1.0, 0.3, 1.0))
 
 func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 	if not is_instance_valid(_popup_container):

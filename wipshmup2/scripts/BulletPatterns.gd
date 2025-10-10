@@ -20,36 +20,11 @@ static func _get_cadence_multiplier() -> float:
 	return c * BASE_CADENCE_MULT
 
 static func _spawn_bullet(node: Node, position: Vector2, direction: Vector2, speed: float) -> void:
-	# Play enemy shot sound
-
-	var bullet: Area2D = ENEMY_BULLET_SCENE.instantiate()
-	bullet.global_position = position
-	bullet.set("direction", direction.normalized())
-	bullet.set("speed", speed * BASE_SPEED_MULT)
-
-	var scene_tree: SceneTree = node.get_tree() if is_instance_valid(node) else Engine.get_main_loop() as SceneTree
-	if scene_tree and scene_tree.current_scene:
-		var container := scene_tree.current_scene.get_node_or_null("GameViewport/Bullets")
-		var target = container if container else scene_tree.current_scene
-		target.add_child(bullet)
-		# Ensure collision is properly enabled after adding to scene
-		bullet.monitoring = true
-		bullet.monitorable = true
-		bullet.collision_layer = 2  # Enemy bullet layer
-		bullet.collision_mask = 1   # Detect player layer
-		
-		# Connect hit_player signal to Main's handler
-		if bullet.has_signal("hit_player"):
-			var main = scene_tree.current_scene
-			if main.has_method("_on_enemy_bullet_hit_player"):
-				bullet.connect("hit_player", Callable(main, "_on_enemy_bullet_hit_player"))
-				print("[BulletPatterns] Spawned and connected bullet at ", position)
-			else:
-				print("[BulletPatterns] WARNING: Main missing _on_enemy_bullet_hit_player method!")
-		else:
-			print("[BulletPatterns] WARNING: Bullet missing hit_player signal!")
-	else:
-		bullet.queue_free()
+	# Use EntityFactory for bullet spawning
+	EntityFactory.spawn_enemy_bullet(position, direction.normalized(), speed * BASE_SPEED_MULT)
+	
+	# Play enemy shot sound through EventBus
+	EventBus.emit_audio("enemy_shot")
 
 static func _await_seconds(node: Node, seconds: float) -> void:
 	if is_instance_valid(node):
@@ -141,26 +116,7 @@ static func fire_spiral(node: Node, origin_node: Node2D, turns: int = 2, bullets
 	for i in range(total):
 		if not is_instance_valid(origin_node): return
 		var dir := Vector2.RIGHT.rotated(deg_to_rad(angle_deg))
-		var bullet: Area2D = ENEMY_BULLET_SCENE.instantiate()
-		bullet.global_position = origin_node.global_position
-		bullet.set("direction", dir)
-		bullet.set("speed", speed * BASE_SPEED_MULT)
-		if accel != 0.0:
-			bullet.set("accel", accel)
-		var scene_tree: SceneTree = node.get_tree() if is_instance_valid(node) else Engine.get_main_loop() as SceneTree
-		if scene_tree and scene_tree.current_scene:
-			var container := scene_tree.current_scene.get_node_or_null("GameViewport/Bullets")
-			var target = container if container else scene_tree.current_scene
-			target.add_child(bullet)
-			bullet.monitoring = true
-			bullet.monitorable = true
-			bullet.collision_layer = 2  # Enemy bullet layer
-			bullet.collision_mask = 1   # Detect player layer
-			# Connect signal
-			if bullet.has_signal("hit_player"):
-				var main = scene_tree.current_scene
-				if main.has_method("_on_enemy_bullet_hit_player"):
-					bullet.connect("hit_player", Callable(main, "_on_enemy_bullet_hit_player"))
+		EntityFactory.spawn_enemy_bullet(origin_node.global_position, dir, speed * BASE_SPEED_MULT)
 		angle_deg += angular_step_deg
 		await _await_seconds(node, 0.02 / _get_cadence_multiplier())
 
@@ -170,25 +126,7 @@ static func fire_accel_bloom(node: Node, origin: Vector2, petals: int = 12, spee
 	for i in range(count):
 		var angle := step * float(i)
 		var dir := Vector2.RIGHT.rotated(angle)
-		var bullet: Area2D = ENEMY_BULLET_SCENE.instantiate()
-		bullet.global_position = origin
-		bullet.set("direction", dir)
-		bullet.set("speed", speed * BASE_SPEED_MULT)
-		bullet.set("accel", accel)
-		var scene_tree: SceneTree = node.get_tree() if is_instance_valid(node) else Engine.get_main_loop() as SceneTree
-		if scene_tree and scene_tree.current_scene:
-			var container := scene_tree.current_scene.get_node_or_null("GameViewport/Bullets")
-			var target = container if container else scene_tree.current_scene
-			target.add_child(bullet)
-			bullet.monitoring = true
-			bullet.monitorable = true
-			bullet.collision_layer = 2  # Enemy bullet layer
-			bullet.collision_mask = 1   # Detect player layer
-			# Connect signal
-			if bullet.has_signal("hit_player"):
-				var main = scene_tree.current_scene
-				if main.has_method("_on_enemy_bullet_hit_player"):
-					bullet.connect("hit_player", Callable(main, "_on_enemy_bullet_hit_player"))
+		EntityFactory.spawn_enemy_bullet(origin, dir, speed * BASE_SPEED_MULT)
 
 static func fire_wave_stream(node: Node, origin_node: Node2D, duration_s: float = 1.2, interval_s: float = 0.06, base_angle_deg: float = 90.0, wiggle_amp: float = 18.0, wiggle_freq: float = 2.0, speed: float = 120.0) -> void:
 	if duration_s <= 0.0: return
@@ -196,26 +134,7 @@ static func fire_wave_stream(node: Node, origin_node: Node2D, duration_s: float 
 	var iv := interval_s / _get_cadence_multiplier()
 	while elapsed < duration_s:
 		if not is_instance_valid(origin_node): return
-		var b: Area2D = ENEMY_BULLET_SCENE.instantiate()
-		b.global_position = origin_node.global_position
-		b.set("direction", Vector2.RIGHT.rotated(deg_to_rad(base_angle_deg)))
-		b.set("speed", speed * BASE_SPEED_MULT)
-		b.set("wiggle_amp", wiggle_amp)
-		b.set("wiggle_freq", wiggle_freq)
-		var scene_tree: SceneTree = node.get_tree() if is_instance_valid(node) else Engine.get_main_loop() as SceneTree
-		if scene_tree and scene_tree.current_scene:
-			var container := scene_tree.current_scene.get_node_or_null("GameViewport/Bullets")
-			var target = container if container else scene_tree.current_scene
-			target.add_child(b)
-			b.monitoring = true
-			b.monitorable = true
-			b.collision_layer = 2  # Enemy bullet layer
-			b.collision_mask = 1   # Detect player layer
-			# Connect signal
-			if b.has_signal("hit_player"):
-				var main = scene_tree.current_scene
-				if main.has_method("_on_enemy_bullet_hit_player"):
-					b.connect("hit_player", Callable(main, "_on_enemy_bullet_hit_player"))
+		EntityFactory.spawn_enemy_bullet(origin_node.global_position, Vector2.RIGHT.rotated(deg_to_rad(base_angle_deg)), speed * BASE_SPEED_MULT)
 		await _await_seconds(node, iv)
 		elapsed += iv
 
