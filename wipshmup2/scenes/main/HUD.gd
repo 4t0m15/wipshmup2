@@ -220,7 +220,7 @@ func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 func _create_boss_health_bar() -> void:
 	"""Create the boss health bar UI element"""
 	# Load the BossHealthBar script
-	var BossHealthBarScript = load("res://scripts/BossHealthBar.gd")
+	var BossHealthBarScript = load("res://scripts/boss/BossHealthBar.gd")
 	if not BossHealthBarScript:
 		push_error("Failed to load BossHealthBar script")
 		return

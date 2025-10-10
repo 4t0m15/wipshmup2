@@ -2,9 +2,9 @@ extends Node2D
 
 # Scene references
 const PLAYER_SCENE: PackedScene = preload("res://scenes/player/Player.tscn")
-const STAGE_CONTROLLER_SCRIPT: Script = preload("res://scripts/StageController.gd")
-const SPACE_BACKGROUND_SCRIPT: Script = preload("res://scripts/SpaceBackground.gd")
-const ITEM_DROP_MANAGER_SCRIPT: Script = preload("res://scripts/ItemDropManager.gd")
+const STAGE_CONTROLLER_SCRIPT: Script = preload("res://scripts/stages/StageController.gd")
+const SPACE_BACKGROUND_SCRIPT: Script = preload("res://scripts/backgrounds/SpaceBackground.gd")
+const ITEM_DROP_MANAGER_SCRIPT: Script = preload("res://scripts/core/ItemDropManager.gd")
 
 var player: Node
 var hud: Node
@@ -52,7 +52,7 @@ func _ready() -> void:
 	_setup_stage_controller()
 
 	# Screen shake hooked to the game viewport root so all children move together
-	screen_shake = load("res://scripts/ScreenShake.gd").new()
+	screen_shake = load("res://scripts/ui/ScreenShake.gd").new()
 	add_child(screen_shake)
 	var target_2d: Node2D = game_viewport if game_viewport is Node2D else self
 	screen_shake.set_target(target_2d)
@@ -439,17 +439,17 @@ func _on_enemy_hit_player() -> void:
 func _setup_visual_clarity_systems() -> void:
 	"""Setup visual clarity enhancement systems"""
 	# Add danger indicator system
-	var danger_indicator = load("res://scripts/DangerIndicator.gd").new()
+	var danger_indicator = load("res://scripts/ui/DangerIndicator.gd").new()
 	danger_indicator.name = "DangerIndicator"
 	add_child(danger_indicator)
 	
 	# Add hit-stop system
-	var hit_stop = load("res://scripts/HitStop.gd").new()
+	var hit_stop = load("res://scripts/ui/HitStop.gd").new()
 	hit_stop.name = "HitStop"
 	add_child(hit_stop)
 	
 	# Add visual settings system
-	var visual_settings = load("res://scripts/VisualSettings.gd").new()
+	var visual_settings = load("res://scripts/ui/VisualSettings.gd").new()
 	visual_settings.name = "VisualSettings"
 	add_child(visual_settings)
 	

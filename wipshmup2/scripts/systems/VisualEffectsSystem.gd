@@ -20,22 +20,22 @@ func _ready() -> void:
 
 func _setup_visual_systems() -> void:
 	# Setup screen shake
-	screen_shake = load("res://scripts/ScreenShake.gd").new()
+	screen_shake = load("res://scripts/ui/ScreenShake.gd").new()
 	screen_shake.name = "ScreenShake"
 	add_child(screen_shake)
 	
 	# Setup hit-stop
-	hit_stop = load("res://scripts/HitStop.gd").new()
+	hit_stop = load("res://scripts/ui/HitStop.gd").new()
 	hit_stop.name = "HitStop"
 	add_child(hit_stop)
 	
 	# Setup danger indicator
-	danger_indicator = load("res://scripts/DangerIndicator.gd").new()
+	danger_indicator = load("res://scripts/ui/DangerIndicator.gd").new()
 	danger_indicator.name = "DangerIndicator"
 	add_child(danger_indicator)
 	
 	# Setup visual settings
-	visual_settings = load("res://scripts/VisualSettings.gd").new()
+	visual_settings = load("res://scripts/ui/VisualSettings.gd").new()
 	visual_settings.name = "VisualSettings"
 	add_child(visual_settings)
 	
@@ -123,7 +123,7 @@ func _create_simple_explosion(position: Vector2, size: float) -> void:
 # Utility methods for common visual effects
 func create_damage_number(position: Vector2, damage: int, color: Color = Color.WHITE) -> void:
 	"""Create a floating damage number"""
-	var damage_number = load("res://scripts/DamageNumber.gd").new()
+	var damage_number = load("res://scripts/ui/DamageNumber.gd").new()
 	damage_number.global_position = position
 	damage_number.setup(damage, color)
 	

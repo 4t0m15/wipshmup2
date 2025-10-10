@@ -103,7 +103,11 @@ func take_damage(amount: int, source: String = "shot") -> void:
 		queue_free()
 
 func _on_area_entered(area: Area2D) -> void:
-	if area.is_in_group("player_hurtbox"):
+	if area.is_in_group("player_bullet"):
+		# Direct collision handling for player bullets
+		take_damage(1, "shot")
+		area.queue_free()
+	elif area.is_in_group("player_hurtbox"):
 		emit_signal("hit_player")
 		queue_free()
 

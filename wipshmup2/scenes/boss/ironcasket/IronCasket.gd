@@ -1,6 +1,6 @@
 extends BossBase
 
-const BP := preload("res://scripts/BulletPatterns.gd")
+const BP := preload("res://scripts/core/BulletPatterns.gd")
 func _init() -> void:
 	phases_total = 2
 

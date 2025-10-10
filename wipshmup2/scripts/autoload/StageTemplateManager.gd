@@ -131,7 +131,11 @@ func _register_template(template_name: String, template_data: Dictionary) -> voi
 	# Set visual effects
 	template.background_tint = template_data.get("background_tint", Color.WHITE)
 	template.ambient_lighting = template_data.get("ambient_lighting", 1.0)
-	template.particle_effects = template_data.get("particle_effects", [])
+	# Properly construct typed array for particle_effects
+	var effects = template_data.get("particle_effects", [])
+	template.particle_effects.clear()
+	for effect in effects:
+		template.particle_effects.append(effect)
 	
 	# Create waves
 	template.waves.clear()
@@ -166,8 +170,16 @@ func _register_template(template_name: String, template_data: Dictionary) -> voi
 		boss_encounter.boss_name = boss_data.get("boss_name", "Boss")
 		boss_encounter.intro_duration = boss_data.get("intro_duration", 2.0)
 		boss_encounter.outro_duration = boss_data.get("outro_duration", 3.0)
-		boss_encounter.intro_effects = boss_data.get("intro_effects", ["screen_shake"])
-		boss_encounter.outro_effects = boss_data.get("outro_effects", ["explosion"])
+		# Properly construct typed arrays for effects
+		var intro_effects_data = boss_data.get("intro_effects", ["screen_shake"])
+		boss_encounter.intro_effects.clear()
+		for effect in intro_effects_data:
+			boss_encounter.intro_effects.append(effect)
+		
+		var outro_effects_data = boss_data.get("outro_effects", ["explosion"])
+		boss_encounter.outro_effects.clear()
+		for effect in outro_effects_data:
+			boss_encounter.outro_effects.append(effect)
 		boss_encounter.background_tint = boss_data.get("background_tint", Color.WHITE)
 		boss_encounter.screen_shake_intensity = boss_data.get("screen_shake_intensity", 0.0)
 		boss_encounter.music_pitch = boss_data.get("music_pitch", 1.0)

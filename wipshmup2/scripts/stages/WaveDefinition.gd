@@ -42,9 +42,9 @@ func add_enemy_spawn(enemy_type: String, position: Vector2, delay: float = 0.0, 
 	}
 	enemy_spawns.append(spawn)
 
-func create_formation_spawns(formation_type: String, enemy_type: String, center_position: Vector2, count: int, properties: Dictionary = {}) -> void:
+func create_formation_spawns(formation_pattern: String, enemy_type: String, center_position: Vector2, count: int, properties: Dictionary = {}) -> void:
 	"""Create spawns in a formation pattern"""
-	match formation_type:
+	match formation_pattern:
 		"line":
 			_create_line_formation(enemy_type, center_position, count, properties)
 		"arc":

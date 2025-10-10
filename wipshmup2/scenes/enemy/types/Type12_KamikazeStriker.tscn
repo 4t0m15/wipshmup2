@@ -1,6 +1,6 @@
 [gd_scene load_steps=4 format=3 uid="uid://da8dru64wmp85"]
 
-[ext_resource type="Script" path="res://scripts/ClassicEnemy.gd" id="1_0n9pk"]
+[ext_resource type="Script" path="res://scripts/enemy/ClassicEnemy.gd" id="1_0n9pk"]
 [ext_resource type="Texture2D" path="res://assets/Ships/C_Fighter_S_frame_002.png" id="2_35kvp"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_1"]

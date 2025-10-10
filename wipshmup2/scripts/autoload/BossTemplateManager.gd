@@ -118,7 +118,11 @@ func _register_template(template_name: String, template_data: Dictionary) -> voi
 		phase.phase_name = phase_data.get("phase_name", "Phase")
 		phase.hp_threshold = phase_data.get("hp_threshold", 0)
 		phase.movement_behavior = phase_data.get("movement_behavior", "StraightDown")
-		phase.attack_patterns = phase_data.get("attack_patterns", ["AimedShot"])
+		# Properly construct typed array
+		var patterns = phase_data.get("attack_patterns", ["AimedShot"])
+		phase.attack_patterns.clear()
+		for pattern in patterns:
+			phase.attack_patterns.append(pattern)
 		phase.movement_params = phase_data.get("movement_params", {})
 		phase.attack_params = phase_data.get("attack_params", {})
 		phase.sprite_scale = phase_data.get("sprite_scale", 1.0)

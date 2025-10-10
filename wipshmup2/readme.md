@@ -289,8 +289,8 @@ The codebase has been completely refactored from a tightly-coupled signal-based 
 │                               SPECIALIZED SYSTEMS                                     │
 │                                                                                       │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐   │
-│  │PlayerController│  │ CombatSystem    │  │VisualEffectsSys│  │RankPressureSys  │   │
-│  │ (Input/Move)    │  │ (Damage/Logic)  │  │ (Screen FX)    │  │ (Rank Pressure) │   │
+│  │PlayerController │  │ CombatSystem    │  │VisualEffectsSys │  │RankPressureSys  │   │
+│  │ (Input/Move)    │  │ (Damage/Logic)  │  │ (Screen FX)     │  │ (Rank Pressure) │   │
 │  │                 │  │                 │  │                 │  │                 │   │
 │  │ ┌─────────────┐ │  │ ┌─────────────┐ │  │ ┌─────────────┐ │  │ ┌─────────────┐ │   │
 │  │ │Movement     │ │  │ │Damage Calc  │ │  │ │Screen Shake │ │  │ │Background   │ │   │
@@ -321,13 +321,13 @@ The codebase has been completely refactored from a tightly-coupled signal-based 
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘  └─────────────────┘   │
 │                                                                                       │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐   │
-│  │SineWaveBehavior │  │ZigzagBehavior  │  │DiveBehavior     │  │FanBehavior      │   │
-│  │ (Movement)      │  │ (Movement)     │  │ (Movement)      │  │ (Attack)        │   │
+│  │SineWaveBehavior │  │ZigzagBehavior   │  │DiveBehavior     │  │FanBehavior      │   │
+│  │ (Movement)      │  │ (Movement)      │  │ (Movement)      │  │ (Attack)        │   │
 │  │                 │  │                 │  │                 │  │                 │   │
 │  │ ┌─────────────┐ │  │ ┌─────────────┐ │  │ ┌─────────────┐ │  │ ┌─────────────┐ │   │
-│  │ │Wave Motion  │ │  │ │Zigzag Path   │ │  │ │Dive & Level │ │  │ │Fan Pattern  │ │   │
-│  │ │Amplitude    │ │  │ │Amplitude     │ │  │ │Speed Change │ │  │ │Angle Spread │ │   │
-│  │ │Frequency    │ │  │ │Frequency     │ │  │ │Distance     │ │  │ │Bullet Count │ │   │
+│  │ │Wave Motion  │ │  │ │Zigzag Path  │ │  │ │Dive & Level │ │  │ │Fan Pattern  │ │   │
+│  │ │Amplitude    │ │  │ │Amplitude    │ │  │ │Speed Change │ │  │ │Angle Spread │ │   │
+│  │ │Frequency    │ │  │ │Frequency    │ │  │ │Distance     │ │  │ │Bullet Count │ │   │
 │  │ │             │ │  │ │             │ │  │ │             │ │  │ │             │ │   │
 │  │ └─────────────┘ │  │ └─────────────┘ │  │ └─────────────┘ │  │ └─────────────┘ │   │
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘  └─────────────────┘   │

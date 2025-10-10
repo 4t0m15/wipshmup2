@@ -1,5 +1,4 @@
 extends Area2D
-signal hit_player
 
 @export var speed: float = 140.0  # Reduced from 320.0 for playable speed
 @export var damage: int = 1
@@ -46,6 +45,7 @@ func _ready() -> void:
 	
 	# Setup visual clarity enhancements
 	_setup_visual_effects()
+
 func _physics_process(delta: float) -> void:
 	_age += delta
 	var speed_mult: float = 1.0
@@ -129,7 +129,7 @@ func _create_trail_system() -> void:
 	# Simple trail implementation - could be enhanced with proper particles
 	pass
 
-func _update_trail_particles(delta: float) -> void:
+func _update_trail_particles(_delta: float) -> void:
 	"""Update trail particle effects"""
 	# Trail particle update logic
 	pass
@@ -139,5 +139,3 @@ func set_danger_level(level: int) -> void:
 	danger_level = clamp(level, 1, 3)
 	if _glow_sprite:
 		_glow_sprite.modulate = _get_danger_color()
-
-

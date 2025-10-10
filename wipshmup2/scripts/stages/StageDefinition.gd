@@ -30,13 +30,12 @@ func _create_default_wave() -> void:
 	"""Create a default wave for the stage"""
 	var wave = WaveDefinition.new()
 	wave.wave_name = "Default Wave"
-	wave.enemy_spawns = [
-		{
-			"enemy_type": "basic_fighter",
-			"position": Vector2(160, -50),
-			"delay": 0.0
-		}
-	]
+	wave.enemy_spawns.clear()
+	wave.enemy_spawns.append({
+		"enemy_type": "basic_fighter",
+		"position": Vector2(160, -50),
+		"delay": 0.0
+	})
 	waves.append(wave)
 
 func get_wave_count() -> int:

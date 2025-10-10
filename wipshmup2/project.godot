@@ -18,10 +18,10 @@ config/icon="res://icon.svg"
 [autoload]
 
 AudioManager="*res://scripts/autoload/AudioManager.gd"
-DifficultyConfig="*res://scripts/DifficultyConfig.gd"
-RankManager="*res://scripts/RankManager.gd"
-ItemDropManager="*res://scripts/ItemDropManager.gd"
-SpriteManager="*res://scripts/SpriteManager.gd"
+DifficultyConfig="*res://scripts/core/DifficultyConfig.gd"
+RankManager="*res://scripts/core/RankManager.gd"
+ItemDropManager="*res://scripts/core/ItemDropManager.gd"
+SpriteManager="*res://scripts/core/SpriteManager.gd"
 EventBus="*res://scripts/autoload/EventBus.gd"
 GameState="*res://scripts/autoload/GameState.gd"
 EntityFactory="*res://scripts/autoload/EntityFactory.gd"
@@ -30,6 +30,7 @@ BossTemplateManager="*res://scripts/autoload/BossTemplateManager.gd"
 StageTemplateManager="*res://scripts/autoload/StageTemplateManager.gd"
 GameModeManager="*res://scripts/autoload/GameModeManager.gd"
 ConfigManager="*res://scripts/autoload/ConfigManager.gd"
+CombatSystem="*res://scripts/systems/CombatSystem.gd"
 
 [display]
 

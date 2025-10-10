@@ -105,8 +105,13 @@ func spawn_player_bullet(position: Vector2, direction: Vector2 = Vector2.UP, spe
 	bullet.set("speed", speed)
 	bullet.visible = true
 	
-	var container = bullets_container if bullets_container else game_viewport
-	container.add_child(bullet)
+	var container = _get_bullet_container()
+	if container:
+		container.add_child(bullet)
+	else:
+		push_error("EntityFactory: No valid container found for player bullet")
+		bullet.queue_free()
+		return null
 	
 	_connect_bullet_signals(bullet, "player")
 	EventBus.entity_spawned.emit(bullet, "player_bullet")
@@ -120,23 +125,72 @@ func spawn_enemy_bullet(position: Vector2, direction: Vector2 = Vector2.DOWN, sp
 	bullet.set("damage", damage)
 	bullet.visible = true
 	
-	var container = bullets_container if bullets_container else game_viewport
-	container.add_child(bullet)
+	var container = _get_bullet_container()
+	if container:
+		container.add_child(bullet)
+	else:
+		push_error("EntityFactory: No valid container found for enemy bullet")
+		bullet.queue_free()
+		return null
 	
 	_connect_bullet_signals(bullet, "enemy")
 	EventBus.entity_spawned.emit(bullet, "enemy_bullet")
 	return bullet
 
+func _get_bullet_container() -> Node:
+	"""Get a valid container for bullets, creating one if necessary"""
+	# Try bullets_container first
+	if bullets_container and is_instance_valid(bullets_container):
+		return bullets_container
+	
+	# Try game_viewport
+	if game_viewport and is_instance_valid(game_viewport):
+		# Try to find or create Bullets container
+		var bullets_node = game_viewport.get_node_or_null("Bullets")
+		if bullets_node:
+			bullets_container = bullets_node
+			return bullets_container
+		else:
+			# Create Bullets container
+			bullets_container = Node.new()
+			bullets_container.name = "Bullets"
+			game_viewport.add_child(bullets_container)
+			return bullets_container
+	
+	# Fallback: try to get current scene
+	var current_scene = get_tree().current_scene
+	if current_scene:
+		var bullets_node = current_scene.get_node_or_null("Bullets")
+		if bullets_node:
+			return bullets_node
+		else:
+			# Create Bullets container in current scene
+			bullets_container = Node.new()
+			bullets_container.name = "Bullets"
+			current_scene.add_child(bullets_container)
+			return bullets_container
+	
+	return null
+
 func _get_pooled_bullet(pool: Array, scene: PackedScene) -> Node:
-	# Try to get from pool first
+	# Try to get from pool first, cleaning up invalid entries
+	var valid_bullets = []
 	for bullet in pool:
-		if not bullet.get_parent():
-			return bullet
+		if bullet and is_instance_valid(bullet):
+			if not bullet.get_parent():
+				valid_bullets.append(bullet)
+	
+	# Update pool with only valid bullets
+	pool.clear()
+	pool.append_array(valid_bullets)
+	
+	# Return first available bullet if any
+	if pool.size() > 0:
+		return pool.pop_front()
 	
 	# Create new if pool is empty
 	var bullet = scene.instantiate()
 	bullet.set_meta("pooled", true)
-	pool.append(bullet)
 	return bullet
 
 func _connect_bullet_signals(bullet: Node, bullet_type: String) -> void:

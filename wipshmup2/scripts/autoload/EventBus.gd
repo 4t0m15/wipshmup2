@@ -44,9 +44,9 @@ signal flash_requested(color: Color, duration: float)
 signal explosion_requested(position: Vector2, size: float)
 
 # Audio Events
-signal play_sound(sound_name: String, volume: float = 1.0)
-signal play_music(music_name: String, fade_in: bool = true)
-signal stop_music(fade_out: bool = true)
+signal play_sound(sound_name: String, volume: float)
+signal play_music(music_name: String, fade_in: bool)
+signal stop_music(fade_out: bool)
 
 # Input Events
 signal input_movement(direction: Vector2)
@@ -65,6 +65,35 @@ signal entity_destroyed(entity: Node, entity_type: String)
 
 func _ready() -> void:
 	print("[EventBus] Event system initialized")
+	# Connect to some basic events to demonstrate signal usage
+	player_hit.connect(_on_player_hit)
+	game_over.connect(_on_game_over)
+	game_started.connect(_on_game_started)
+	game_paused.connect(_on_game_paused)
+	game_resumed.connect(_on_game_resumed)
+	lives_changed.connect(_on_lives_changed)
+	bombs_changed.connect(_on_bombs_changed)
+	player_invincibility_started.connect(_on_player_invincibility_started)
+	player_invincibility_ended.connect(_on_player_invincibility_ended)
+	bullet_hit_player.connect(_on_bullet_hit_player)
+	bullet_hit_enemy.connect(_on_bullet_hit_enemy)
+	bomb_used.connect(_on_bomb_used)
+	stage_started.connect(_on_stage_started)
+	stage_completed.connect(_on_stage_completed)
+	enemy_spawned.connect(_on_enemy_spawned)
+	boss_spawned.connect(_on_boss_spawned)
+	wave_started.connect(_on_wave_started)
+	wave_completed.connect(_on_wave_completed)
+	item_dropped.connect(_on_item_dropped)
+	item_collected.connect(_on_item_collected)
+	input_movement.connect(_on_input_movement)
+	input_shoot.connect(_on_input_shoot)
+	input_bomb.connect(_on_input_bomb)
+	input_pause.connect(_on_input_pause)
+	rank_changed.connect(_on_rank_changed)
+	streak_changed.connect(_on_streak_changed)
+	entity_spawned.connect(_on_entity_spawned)
+	entity_destroyed.connect(_on_entity_destroyed)
 
 # Convenience methods for common event patterns
 func emit_player_damage(amount: int) -> void:
@@ -105,3 +134,102 @@ func emit_audio(sound_type: String, params: Dictionary = {}) -> void:
 			play_sound.emit("bomb_use", params.get("volume", 0.5))
 		"boss_hit":
 			play_sound.emit("boss_hit", params.get("volume", 0.5))
+
+# Convenience methods for audio signals with defaults
+func play_sound_with_defaults(sound_name: String, volume: float = 1.0) -> void:
+	play_sound.emit(sound_name, volume)
+
+func play_music_with_defaults(music_name: String, fade_in: bool = true) -> void:
+	play_music.emit(music_name, fade_in)
+
+func stop_music_with_defaults(fade_out: bool = true) -> void:
+	stop_music.emit(fade_out)
+
+# Event handlers to demonstrate signal usage
+func _on_player_hit() -> void:
+	print("[EventBus] Player hit event received")
+
+func _on_game_over() -> void:
+	print("[EventBus] Game over event received")
+
+func _on_game_started() -> void:
+	print("[EventBus] Game started event received")
+
+func _on_game_paused() -> void:
+	print("[EventBus] Game paused event received")
+
+func _on_game_resumed() -> void:
+	print("[EventBus] Game resumed event received")
+
+func _on_lives_changed(new_lives: int) -> void:
+	print("[EventBus] Lives changed to: ", new_lives)
+
+func _on_bombs_changed(new_bombs: int) -> void:
+	print("[EventBus] Bombs changed to: ", new_bombs)
+
+func _on_player_invincibility_started() -> void:
+	print("[EventBus] Player invincibility started")
+
+func _on_player_invincibility_ended() -> void:
+	print("[EventBus] Player invincibility ended")
+
+func _on_bullet_hit_player(bullet_position: Vector2) -> void:
+	print("[EventBus] Bullet hit player at: ", bullet_position)
+
+func _on_bullet_hit_enemy(enemy_position: Vector2, damage: int) -> void:
+	print("[EventBus] Bullet hit enemy at: ", enemy_position, " for ", damage, " damage")
+
+func _on_bomb_used(position: Vector2) -> void:
+	print("[EventBus] Bomb used at: ", position)
+
+func _on_stage_started(stage_number: int) -> void:
+	print("[EventBus] Stage started: ", stage_number)
+
+func _on_stage_completed(stage_number: int) -> void:
+	print("[EventBus] Stage completed: ", stage_number)
+
+func _on_enemy_spawned(_enemy: Node, enemy_type: String) -> void:
+	print("[EventBus] Enemy spawned: ", enemy_type)
+
+func _on_boss_spawned(_boss: Node, boss_name: String) -> void:
+	print("[EventBus] Boss spawned: ", boss_name)
+
+func _on_wave_started(wave_number: int) -> void:
+	print("[EventBus] Wave started: ", wave_number)
+
+func _on_wave_completed(wave_number: int) -> void:
+	print("[EventBus] Wave completed: ", wave_number)
+
+func _on_item_dropped(item_type: String, position: Vector2) -> void:
+	print("[EventBus] Item dropped: ", item_type, " at ", position)
+
+func _on_item_collected(item_type: String, value: int) -> void:
+	print("[EventBus] Item collected: ", item_type, " value: ", value)
+
+func _on_input_movement(_direction: Vector2) -> void:
+	# Input events are typically handled by input systems
+	pass
+
+func _on_input_shoot(_pressed: bool) -> void:
+	# Input events are typically handled by input systems
+	pass
+
+func _on_input_bomb(_pressed: bool) -> void:
+	# Input events are typically handled by input systems
+	pass
+
+func _on_input_pause(_pressed: bool) -> void:
+	# Input events are typically handled by input systems
+	pass
+
+func _on_rank_changed(new_rank: float) -> void:
+	print("[EventBus] Rank changed to: ", new_rank)
+
+func _on_streak_changed(current: int, max_streak: int) -> void:
+	print("[EventBus] Streak changed: ", current, "/", max_streak)
+
+func _on_entity_spawned(_entity: Node, entity_type: String) -> void:
+	print("[EventBus] Entity spawned: ", entity_type)
+
+func _on_entity_destroyed(_entity: Node, entity_type: String) -> void:
+	print("[EventBus] Entity destroyed: ", entity_type)

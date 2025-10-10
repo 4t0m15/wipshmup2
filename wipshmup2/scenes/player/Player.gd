@@ -136,7 +136,7 @@ func _create_circle_texture(radius: int, color: Color) -> ImageTexture:
 				image.set_pixel(x, y, color)
 	
 	var texture = ImageTexture.new()
-	texture.create_from_image(image)
+	texture.set_image(image)
 	return texture
 
 func set_focused(focused: bool) -> void:
@@ -147,7 +147,7 @@ func set_focused(focused: bool) -> void:
 		if focused:
 			_hitbox_indicator.modulate = Color(0.2, 1.0, 0.2, 0.8)
 
-func _update_visual_effects(delta: float) -> void:
+func _update_visual_effects(_delta: float) -> void:
 	"""Update visual effects for better clarity"""
 	# Update glow pulsing
 	if _glow_sprite:

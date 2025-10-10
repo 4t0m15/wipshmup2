@@ -1,0 +1,10 @@
+{
+  "enemies": {
+    "basic_fighter": {
+      "health": 10,
+      "speed": 50,
+      "points": 100
+    }
+  }
+}
+

@@ -26,7 +26,7 @@ func _ready() -> void:
 	
 	# Setup visual clarity for player bullets
 	_setup_player_bullet_effects()
-
+#okokokokok
 func _physics_process(delta: float) -> void:
 	position += direction * speed * delta
 	position = position.round()
