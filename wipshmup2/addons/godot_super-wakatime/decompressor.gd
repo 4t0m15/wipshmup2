@@ -14,7 +14,8 @@ func decompressor_cli(current_decompressor, platform: String, plugin_path: Strin
 		current_decompressor = "%s%s" % [build, ext]
 		
 	return current_decompressor
-	
+
+#hmm ballright 
 func lib_exists(current_decompressor, platform: String, plugin_path: String) -> bool:
 	"""Return if ouch already exists"""
 	return FileAccess.file_exists(decompressor_cli(current_decompressor, platform, plugin_path));

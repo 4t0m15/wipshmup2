@@ -3,9 +3,10 @@ extends Node
 
 const ENEMY_BULLET_SCENE: PackedScene = preload("res://scenes/bullet/EnemyBullet.tscn")
 
-const BASE_DENSITY_MULT: float = 0.3
-const BASE_SPEED_MULT: float = 0.4  # Reduced from 0.6 for playable speed
-const BASE_CADENCE_MULT: float = 0.75
+const BASE_DENSITY_MULT: float = 0.25
+const BASE_SPEED_MULT: float = 0.35  # Reduced further to cut CPU load
+const BASE_CADENCE_MULT: float = 0.9
+const SOFT_ENEMY_BULLET_CAP: int = 140
 
 # Difficulty scaling
 static var _difficulty_multiplier: float = 1.0
@@ -18,17 +19,29 @@ static func _get_density_multiplier() -> float:
 	var rank_mult: float = 1.0
 	if typeof(RankManager) != TYPE_NIL and RankManager.has_method("get_pattern_density_multiplier"):
 		rank_mult = float(RankManager.get_pattern_density_multiplier())
-	return BASE_DENSITY_MULT * rank_mult
+	return BASE_DENSITY_MULT * rank_mult * _get_dynamic_throttle()
 
 static func _get_cadence_multiplier() -> float:
 	var c: float = 1.0
 	if typeof(RankManager) != TYPE_NIL and RankManager.has_method("get_pattern_cadence_multiplier"):
 		c = max(0.001, float(RankManager.get_pattern_cadence_multiplier()))
-	return c * BASE_CADENCE_MULT
+	return c * BASE_CADENCE_MULT * _get_dynamic_throttle()
+
+static func _get_dynamic_throttle() -> float:
+	# Throttle intensity based on current enemy bullet load
+	var ml = Engine.get_main_loop()
+	if ml is SceneTree:
+		var bullets: Array = (ml as SceneTree).get_nodes_in_group("enemy_bullet")
+		var load_ratio: float = float(bullets.size()) / float(SOFT_ENEMY_BULLET_CAP)
+		# Start throttling as we approach 70% of cap; never drop below 0.25
+		var throttle: float = 1.0 - max(0.0, load_ratio - 0.7) / 0.6
+		return clamp(throttle, 0.25, 1.0)
+	return 1.0
 
 static func _spawn_bullet(_node: Node, position: Vector2, direction: Vector2, speed: float) -> void:
-	# Use EntityFactory for bullet spawning with difficulty scaling
-	EntityFactory.spawn_enemy_bullet(position, direction.normalized(), speed * BASE_SPEED_MULT * _difficulty_multiplier)
+	# Use EntityFactory for bullet spawning with difficulty scaling and dynamic throttle
+	var dyn := _get_dynamic_throttle()
+	EntityFactory.spawn_enemy_bullet(position, direction.normalized(), speed * BASE_SPEED_MULT * _difficulty_multiplier * dyn)
 	
 	# Play enemy shot sound through EventBus
 	EventBus.emit_audio("enemy_shot")
@@ -123,7 +136,7 @@ static func fire_spiral(node: Node, origin_node: Node2D, turns: int = 2, bullets
 	for i in range(total):
 		if not is_instance_valid(origin_node): return
 		var dir := Vector2.RIGHT.rotated(deg_to_rad(angle_deg))
-		EntityFactory.spawn_enemy_bullet(origin_node.global_position, dir, speed * BASE_SPEED_MULT)
+		_spawn_bullet(node, origin_node.global_position, dir, speed)
 		angle_deg += angular_step_deg
 		await _await_seconds(node, 0.02 / _get_cadence_multiplier())
 
@@ -133,7 +146,7 @@ static func fire_accel_bloom(_node: Node, origin: Vector2, petals: int = 12, spe
 	for i in range(count):
 		var angle := step * float(i)
 		var dir := Vector2.RIGHT.rotated(angle)
-		EntityFactory.spawn_enemy_bullet(origin, dir, speed * BASE_SPEED_MULT)
+		_spawn_bullet(_node, origin, dir, speed)
 
 static func fire_wave_stream(node: Node, origin_node: Node2D, duration_s: float = 1.2, interval_s: float = 0.06, base_angle_deg: float = 90.0, _wiggle_amp: float = 18.0, _wiggle_freq: float = 2.0, speed: float = 120.0) -> void:
 	if duration_s <= 0.0: return
@@ -141,7 +154,8 @@ static func fire_wave_stream(node: Node, origin_node: Node2D, duration_s: float 
 	var iv := interval_s / _get_cadence_multiplier()
 	while elapsed < duration_s:
 		if not is_instance_valid(origin_node): return
-		EntityFactory.spawn_enemy_bullet(origin_node.global_position, Vector2.RIGHT.rotated(deg_to_rad(base_angle_deg)), speed * BASE_SPEED_MULT)
+		var dir := Vector2.RIGHT.rotated(deg_to_rad(base_angle_deg))
+		_spawn_bullet(node, origin_node.global_position, dir, speed)
 		await _await_seconds(node, iv)
 		elapsed += iv
 

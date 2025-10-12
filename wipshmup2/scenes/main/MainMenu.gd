@@ -141,9 +141,11 @@ func _on_quit_pressed() -> void:
 	if is_instance_valid(_quit_image_layer):
 		_quit_image_layer.visible = true
 	
-	# Wait 1 second, then quit
-	await get_tree().create_timer(1.0, false).timeout
-	get_tree().quit()
+	# Wait 1 second, then quit - with tree safety check
+	if is_inside_tree():
+		await get_tree().create_timer(1.0, false).timeout
+		if is_inside_tree():
+			get_tree().quit()
 
 # Viewport/CRT helpers
 func _setup_viewport_and_crt() -> void:

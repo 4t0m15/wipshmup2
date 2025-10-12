@@ -11,15 +11,16 @@ extends Node
 var _is_hit_stopping: bool = false
 var _hit_stop_timer: float = 0.0
 var _original_time_scale: float = 1.0
+var _hit_stop_end_ms: int = 0
 
 func _ready() -> void:
 	# Add to autoload or get reference from main scene
-	pass
+	set_process(true)
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if _is_hit_stopping:
-		_hit_stop_timer -= delta
-		if _hit_stop_timer <= 0.0:
+		# Use wall-clock time to end hit-stop reliably even when time_scale == 0.0
+		if Time.get_ticks_msec() >= _hit_stop_end_ms:
 			_end_hit_stop()
 
 func trigger_hit_stop(duration: float = -1.0, intensity: float = 1.0) -> void:
@@ -43,9 +44,13 @@ func trigger_player_death_stop() -> void:
 func _start_hit_stop(duration: float) -> void:
 	"""Start the hit-stop effect"""
 	_is_hit_stopping = true
-	_hit_stop_timer = duration
+	# Cap to a reasonable maximum in case of misconfiguration
+	var capped_duration: float = min(duration, 0.5)
+	_hit_stop_timer = capped_duration
+	_hit_stop_end_ms = Time.get_ticks_msec() + int(capped_duration * 1000.0)
 	_original_time_scale = Engine.time_scale
-	Engine.time_scale = 0.0  # Freeze time
+	# Use a near-zero time scale instead of a hard freeze to avoid stalling scaled timers in other systems
+	Engine.time_scale = 0.0001
 
 func _end_hit_stop() -> void:
 	"""End the hit-stop effect"""

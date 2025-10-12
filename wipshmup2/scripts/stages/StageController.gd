@@ -15,7 +15,7 @@ var current_wave_index: int = 0
 var current_stage_index: int = 0
 
 # Stage progression
-var stage_order: Array[int] = [1, 2, 3, 4, 5, 6, 7, 8]
+var stage_order: Array[int] = [1, 2, 3]  # Only 3 stages are registered
 var is_stage_active: bool = false
 var is_boss_active: bool = false
 
@@ -95,14 +95,22 @@ func _start_boss_encounter() -> void:
 		_complete_stage()
 		return
 	
+	# Prevent multiple boss spawns - set flag BEFORE awaiting
+	if is_boss_active:
+		print("[StageController] Boss already active, skipping spawn")
+		return
+	
+	is_boss_active = true
+	
 	var boss_encounter = current_stage.boss_encounter
 	print("[StageController] Starting boss: ", boss_encounter.boss_name)
 	
 	# Apply boss intro effects
 	boss_encounter.apply_intro_effects()
 	
-	# Spawn boss after delay
-	await get_tree().create_timer(current_stage.boss_delay).timeout
+	# Spawn boss after delay - with tree safety check
+	if is_inside_tree():
+		await get_tree().create_timer(current_stage.boss_delay).timeout
 	
 	# Create boss
 	var boss = BossTemplateManager.create_boss(
@@ -114,25 +122,29 @@ func _start_boss_encounter() -> void:
 		# Connect boss signals
 		_connect_boss_signals(boss)
 		
-		# Add boss to scene
-		var container = get_tree().current_scene.get_node_or_null("GameViewport/Enemies")
-		if container:
-			container.add_child(boss)
-		else:
-			get_tree().current_scene.add_child(boss)
+		# Add boss to scene - with tree safety check
+		if is_inside_tree():
+			var container = get_tree().current_scene.get_node_or_null("GameViewport/Enemies")
+			if container:
+				container.add_child(boss)
+			else:
+				get_tree().current_scene.add_child(boss)
 		
 		# Emit boss spawned event
 		EventBus.boss_spawned.emit(boss, boss_encounter.boss_name)
-		is_boss_active = true
+	else:
+		# Boss creation failed, reset flag
+		is_boss_active = false
 
 func _connect_boss_signals(boss: Node) -> void:
 	"""Connect boss signals"""
 	if boss.has_signal("defeated"):
-		boss.defeated.connect(_on_boss_defeated)
+		# Bind boss so we can read its name/points on defeat
+		boss.defeated.connect(_on_boss_defeated.bind(boss))
 	if boss.has_signal("hit_player"):
 		boss.hit_player.connect(_on_boss_hit_player)
 
-func _on_boss_defeated() -> void:
+func _on_boss_defeated(boss: Node) -> void:
 	"""Handle boss defeat"""
 	print("[StageController] Boss defeated")
 	
@@ -140,20 +152,29 @@ func _on_boss_defeated() -> void:
 	if current_stage and current_stage.boss_encounter:
 		current_stage.boss_encounter.apply_outro_effects()
 	
-	# Emit boss defeated event
-	EventBus.boss_defeated.emit()
+	# Emit boss defeated event (validate values to avoid null type errors)
+	var name_val = boss.get("boss_name") if boss and boss.has_method("get") else null
+	var boss_name: String = name_val if (name_val is String and name_val != "") else "boss"
+	var pts_val = boss.get("points") if boss and boss.has_method("get") else null
+	var points: int = int(pts_val) if (pts_val is int or pts_val is float) else 10000
+	EventBus.boss_defeated.emit(boss_name, points)
 	boss_defeated.emit()
 	
-	# Complete stage after delay
-	await get_tree().create_timer(2.0).timeout
+	# Complete stage after delay - with tree safety check
+	if is_inside_tree():
+		await get_tree().create_timer(2.0).timeout
 	_complete_stage()
 
 func _on_boss_hit_player() -> void:
 	"""Handle boss hitting player"""
 	EventBus.player_hit.emit()
-
+ 
 func _complete_stage() -> void:
 	"""Complete the current stage"""
+	if not current_stage:
+		push_error("Cannot complete stage: current_stage is null")
+		return
+	
 	print("[StageController] Stage completed: ", current_stage.stage_name)
 	
 	# Emit stage completed event
@@ -182,12 +203,17 @@ func _process(delta: float) -> void:
 	
 	# Check if wave is complete
 	if current_wave and current_spawn_index >= current_wave.get_spawn_count():
-		# Check if wave duration is complete (or if no duration limit)
-		if current_wave.wave_duration < 0.0 or wave_timer >= current_wave.wave_duration:
-			# Wait a bit before starting next wave
-			if wave_timer < 2.0:
-				return
-			_complete_current_wave()
+		# Finite-duration waves: advance when duration elapsed
+		if current_wave.wave_duration >= 0.0:
+			if wave_timer >= current_wave.wave_duration:
+				_complete_current_wave()
+		# Infinite-duration waves: wait a short settle time and ensure field is clear
+		else:
+			# Allow a brief delay after the last spawn, then only advance when no enemies remain
+			if wave_timer >= 2.0:
+				var enemies := get_tree().get_nodes_in_group("enemy")
+				if enemies.size() == 0:
+					_complete_current_wave()
 
 func _spawn_next_enemy() -> void:
 	"""Spawn the next enemy in the current wave"""
@@ -205,8 +231,8 @@ func _spawn_next_enemy() -> void:
 	
 	print("[StageController] Spawning enemy: ", enemy_type, " at ", position)
 	
-	# Wait for delay if needed
-	if delay > 0.0:
+	# Wait for delay if needed - with tree safety check
+	if delay > 0.0 and is_inside_tree():
 		await get_tree().create_timer(delay).timeout
 	
 	# Create enemy
@@ -219,14 +245,15 @@ func _spawn_next_enemy() -> void:
 			if enemy.has_method("set") or enemy.get(key) != null:
 				enemy.set(key, properties[key])
 		
-		# Add to scene
-		var container = get_tree().current_scene.get_node_or_null("GameViewport/Enemies")
-		if container:
-			container.add_child(enemy)
-			print("[StageController] Enemy added to GameViewport/Enemies")
-		else:
-			get_tree().current_scene.add_child(enemy)
-			print("[StageController] Enemy added to current_scene")
+		# Add to scene - with tree safety check
+		if is_inside_tree():
+			var container = get_tree().current_scene.get_node_or_null("GameViewport/Enemies")
+			if container:
+				container.add_child(enemy)
+				print("[StageController] Enemy added to GameViewport/Enemies")
+			else:
+				get_tree().current_scene.add_child(enemy)
+				print("[StageController] Enemy added to current_scene")
 		
 		# Connect enemy signals
 		_connect_enemy_signals(enemy)

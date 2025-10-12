@@ -197,16 +197,30 @@ func _fire_loop() -> void:
 	if _firing_task_running: return
 	_firing_task_running = true
 
-	while is_instance_valid(self):
+	while is_instance_valid(self) and is_inside_tree():
+		# Check if we're still valid and in the tree before each operation
+		if not is_instance_valid(self) or not is_inside_tree():
+			break
+			
 		if _fire_timer > 0:
+			# Only create timer if we're still in the tree
+			if not is_inside_tree():
+				break
 			await get_tree().create_timer(_fire_timer, false).timeout
 			_fire_timer = 0.0
 
-		if not is_instance_valid(self): break
+		# Double-check validity after await
+		if not is_instance_valid(self) or not is_inside_tree():
+			break
+			
 		if not _is_on_screen():
+			# Only create timer if we're still in the tree
+			if not is_inside_tree():
+				break
 			await get_tree().create_timer(0.5, false).timeout
 			continue
 
+		# Fire the appropriate pattern
 		match fire_pattern:
 			FirePattern.STRAIGHT_SHOT: _fire_straight_shot()
 			FirePattern.SPREAD_3: _fire_spread_3()
@@ -216,7 +230,13 @@ func _fire_loop() -> void:
 			FirePattern.TRIPLE_SHOT: _fire_triple_shot()
 
 		_fire_timer = fire_interval
-		await get_tree().create_timer(fire_interval, false).timeout
+		
+		# Only create timer if we're still in the tree
+		if not is_inside_tree():
+			break
+		# Add jitter to desynchronize enemies and avoid burst spikes
+		var jitter := randf_range(-0.05, 0.05)
+		await get_tree().create_timer(max(0.02, fire_interval + jitter), false).timeout
 
 	_firing_task_running = false
 
@@ -252,15 +272,29 @@ func _fire_bomb_drop() -> void:
 func _fire_triple_shot() -> void:
 	for i in range(3):
 		_spawn_bullet(Vector2.DOWN)
+		# Only create timer if we're still in the tree
+		if not is_inside_tree():
+			break
 		await get_tree().create_timer(0.1, false).timeout
 
 func _spawn_bullet(direction: Vector2) -> void:
+	# Safety check: ensure we're still valid and in the tree
+	if not is_instance_valid(self) or not is_inside_tree():
+		return
+		
 	# Play enemy shot sound
 	var audio_manager = get_node_or_null("/root/AudioManager")
 	if audio_manager and audio_manager.has_method("play_enemy_shot"):
 		audio_manager.play_enemy_shot()
 
-	GameUtils.spawn_bullet(ENEMY_BULLET_SCENE, global_position, direction, bullet_speed, get_tree().current_scene)
+	# Only spawn bullet if we're still in the tree
+	if is_inside_tree():
+		# Respect global bullet cap via EntityFactory if available; fallback to GameUtils
+		var ef = get_node_or_null("/root/EntityFactory")
+		if ef and ef.has_method("spawn_enemy_bullet"):
+			EntityFactory.spawn_enemy_bullet(global_position, direction, bullet_speed)
+		else:
+			GameUtils.spawn_bullet(ENEMY_BULLET_SCENE, global_position, direction, bullet_speed, get_tree().current_scene)
 
 # Optimized player finding with caching
 func _get_cached_player() -> Node2D:
@@ -270,8 +304,10 @@ func _is_on_screen() -> bool:
 	return GameUtils.is_on_screen(global_position)
 
 func _ensure_player_bullet_hits() -> void:
-	var bullets = get_tree().get_nodes_in_group("player_bullet")
-	for bullet in bullets:
-		if bullet and bullet.global_position.distance_to(global_position) < 16:
-			take_damage(1, "shot")
-			bullet.queue_free()
+	# Only check bullets if we're still in the tree
+	if is_inside_tree():
+		var bullets = get_tree().get_nodes_in_group("player_bullet")
+		for bullet in bullets:
+			if bullet and bullet.global_position.distance_to(global_position) < 16:
+				take_damage(1, "shot")
+				bullet.queue_free()

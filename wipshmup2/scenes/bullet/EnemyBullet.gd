@@ -26,7 +26,7 @@ func _ready() -> void:
 	collision_mask = 1   # Detect player layer
 	add_to_group("enemy_bullet")
 	
-	print("[EnemyBullet] Created at position: ", position)
+	# Debug print removed to reduce log spam during heavy fire
 	
 	if has_node("VisibleOnScreenNotifier2D"):
 		$VisibleOnScreenNotifier2D.screen_exited.connect(_on_screen_exited)
@@ -83,7 +83,7 @@ func _physics_process(delta: float) -> void:
 func _on_area_entered(area: Area2D) -> void:
 	# ONLY detect player hurtbox - single detection path
 	if area.is_in_group("player_hurtbox"):
-		print("[EnemyBullet] HIT CONFIRMED! Emitting to EventBus")
+		# Avoid log spam during heavy fire
 		EventBus.bullet_hit_player.emit(global_position)
 		queue_free()
 

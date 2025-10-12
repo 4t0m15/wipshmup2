@@ -41,7 +41,7 @@ func _init() -> void:
 			"bullet_damage": 1
 		}
 
-func get_movement_behavior_scene() -> PackedScene:
+func get_movement_behavior_scene() -> GDScript:
 	"""Get the movement behavior scene for this phase"""
 	match movement_behavior:
 		"StraightDown":
@@ -55,7 +55,7 @@ func get_movement_behavior_scene() -> PackedScene:
 		_:
 			return load("res://scripts/components/behaviors/StraightDownBehavior.gd")
 
-func get_attack_behavior_scene() -> PackedScene:
+func get_attack_behavior_scene() -> GDScript:
 	"""Get the attack behavior scene for this phase"""
 	match attack_patterns[0] if attack_patterns.size() > 0 else "AimedShot":
 		"AimedShot":
@@ -83,7 +83,7 @@ func apply_visual_effects(boss: Node) -> void:
 			"duration": 0.5
 		})
 	
-	# Apply background tint
+	# Apply background
 	if background_tint != Color.WHITE:
 		EventBus.emit_visual_effect("flash", {
 			"color": background_tint,

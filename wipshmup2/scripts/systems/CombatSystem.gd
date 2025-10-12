@@ -21,7 +21,7 @@ func _on_bullet_hit_enemy(enemy_position: Vector2, damage: int) -> void:
 				enemy.take_damage(damage, "shot")
 			break
 
-func _on_bullet_hit_player(bullet_position: Vector2) -> void:
+func _on_bullet_hit_player(_bullet_position: Vector2) -> void:
 	# Check if player is invincible
 	if GameState.is_invincible():
 		return
@@ -34,7 +34,7 @@ func _on_bullet_hit_player(bullet_position: Vector2) -> void:
 	GameState.set_invincible(true)
 	_start_invincibility_timer()
 
-func _on_enemy_killed(points: int, position: Vector2, enemy_type: String) -> void:
+func _on_enemy_killed(points: int, position: Vector2, _enemy_type: String) -> void:
 	# Update score
 	GameState.add_score(points)
 	
@@ -55,7 +55,7 @@ func _on_enemy_killed(points: int, position: Vector2, enemy_type: String) -> voi
 	if RankManager and RankManager.has_method("on_enemy_killed"):
 		RankManager.on_enemy_killed(points)
 
-func _on_boss_defeated(boss_name: String, points: int) -> void:
+func _on_boss_defeated(_boss_name: String, points: int) -> void:
 	# Update score
 	GameState.add_score(points)
 	
@@ -69,7 +69,7 @@ func _on_boss_defeated(boss_name: String, points: int) -> void:
 	if RankManager and RankManager.has_method("on_boss_defeated"):
 		RankManager.on_boss_defeated()
 
-func _on_bomb_used(position: Vector2) -> void:
+func _on_bomb_used(_position: Vector2) -> void:
 	# Destroy all enemies in range
 	var enemies = get_tree().get_nodes_in_group("enemy")
 	for enemy in enemies:

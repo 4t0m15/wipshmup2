@@ -33,6 +33,9 @@ var bullet_timer: Timer
 var player_hurtbox: Area2D
 var game_viewport: Node
 var screen_shake: Node
+var _perf_watchdog_timer: Timer
+const MAX_ENEMY_BULLETS_ALLOWED: int = 160
+const MAX_TOTAL_BULLETS_ALLOWED: int = 220
 
 func _ready() -> void:
 	add_to_group("game")
@@ -111,9 +114,13 @@ func _setup_stage_controller() -> void:
 
 	stage_controller.start_run()
 
-	# Connect any bullets that already exist in the scene (e.g. preloaded tutorials)
-	for bullet in get_tree().get_nodes_in_group("enemy_bullet"):
-		_connect_enemy_bullet(bullet)
+	# Start lightweight performance watchdog to prevent runaway node counts
+	_start_perf_watchdog()
+
+	# Connect any bullets that already exist in the scene (e.g. preloaded tutorials) - with tree safety check
+	if is_inside_tree():
+		for bullet in get_tree().get_nodes_in_group("enemy_bullet"):
+			_connect_enemy_bullet(bullet)
 
 func _spawn_player() -> void:
 	print("[Main] Spawning player")
@@ -153,9 +160,10 @@ func _spawn_player() -> void:
 		print("[Main] Connected to player 'hit' signal")
 
 func _process(delta: float) -> void:
-	# Handle game over restart in _process (UI-related)
+	# Handle game over restart in _process (UI-related) - with tree safety check
 	if game_over and Input.is_action_just_pressed("ui_accept"):
-		get_tree().reload_current_scene()
+		if is_inside_tree():
+			get_tree().reload_current_scene()
 		return
 	
 	# Apply rank pressure system
@@ -254,6 +262,10 @@ func _fire_bullet() -> void:
 	"""Fire a bullet from the player"""
 	if not player or not is_instance_valid(player):
 		return
+	
+	# Safety check: ensure we're still in the tree
+	if not is_inside_tree():
+		return
 
 	# Load bullet scene
 	const BULLET_SCENE: PackedScene = preload("res://scenes/bullet/Bullet.tscn")
@@ -282,25 +294,27 @@ func _use_bomb() -> void:
 	# Create visual flash effect
 	_create_bomb_flash()
 
-	# Destroy all enemies
-	var enemies = get_tree().get_nodes_in_group("enemy")
-	print("[Main] Destroying ", enemies.size(), " enemies with bomb")
-	for enemy in enemies:
-		if enemy and is_instance_valid(enemy):
-			# Award points for bomb kills
-			if enemy.has_method("take_damage"):
-				enemy.take_damage(999, "bomb")
-			elif enemy.has_method("die"):
-				enemy.die()
-			else:
-				enemy.queue_free()
+	# Destroy all enemies - with tree safety check
+	if is_inside_tree():
+		var enemies = get_tree().get_nodes_in_group("enemy")
+		print("[Main] Destroying ", enemies.size(), " enemies with bomb")
+		for enemy in enemies:
+			if enemy and is_instance_valid(enemy):
+				# Award points for bomb kills
+				if enemy.has_method("take_damage"):
+					enemy.take_damage(999, "bomb")
+				elif enemy.has_method("die"):
+					enemy.die()
+				else:
+					enemy.queue_free()
 	
-	# Destroy all enemy bullets
-	var bullets = get_tree().get_nodes_in_group("enemy_bullet")
-	print("[Main] Destroying ", bullets.size(), " enemy bullets with bomb")
-	for bullet in bullets:
-		if bullet and is_instance_valid(bullet):
-			bullet.queue_free()
+	# Destroy all enemy bullets - with tree safety check
+	if is_inside_tree():
+		var bullets = get_tree().get_nodes_in_group("enemy_bullet")
+		print("[Main] Destroying ", bullets.size(), " enemy bullets with bomb")
+		for bullet in bullets:
+			if bullet and is_instance_valid(bullet):
+				bullet.queue_free()
 
 	# Screen shake for impact
 	if is_instance_valid(screen_shake):
@@ -454,14 +468,7 @@ func _setup_visual_clarity_systems() -> void:
 	add_child(visual_settings)
 	
 	print("[Main] Visual clarity systems initialized")
-	if player and is_instance_valid(player):
-		if player.has_method("take_damage"):
-			print("[Main] Calling player.take_damage(1) from enemy")
-			player.take_damage(1)
-		else:
-			print("[Main] ERROR: Player missing take_damage method!")
-	else:
-		print("[Main] ERROR: Player invalid when enemy hit!")
+	# Remove immediate player damage call here to avoid early hit-stop trigger on start
 
 func _get_shake_scale_from_streak() -> float:
 	# Logarithmic scale: 1 + k * ln(1 + streak)
@@ -483,19 +490,21 @@ func _check_for_bosses() -> void:
 	if game_over:
 		return
 	
-	var bosses = get_tree().get_nodes_in_group("boss")
-	for boss in bosses:
-		if is_instance_valid(boss) and not boss.has_meta("health_bar_shown"):
-			# Mark this boss as having its health bar shown
-			boss.set_meta("health_bar_shown", true)
-			
-			# Show the boss health bar
-			if is_instance_valid(hud) and hud.has_method("show_boss_health"):
-				hud.show_boss_health(boss)
-			
-			# Connect to boss defeated signal to hide health bar
-			if boss.has_signal("defeated"):
-				boss.defeated.connect(_on_boss_health_depleted.bind(boss))
+	# Check for bosses with tree safety check
+	if is_inside_tree():
+		var bosses = get_tree().get_nodes_in_group("boss")
+		for boss in bosses:
+			if is_instance_valid(boss) and not boss.has_meta("health_bar_shown"):
+				# Mark this boss as having its health bar shown
+				boss.set_meta("health_bar_shown", true)
+				
+				# Show the boss health bar
+				if is_instance_valid(hud) and hud.has_method("show_boss_health"):
+					hud.show_boss_health(boss)
+				
+				# Connect to boss defeated signal to hide health bar
+				if boss.has_signal("defeated"):
+					boss.defeated.connect(_on_boss_health_depleted.bind(boss))
 
 func _on_boss_health_depleted(_boss: Node) -> void:
 	"""Handle when a boss is defeated"""
@@ -517,6 +526,45 @@ func _setup_rank_pressure_system() -> void:
 	# Store base background color
 	if is_instance_valid(space_background):
 		base_background_color = space_background.modulate
+
+func _start_perf_watchdog() -> void:
+	"""Start a periodic watchdog that prunes runaway objects"""
+	if _perf_watchdog_timer:
+		return
+	_perf_watchdog_timer = Timer.new()
+	_perf_watchdog_timer.wait_time = 1.0
+	_perf_watchdog_timer.autostart = true
+	_perf_watchdog_timer.timeout.connect(_perf_watchdog_tick)
+	add_child(_perf_watchdog_timer)
+
+func _perf_watchdog_tick() -> void:
+	# Count bullets and prune if exceeding thresholds
+	var enemy_bullets: Array = get_tree().get_nodes_in_group("enemy_bullet")
+	var player_bullets: Array = get_tree().get_nodes_in_group("player_bullet")
+	var total_bullets := enemy_bullets.size() + player_bullets.size()
+
+	if enemy_bullets.size() > MAX_ENEMY_BULLETS_ALLOWED:
+		var excess := enemy_bullets.size() - MAX_ENEMY_BULLETS_ALLOWED
+		for i in range(min(excess, enemy_bullets.size())):
+			var b = enemy_bullets[i]
+			if b and is_instance_valid(b):
+				b.queue_free()
+
+	if total_bullets > MAX_TOTAL_BULLETS_ALLOWED:
+		var excess_total := total_bullets - MAX_TOTAL_BULLETS_ALLOWED
+		# Prefer removing enemy bullets first, then player bullets if needed
+		var enemy_to_remove: int = min(excess_total, enemy_bullets.size())
+		for i in range(enemy_to_remove):
+			var eb = enemy_bullets[i]
+			if eb and is_instance_valid(eb):
+				eb.queue_free()
+		excess_total -= enemy_to_remove
+		if excess_total > 0:
+			var player_to_remove: int = min(excess_total, player_bullets.size())
+			for i in range(player_to_remove):
+				var pb = player_bullets[i]
+				if pb and is_instance_valid(pb):
+					pb.queue_free()
 
 func _apply_rank_pressure(delta: float) -> void:
 	"""Apply visual and audio pressure based on rank"""

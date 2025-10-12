@@ -106,4 +106,5 @@ func _add_phase_management(boss: Node) -> void:
 	var phase_manager = phase_manager_script.new()
 	phase_manager.name = "PhaseManager"
 	phase_manager.boss_template = self
-	boss.add_child(phase_manager)
+	# Use call_deferred to avoid "Parent node is busy setting up children" error
+	boss.add_child.call_deferred(phase_manager)

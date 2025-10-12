@@ -52,7 +52,7 @@ func _init() -> void:
 			"bullet_damage": 1
 		}
 
-func get_movement_behavior_scene() -> PackedScene:
+func get_movement_behavior_scene() -> GDScript:
 	"""Get the movement behavior scene for this template"""
 	match movement_behavior:
 		"StraightDown":
@@ -66,7 +66,7 @@ func get_movement_behavior_scene() -> PackedScene:
 		_:
 			return load("res://scripts/components/behaviors/StraightDownBehavior.gd")
 
-func get_attack_behavior_scene() -> PackedScene:
+func get_attack_behavior_scene() -> GDScript:
 	"""Get the attack behavior scene for this template"""
 	match attack_behavior:
 		"AimedShot":

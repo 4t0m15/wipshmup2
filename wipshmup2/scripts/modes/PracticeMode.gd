@@ -107,16 +107,20 @@ func _create_boss_encounter() -> void:
 func _connect_boss_signals(boss: Node) -> void:
 	"""Connect boss signals"""
 	if boss.has_signal("defeated"):
-		boss.defeated.connect(_on_boss_defeated)
+		boss.defeated.connect(_on_boss_defeated.bind(boss))
 	if boss.has_signal("hit_player"):
 		boss.hit_player.connect(_on_boss_hit_player)
 
-func _on_boss_defeated() -> void:
+func _on_boss_defeated(boss: Node) -> void:
 	"""Handle boss defeat in practice"""
 	print("[PracticeMode] Boss defeated in practice")
 	
-	# Emit boss defeated event
-	EventBus.boss_defeated.emit()
+	# Emit boss defeated event with validation
+	var name_val = boss.get("boss_name") if boss and boss.has_method("get") else null
+	var boss_name: String = name_val if (name_val is String and name_val != "") else practice_boss
+	var pts_val = boss.get("points") if boss and boss.has_method("get") else null
+	var points: int = int(pts_val) if (typeof(pts_val) == TYPE_INT or typeof(pts_val) == TYPE_FLOAT) else 10000
+	EventBus.boss_defeated.emit(boss_name, points)
 	
 	# Restart boss after delay
 	await get_tree().create_timer(3.0).timeout

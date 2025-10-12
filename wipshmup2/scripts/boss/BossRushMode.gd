@@ -100,17 +100,22 @@ func _apply_boss_modifiers(boss: Node) -> void:
 func _connect_boss_signals(boss: Node) -> void:
 	"""Connect boss signals"""
 	if boss.has_signal("defeated"):
-		boss.defeated.connect(_on_boss_defeated)
+		boss.defeated.connect(_on_boss_defeated.bind(boss))
 	if boss.has_signal("hit_player"):
 		boss.hit_player.connect(_on_boss_hit_player)
 
-func _on_boss_defeated() -> void:
+func _on_boss_defeated(boss: Node) -> void:
 	"""Handle boss defeat"""
 	bosses_defeated += 1
 	print("[BossRushMode] Boss defeated! Total: ", bosses_defeated)
 	
-	# Emit boss defeated event
-	EventBus.boss_defeated.emit()
+	# Emit boss defeated event with validation
+	var name_val = boss.get("boss_name") if boss and boss.has_method("get") else null
+	var fallback_name = boss_order[max(0, current_boss_index - 1)] if boss_order.size() > 0 else "boss"
+	var boss_name: String = name_val if (name_val is String and name_val != "") else fallback_name
+	var pts_val = boss.get("points") if boss and boss.has_method("get") else null
+	var points: int = int(pts_val) if (typeof(pts_val) == TYPE_INT or typeof(pts_val) == TYPE_FLOAT) else 10000
+	EventBus.boss_defeated.emit(boss_name, points)
 	
 	# Move to next boss after delay
 	await get_tree().create_timer(3.0).timeout

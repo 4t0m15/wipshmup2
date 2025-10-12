@@ -9,6 +9,14 @@ const BULLET_SCENE: PackedScene = preload("res://scenes/bullet/Bullet.tscn")
 const ENEMY_BULLET_SCENE: PackedScene = preload("res://scenes/bullet/EnemyBullet.tscn")
 const ENEMY_SCENE: PackedScene = preload("res://scenes/enemy/Enemy.tscn")
 
+# Safety caps
+const MAX_ENEMY_BULLETS: int = 140
+const MAX_ENEMY_BULLETS_PER_SEC: int = 90
+
+# Simple rate limiter state
+var _bullet_rate_window_start_ms: int = 0
+var _bullet_rate_count: int = 0
+
 # Object pools for performance
 var bullet_pool: Array[Node] = []
 var enemy_bullet_pool: Array[Node] = []
@@ -118,6 +126,25 @@ func spawn_player_bullet(position: Vector2, direction: Vector2 = Vector2.UP, spe
 	return bullet
 
 func spawn_enemy_bullet(position: Vector2, direction: Vector2 = Vector2.DOWN, speed: float = 140.0, damage: int = 1) -> Node:
+	# Global cap to prevent runaway spawning/lockups
+	var container_check = _get_bullet_container()
+	if container_check and container_check.get_child_count() >= MAX_ENEMY_BULLETS:
+		return null
+
+	# Skip spawning during heavy hit-stop to avoid visible bullet walls
+	if Engine.time_scale < 0.2:
+		return null
+
+	# Rate limit enemy bullet spawns
+	var now_ms: int = Time.get_ticks_msec()
+	if _bullet_rate_window_start_ms == 0 or now_ms - _bullet_rate_window_start_ms >= 1000:
+		_bullet_rate_window_start_ms = now_ms
+		_bullet_rate_count = 0
+	else:
+		if _bullet_rate_count >= MAX_ENEMY_BULLETS_PER_SEC:
+			return null
+		_bullet_rate_count += 1
+
 	var bullet = _get_pooled_bullet(enemy_bullet_pool, ENEMY_BULLET_SCENE)
 	bullet.position = position
 	bullet.set("direction", direction)

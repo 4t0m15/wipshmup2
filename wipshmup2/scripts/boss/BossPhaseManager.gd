@@ -40,6 +40,11 @@ func _initialize_phase() -> void:
 		_apply_phase_visuals()
 		phase_start_time = Time.get_ticks_msec() / 1000.0
 
+
+
+
+
+
 func _apply_phase_behavior() -> void:
 	"""Apply the current phase's behavior"""
 	if not current_phase:
@@ -77,6 +82,7 @@ func _add_movement_behavior() -> void:
 	var behavior_script = current_phase.get_movement_behavior_scene()
 	var new_movement_behavior = behavior_script.new()
 	new_movement_behavior.name = "MovementBehavior"
+	# Add directly - PhaseManager is already added with call_deferred, so boss is ready
 	boss.add_child(new_movement_behavior)
 	movement_behavior = new_movement_behavior
 	
@@ -96,6 +102,7 @@ func _add_attack_behavior() -> void:
 	var behavior_script = current_phase.get_attack_behavior_scene()
 	attack_behavior = behavior_script.new()
 	attack_behavior.name = "AttackBehavior"
+	# Add directly - PhaseManager is already added with call_deferred, so boss is ready
 	boss.add_child(attack_behavior)
 	
 	# Apply attack parameters
@@ -113,7 +120,7 @@ func _apply_phase_visuals() -> void:
 	var boss = get_parent()
 	current_phase.apply_visual_effects(boss)
 
-func _on_boss_damaged(amount: int) -> void:
+func _on_boss_damaged(_amount: int) -> void:
 	"""Handle boss damage and check for phase transitions"""
 	var new_hp = get_boss_hp()
 	var new_phase = boss_template.get_current_phase(new_hp)
