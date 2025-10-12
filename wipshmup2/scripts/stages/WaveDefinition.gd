@@ -7,7 +7,7 @@ class_name WaveDefinition
 @export var wave_name: String = "Wave"
 @export var enemy_spawns: Array[Dictionary] = []
 @export var wave_duration: float = -1.0  # -1 for infinite
-@export var spawn_interval: float = 0.5
+@export var spawn_interval: float = 0.15  # Reduced from 0.5 - MUCH FASTER
 @export var formation_type: String = "none"  # none, line, arc, circle, v_formation
 
 # Formation parameters

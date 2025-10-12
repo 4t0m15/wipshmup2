@@ -39,6 +39,20 @@ theme_override_colors/font_outline_color = Color(0.8, 0.2, 0.6, 0.9)
 theme_override_constants/outline_size = 4
 text = "wipshmup2"
 
+[node name="FlavorText" type="Label" parent="Canvas"]
+offset_left = 200.0
+offset_top = 30.0
+offset_right = 300.0
+offset_bottom = 50.0
+rotation = -0.349066
+pivot_offset = Vector2(50, 10)
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(1, 1, 0.3, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.8)
+theme_override_constants/outline_size = 2
+text = "Bullet Hell!"
+horizontal_alignment = 1
+
 [node name="MenuPanel" type="PanelContainer" parent="Canvas"]
 offset_left = 20.0
 offset_top = 76.0

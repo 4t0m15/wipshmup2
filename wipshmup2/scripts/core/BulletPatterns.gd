@@ -3,10 +3,10 @@ extends Node
 
 const ENEMY_BULLET_SCENE: PackedScene = preload("res://scenes/bullet/EnemyBullet.tscn")
 
-const BASE_DENSITY_MULT: float = 0.25
-const BASE_SPEED_MULT: float = 0.35  # Reduced further to cut CPU load
-const BASE_CADENCE_MULT: float = 0.9
-const SOFT_ENEMY_BULLET_CAP: int = 140
+const BASE_DENSITY_MULT: float = 0.6  # Increased from 0.25 - MORE BULLETS
+const BASE_SPEED_MULT: float = 0.7  # Increased from 0.35 - FASTER BULLETS
+const BASE_CADENCE_MULT: float = 1.2  # Increased from 0.9 - FIRE FASTER
+const SOFT_ENEMY_BULLET_CAP: int = 300  # Increased from 140
 
 # Difficulty scaling
 static var _difficulty_multiplier: float = 1.0

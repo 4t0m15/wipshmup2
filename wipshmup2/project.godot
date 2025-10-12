@@ -31,15 +31,18 @@ StageTemplateManager="*res://scripts/autoload/StageTemplateManager.gd"
 GameModeManager="*res://scripts/autoload/GameModeManager.gd"
 ConfigManager="*res://scripts/autoload/ConfigManager.gd"
 CombatSystem="*res://scripts/systems/CombatSystem.gd"
+BulletReadability="*res://scripts/bullet_readability/BulletReadabilitySettings.gd"
 
 [display]
 
+window/size/viewport_width=320
 window/size/viewport_height=180
-window/size/mode="windowed"
+window/size/mode="exclusive_fullscreen"
+window/size/window_width_override=1920
+window/size/window_height_override=1080
 window/stretch/mode="viewport"
 window/stretch/scale_mode="integer"
 window/vsync/vsync_mode=0
-#iwouldhaveawayofmakingitbetterbutidkwindow/size/viewport_width=320
 
 [editor_plugins]
 

@@ -34,8 +34,8 @@ var player_hurtbox: Area2D
 var game_viewport: Node
 var screen_shake: Node
 var _perf_watchdog_timer: Timer
-const MAX_ENEMY_BULLETS_ALLOWED: int = 160
-const MAX_TOTAL_BULLETS_ALLOWED: int = 220
+const MAX_ENEMY_BULLETS_ALLOWED: int = 400  # Increased from 160
+const MAX_TOTAL_BULLETS_ALLOWED: int = 500  # Increased from 220
 
 func _ready() -> void:
 	add_to_group("game")
@@ -467,7 +467,12 @@ func _setup_visual_clarity_systems() -> void:
 	visual_settings.name = "VisualSettings"
 	add_child(visual_settings)
 	
-	print("[Main] Visual clarity systems initialized")
+	# Add COMPREHENSIVE bullet readability background dimming
+	var bg_dim = preload("res://scripts/bullet_readability/BackgroundDimManager.gd").new()
+	bg_dim.name = "BackgroundDimManager"
+	add_child(bg_dim)
+	
+	print("[Main] Visual clarity systems initialized (including bullet readability)")
 	# Remove immediate player damage call here to avoid early hit-stop trigger on start
 
 func _get_shake_scale_from_streak() -> float:

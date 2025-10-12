@@ -18,20 +18,92 @@ func _register_default_templates() -> void:
 		"stage_number": 1,
 		"background_type": "space",
 		"music_track": "default",
+		"spawn_interval": 0.15,  # Much faster spawning - was 0.5
 		"waves": [
 			{
-				"wave_name": "Opening Wave",
+				"wave_name": "Side Pincer Attack",
+				"spawn_interval": 0.15,
 				"enemy_spawns": [
-					{"enemy_type": "basic_fighter", "position": Vector2(80, -50), "delay": 0.0},
-					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 0.5},
-					{"enemy_type": "basic_fighter", "position": Vector2(240, -50), "delay": 1.0}
+					# Left side wave
+					{"enemy_type": "basic_fighter", "position": Vector2(20, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(20, -50), "delay": 0.15},
+					{"enemy_type": "basic_fighter", "position": Vector2(20, -50), "delay": 0.3},
+					# Right side wave
+					{"enemy_type": "basic_fighter", "position": Vector2(300, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(300, -50), "delay": 0.15},
+					{"enemy_type": "basic_fighter", "position": Vector2(300, -50), "delay": 0.3},
+					# Center interrupt
+					{"enemy_type": "sine_fighter", "position": Vector2(160, -50), "delay": 0.5},
+					# Second pincer
+					{"enemy_type": "zigzag_fighter", "position": Vector2(40, -50), "delay": 0.8},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(280, -50), "delay": 0.8},
+					{"enemy_type": "basic_fighter", "position": Vector2(60, -50), "delay": 1.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(260, -50), "delay": 1.0}
 				],
-				"formation_type": "line"
+				"formation_type": "none"
 			},
 			{
-				"wave_name": "Sine Wave",
+				"wave_name": "Weaving Serpent",
+				"spawn_interval": 0.12,
 				"enemy_spawns": [
-					{"enemy_type": "sine_fighter", "position": Vector2(160, -50), "delay": 0.0}
+					# Snake pattern from left to right
+					{"enemy_type": "sine_fighter", "position": Vector2(40, -50), "delay": 0.0},
+					{"enemy_type": "sine_fighter", "position": Vector2(80, -50), "delay": 0.15},
+					{"enemy_type": "sine_fighter", "position": Vector2(120, -50), "delay": 0.3},
+					{"enemy_type": "sine_fighter", "position": Vector2(160, -50), "delay": 0.45},
+					{"enemy_type": "sine_fighter", "position": Vector2(200, -50), "delay": 0.6},
+					{"enemy_type": "sine_fighter", "position": Vector2(240, -50), "delay": 0.75},
+					{"enemy_type": "sine_fighter", "position": Vector2(280, -50), "delay": 0.9},
+					# Counter-wave from opposite side
+					{"enemy_type": "basic_fighter", "position": Vector2(280, -50), "delay": 1.2},
+					{"enemy_type": "basic_fighter", "position": Vector2(200, -50), "delay": 1.3},
+					{"enemy_type": "basic_fighter", "position": Vector2(120, -50), "delay": 1.4},
+					{"enemy_type": "basic_fighter", "position": Vector2(40, -50), "delay": 1.5}
+				],
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Diamond Formation Rush",
+				"spawn_interval": 0.08,
+				"enemy_spawns": [
+					# Diamond 1 - Center
+					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(140, -50), "delay": 0.1},
+					{"enemy_type": "basic_fighter", "position": Vector2(180, -50), "delay": 0.1},
+					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 0.2},
+					# Diamond 2 - Left offset
+					{"enemy_type": "zigzag_fighter", "position": Vector2(80, -50), "delay": 0.5},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(60, -50), "delay": 0.6},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(100, -50), "delay": 0.6},
+					# Diamond 3 - Right offset
+					{"enemy_type": "zigzag_fighter", "position": Vector2(240, -50), "delay": 0.5},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(220, -50), "delay": 0.6},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(260, -50), "delay": 0.6},
+					# Cleanup stragglers
+					{"enemy_type": "basic_fighter", "position": Vector2(120, -50), "delay": 0.9},
+					{"enemy_type": "basic_fighter", "position": Vector2(200, -50), "delay": 0.9}
+				],
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Cascading Walls",
+				"spawn_interval": 0.1,
+				"enemy_spawns": [
+					# Wall 1 - Left third
+					{"enemy_type": "basic_fighter", "position": Vector2(40, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(70, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(100, -50), "delay": 0.0},
+					# Wall 2 - Middle third
+					{"enemy_type": "basic_fighter", "position": Vector2(130, -50), "delay": 0.3},
+					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 0.3},
+					{"enemy_type": "basic_fighter", "position": Vector2(190, -50), "delay": 0.3},
+					# Wall 3 - Right third
+					{"enemy_type": "basic_fighter", "position": Vector2(220, -50), "delay": 0.6},
+					{"enemy_type": "basic_fighter", "position": Vector2(250, -50), "delay": 0.6},
+					{"enemy_type": "basic_fighter", "position": Vector2(280, -50), "delay": 0.6},
+					# Interrupters
+					{"enemy_type": "sine_fighter", "position": Vector2(80, -50), "delay": 0.9},
+					{"enemy_type": "sine_fighter", "position": Vector2(240, -50), "delay": 0.9}
 				],
 				"formation_type": "none"
 			}
@@ -52,21 +124,109 @@ func _register_default_templates() -> void:
 		"stage_number": 2,
 		"background_type": "space",
 		"music_track": "default",
+		"spawn_interval": 0.12,
 		"waves": [
 			{
-				"wave_name": "Zigzag Wave",
+				"wave_name": "Crisscross Pattern",
+				"spawn_interval": 0.1,
 				"enemy_spawns": [
-					{"enemy_type": "zigzag_fighter", "position": Vector2(160, -50), "delay": 0.0}
+					# Left to right diagonal
+					{"enemy_type": "zigzag_fighter", "position": Vector2(20, -50), "delay": 0.0},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(80, -50), "delay": 0.15},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(140, -50), "delay": 0.3},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(200, -50), "delay": 0.45},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(260, -50), "delay": 0.6},
+					# Right to left diagonal (offset timing)
+					{"enemy_type": "zigzag_fighter", "position": Vector2(300, -50), "delay": 0.3},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(240, -50), "delay": 0.45},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(180, -50), "delay": 0.6},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(120, -50), "delay": 0.75},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(60, -50), "delay": 0.9},
+					# Fill the gaps
+					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 1.1},
+					{"enemy_type": "basic_fighter", "position": Vector2(100, -50), "delay": 1.2},
+					{"enemy_type": "basic_fighter", "position": Vector2(220, -50), "delay": 1.2}
 				],
 				"formation_type": "none"
 			},
 			{
-				"wave_name": "Formation Wave",
+				"wave_name": "Rotating Spokes",
+				"spawn_interval": 0.09,
 				"enemy_spawns": [
-					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 0.0}
+					# Spoke 1 - Top center
+					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 0.1},
+					{"enemy_type": "sine_fighter", "position": Vector2(160, -50), "delay": 0.2},
+					# Spoke 2 - Upper left
+					{"enemy_type": "basic_fighter", "position": Vector2(80, -50), "delay": 0.3},
+					{"enemy_type": "basic_fighter", "position": Vector2(60, -50), "delay": 0.4},
+					# Spoke 3 - Upper right
+					{"enemy_type": "basic_fighter", "position": Vector2(240, -50), "delay": 0.3},
+					{"enemy_type": "basic_fighter", "position": Vector2(260, -50), "delay": 0.4},
+					# Spoke 4 - Left
+					{"enemy_type": "sine_fighter", "position": Vector2(40, -50), "delay": 0.6},
+					{"enemy_type": "basic_fighter", "position": Vector2(30, -50), "delay": 0.7},
+					# Spoke 5 - Right
+					{"enemy_type": "sine_fighter", "position": Vector2(280, -50), "delay": 0.6},
+					{"enemy_type": "basic_fighter", "position": Vector2(290, -50), "delay": 0.7},
+					# Center dive bombers
+					{"enemy_type": "dive_bomber", "position": Vector2(140, -50), "delay": 0.9},
+					{"enemy_type": "dive_bomber", "position": Vector2(180, -50), "delay": 0.9},
+					# Heavy cleanup
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 1.2}
 				],
-				"formation_type": "v_formation",
-				"formation_params": {"spacing": 30.0}
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Alternating Columns",
+				"spawn_interval": 0.07,
+				"enemy_spawns": [
+					# Column 1 - Far left
+					{"enemy_type": "basic_fighter", "position": Vector2(40, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(40, -50), "delay": 0.2},
+					{"enemy_type": "sine_fighter", "position": Vector2(40, -50), "delay": 0.4},
+					# Column 2 - Left center
+					{"enemy_type": "basic_fighter", "position": Vector2(110, -50), "delay": 0.1},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(110, -50), "delay": 0.3},
+					{"enemy_type": "basic_fighter", "position": Vector2(110, -50), "delay": 0.5},
+					# Column 3 - Right center
+					{"enemy_type": "basic_fighter", "position": Vector2(210, -50), "delay": 0.1},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(210, -50), "delay": 0.3},
+					{"enemy_type": "basic_fighter", "position": Vector2(210, -50), "delay": 0.5},
+					# Column 4 - Far right
+					{"enemy_type": "basic_fighter", "position": Vector2(280, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(280, -50), "delay": 0.2},
+					{"enemy_type": "sine_fighter", "position": Vector2(280, -50), "delay": 0.4},
+					# Dive bombers through the middle
+					{"enemy_type": "dive_bomber", "position": Vector2(160, -50), "delay": 0.7},
+					{"enemy_type": "dive_bomber", "position": Vector2(160, -50), "delay": 0.9}
+				],
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Expanding Rings",
+				"spawn_interval": 0.08,
+				"enemy_spawns": [
+					# Inner ring - 4 enemies
+					{"enemy_type": "sine_fighter", "position": Vector2(160, -50), "delay": 0.0},
+					{"enemy_type": "sine_fighter", "position": Vector2(120, -50), "delay": 0.05},
+					{"enemy_type": "sine_fighter", "position": Vector2(200, -50), "delay": 0.05},
+					{"enemy_type": "sine_fighter", "position": Vector2(160, -50), "delay": 0.1},
+					# Middle ring - 6 enemies
+					{"enemy_type": "basic_fighter", "position": Vector2(80, -50), "delay": 0.4},
+					{"enemy_type": "basic_fighter", "position": Vector2(120, -50), "delay": 0.45},
+					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 0.5},
+					{"enemy_type": "basic_fighter", "position": Vector2(200, -50), "delay": 0.45},
+					{"enemy_type": "basic_fighter", "position": Vector2(240, -50), "delay": 0.4},
+					# Outer ring - 8 enemies
+					{"enemy_type": "zigzag_fighter", "position": Vector2(40, -50), "delay": 0.8},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(90, -50), "delay": 0.85},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(140, -50), "delay": 0.9},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(180, -50), "delay": 0.9},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(230, -50), "delay": 0.85},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(280, -50), "delay": 0.8}
+				],
+				"formation_type": "none"
 			}
 		],
 		"boss_encounter": {
@@ -85,21 +245,125 @@ func _register_default_templates() -> void:
 		"stage_number": 3,
 		"background_type": "space",
 		"music_track": "default",
+		"spawn_interval": 0.1,
 		"waves": [
 			{
-				"wave_name": "Dive Wave",
+				"wave_name": "Bomber Wing Formation",
+				"spawn_interval": 0.08,
 				"enemy_spawns": [
-					{"enemy_type": "dive_bomber", "position": Vector2(160, -50), "delay": 0.0}
+					# Lead bomber with escort
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(140, -50), "delay": 0.1},
+					{"enemy_type": "basic_fighter", "position": Vector2(180, -50), "delay": 0.1},
+					# Dive bomber strike from sides
+					{"enemy_type": "dive_bomber", "position": Vector2(40, -50), "delay": 0.3},
+					{"enemy_type": "dive_bomber", "position": Vector2(280, -50), "delay": 0.3},
+					{"enemy_type": "dive_bomber", "position": Vector2(80, -50), "delay": 0.5},
+					{"enemy_type": "dive_bomber", "position": Vector2(240, -50), "delay": 0.5},
+					# Second wave - heavier
+					{"enemy_type": "heavy_bomber", "position": Vector2(100, -50), "delay": 0.8},
+					{"enemy_type": "heavy_bomber", "position": Vector2(220, -50), "delay": 0.8},
+					{"enemy_type": "sine_fighter", "position": Vector2(60, -50), "delay": 1.0},
+					{"enemy_type": "sine_fighter", "position": Vector2(160, -50), "delay": 1.0},
+					{"enemy_type": "sine_fighter", "position": Vector2(260, -50), "delay": 1.0},
+					# Cleanup strike
+					{"enemy_type": "zigzag_fighter", "position": Vector2(120, -50), "delay": 1.3},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(200, -50), "delay": 1.3}
 				],
 				"formation_type": "none"
 			},
 			{
-				"wave_name": "Heavy Wave",
+				"wave_name": "Pinwheel Assault",
+				"spawn_interval": 0.06,
 				"enemy_spawns": [
-					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 0.0}
+					# Center pivot
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 0.0},
+					# First rotation - 4 arms
+					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 0.15},
+					{"enemy_type": "sine_fighter", "position": Vector2(100, -50), "delay": 0.15},
+					{"enemy_type": "sine_fighter", "position": Vector2(220, -50), "delay": 0.15},
+					{"enemy_type": "basic_fighter", "position": Vector2(80, -50), "delay": 0.25},
+					{"enemy_type": "basic_fighter", "position": Vector2(240, -50), "delay": 0.25},
+					# Second rotation - offset 45 degrees
+					{"enemy_type": "zigzag_fighter", "position": Vector2(130, -50), "delay": 0.4},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(190, -50), "delay": 0.4},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(60, -50), "delay": 0.5},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(260, -50), "delay": 0.5},
+					# Dive bomber burst
+					{"enemy_type": "dive_bomber", "position": Vector2(40, -50), "delay": 0.7},
+					{"enemy_type": "dive_bomber", "position": Vector2(120, -50), "delay": 0.75},
+					{"enemy_type": "dive_bomber", "position": Vector2(200, -50), "delay": 0.75},
+					{"enemy_type": "dive_bomber", "position": Vector2(280, -50), "delay": 0.7},
+					# Final heavy wave
+					{"enemy_type": "heavy_bomber", "position": Vector2(80, -50), "delay": 1.0},
+					{"enemy_type": "heavy_bomber", "position": Vector2(240, -50), "delay": 1.0}
 				],
-				"formation_type": "arc",
-				"formation_params": {"radius": 60.0, "angle": 0.0}
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Interlocking Gears",
+				"spawn_interval": 0.05,
+				"enemy_spawns": [
+					# Gear 1 - Left side rotating
+					{"enemy_type": "sine_fighter", "position": Vector2(60, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(80, -50), "delay": 0.1},
+					{"enemy_type": "sine_fighter", "position": Vector2(100, -50), "delay": 0.2},
+					{"enemy_type": "basic_fighter", "position": Vector2(80, -50), "delay": 0.3},
+					{"enemy_type": "sine_fighter", "position": Vector2(60, -50), "delay": 0.4},
+					# Gear 2 - Right side counter-rotating
+					{"enemy_type": "sine_fighter", "position": Vector2(260, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(240, -50), "delay": 0.1},
+					{"enemy_type": "sine_fighter", "position": Vector2(220, -50), "delay": 0.2},
+					{"enemy_type": "basic_fighter", "position": Vector2(240, -50), "delay": 0.3},
+					{"enemy_type": "sine_fighter", "position": Vector2(260, -50), "delay": 0.4},
+					# Center teeth
+					{"enemy_type": "zigzag_fighter", "position": Vector2(140, -50), "delay": 0.5},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(160, -50), "delay": 0.55},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(180, -50), "delay": 0.6},
+					# Heavy assault through the gears
+					{"enemy_type": "dive_bomber", "position": Vector2(120, -50), "delay": 0.8},
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 0.85},
+					{"enemy_type": "dive_bomber", "position": Vector2(200, -50), "delay": 0.9},
+					# Final chaos
+					{"enemy_type": "basic_fighter", "position": Vector2(40, -50), "delay": 1.1},
+					{"enemy_type": "basic_fighter", "position": Vector2(280, -50), "delay": 1.1},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(100, -50), "delay": 1.2},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(220, -50), "delay": 1.2}
+				],
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Converging Storm",
+				"spawn_interval": 0.05,
+				"enemy_spawns": [
+					# Top left converge
+					{"enemy_type": "basic_fighter", "position": Vector2(20, -50), "delay": 0.0},
+					{"enemy_type": "sine_fighter", "position": Vector2(40, -50), "delay": 0.1},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(60, -50), "delay": 0.2},
+					{"enemy_type": "basic_fighter", "position": Vector2(80, -50), "delay": 0.3},
+					# Top right converge
+					{"enemy_type": "basic_fighter", "position": Vector2(300, -50), "delay": 0.0},
+					{"enemy_type": "sine_fighter", "position": Vector2(280, -50), "delay": 0.1},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(260, -50), "delay": 0.2},
+					{"enemy_type": "basic_fighter", "position": Vector2(240, -50), "delay": 0.3},
+					# Center collision point - heavy units
+					{"enemy_type": "heavy_bomber", "position": Vector2(140, -50), "delay": 0.5},
+					{"enemy_type": "heavy_bomber", "position": Vector2(180, -50), "delay": 0.5},
+					{"enemy_type": "dive_bomber", "position": Vector2(160, -50), "delay": 0.6},
+					# Outer spiral
+					{"enemy_type": "sine_fighter", "position": Vector2(30, -50), "delay": 0.8},
+					{"enemy_type": "sine_fighter", "position": Vector2(100, -50), "delay": 0.85},
+					{"enemy_type": "sine_fighter", "position": Vector2(160, -50), "delay": 0.9},
+					{"enemy_type": "sine_fighter", "position": Vector2(220, -50), "delay": 0.85},
+					{"enemy_type": "sine_fighter", "position": Vector2(290, -50), "delay": 0.8},
+					# Final bombardment
+					{"enemy_type": "dive_bomber", "position": Vector2(80, -50), "delay": 1.1},
+					{"enemy_type": "dive_bomber", "position": Vector2(120, -50), "delay": 1.15},
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 1.2},
+					{"enemy_type": "dive_bomber", "position": Vector2(200, -50), "delay": 1.15},
+					{"enemy_type": "dive_bomber", "position": Vector2(240, -50), "delay": 1.1}
+				],
+				"formation_type": "none"
 			}
 		],
 		"boss_encounter": {

@@ -1,25 +1,25 @@
 extends Node
 
 @export var min_rank: float = 1.0
-@export var max_rank: float = 3.0
-@export var time_rank_rate: float = 0.01
-@export var kill_rank_rate: float = 0.0005
-@export var shot_rank_rate: float = 0.000015
+@export var max_rank: float = 5.0  # Increased from 3.0 for wider difficulty range
+@export var time_rank_rate: float = 0.03  # 3x faster - was 0.01
+@export var kill_rank_rate: float = 0.002  # 4x faster - was 0.0005
+@export var shot_rank_rate: float = 0.00006  # 4x faster - was 0.000015
 
-@export var bomb_use_rank_add: float = 0.06
-@export var death_rank_drop: float = 0.22
-@export var bullet_seal_rank_rate: float = 0.0002
+@export var bomb_use_rank_add: float = 0.15  # 2.5x more - was 0.06 (punish bombing)
+@export var death_rank_drop: float = 0.12  # Half reduction - was 0.22 (less forgiving)
+@export var bullet_seal_rank_rate: float = 0.0008  # 4x faster - was 0.0002
 
 var rank: float = 1.0
 var stage_number: int = 1
 
-# Max multiplier caps - Reduced for more manageable difficulty scaling
+# Max multiplier caps - AGGRESSIVE SCALING
 var multipliers = {
-	"enemy_speed": 1.4,      # Reduced from 1.8 for better pacing
-	"enemy_hp": 2.0,         # Kept same for challenge balance
-	"bullet_speed": 1.3,     # Reduced from 1.7 for dodgeable bullets
-	"pattern_density": 1.6,  # Reduced from 2.0 for manageable patterns
-	"pattern_cadence": 0.8   # Reduced from 1.0 for slower firing
+	"enemy_speed": 2.5,      # Increased from 1.4 - enemies get MUCH faster
+	"enemy_hp": 3.5,         # Increased from 2.0 - enemies become tanks
+	"bullet_speed": 2.2,     # Increased from 1.3 - bullets get very fast
+	"pattern_density": 2.8,  # Increased from 1.6 - many more bullets
+	"pattern_cadence": 1.5   # Increased from 0.8 - fire much faster
 }
 
 func _ready() -> void:
@@ -46,7 +46,8 @@ func _process(delta: float) -> void:
 
 func reset(new_stage: int) -> void:
 	stage_number = new_stage
-	rank = clamp(1.0 + (float(stage_number) - 1.0) * 0.05, min_rank, max_rank)
+	# Start each stage at higher rank - was 0.05, now 0.25
+	rank = clamp(1.0 + (float(stage_number) - 1.0) * 0.25, min_rank, max_rank)
 
 func on_enemy_killed(points: int) -> void:
 	rank = clamp(rank + kill_rank_rate * float(points), min_rank, max_rank)
@@ -60,7 +61,8 @@ func on_bomb_used() -> void:
 	rank = clamp(rank + bomb_use_rank_add, min_rank, max_rank)
 
 func on_player_died(current_lives: int = 0) -> void:
-	var life_factor: float = clamp(1.0 - 0.05 * float(max(current_lives - 1, 0)), 0.8, 1.0)
+	# Less forgiving - reduced life_factor scaling
+	var life_factor: float = clamp(1.0 - 0.02 * float(max(current_lives - 1, 0)), 0.9, 1.0)
 	rank = clamp(rank - death_rank_drop * life_factor, min_rank, max_rank)
 
 func on_bullet_sealed() -> void:

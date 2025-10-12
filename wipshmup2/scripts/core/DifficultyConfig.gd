@@ -43,16 +43,16 @@ func _get_value_for_current(key: String, default_value: Variant) -> Variant:
 func get_rank_params() -> Dictionary:
 	return {
 		"min_rank": float(_get_value_for_current("min_rank", 1.0)),
-		"max_rank": float(_get_value_for_current("max_rank", 3.0)),
-		"time_rank_rate": float(_get_value_for_current("time_rank_rate", 0.01)),
-		"kill_rank_rate": float(_get_value_for_current("kill_rank_rate", 0.0005))
+		"max_rank": float(_get_value_for_current("max_rank", 5.0)),  # Increased from 3.0
+		"time_rank_rate": float(_get_value_for_current("time_rank_rate", 0.03)),  # 3x faster
+		"kill_rank_rate": float(_get_value_for_current("kill_rank_rate", 0.002))  # 4x faster
 	}
 
 func get_multiplier_caps() -> Dictionary:
 	return {
-		"enemy_speed_max_mult": float(_get_value_for_current("enemy_speed_max_mult", 1.8)),
-		"enemy_hp_max_mult": float(_get_value_for_current("enemy_hp_max_mult", 2.0)),
-		"bullet_speed_max_mult": float(_get_value_for_current("bullet_speed_max_mult", 1.7)),
-		"pattern_density_max_mult": float(_get_value_for_current("pattern_density_max_mult", 2.0)),
-		"pattern_cadence_max_mult": float(_get_value_for_current("pattern_cadence_max_mult", 1.0))
+		"enemy_speed_max_mult": float(_get_value_for_current("enemy_speed_max_mult", 2.5)),  # More aggressive
+		"enemy_hp_max_mult": float(_get_value_for_current("enemy_hp_max_mult", 3.5)),  # More aggressive
+		"bullet_speed_max_mult": float(_get_value_for_current("bullet_speed_max_mult", 2.2)),  # More aggressive
+		"pattern_density_max_mult": float(_get_value_for_current("pattern_density_max_mult", 2.8)),  # More aggressive
+		"pattern_cadence_max_mult": float(_get_value_for_current("pattern_cadence_max_mult", 1.5))  # More aggressive
 	}

@@ -17,7 +17,6 @@ extends Area2D
 var direction: Vector2 = Vector2.DOWN
 var _age: float = 0.0
 var _trail_particles: Array[Node2D] = []
-var _glow_sprite: Sprite2D
 
 func _ready() -> void:
 	monitoring = true
@@ -91,51 +90,102 @@ func _on_screen_exited() -> void:
 	queue_free()
 
 func _setup_visual_effects() -> void:
-	"""Setup visual clarity enhancements for bullet visibility"""
-	# Create glow effect
-	_glow_sprite = Sprite2D.new()
-	_glow_sprite.texture = $Sprite2D.texture
-	_glow_sprite.scale = $Sprite2D.scale * 1.5
-	_glow_sprite.modulate = _get_danger_color()
-	_glow_sprite.z_index = -1
-	add_child(_glow_sprite)
+	"""Setup COMPREHENSIVE visual clarity enhancements for bullet visibility"""
+	# Auto-classify danger level if not set
+	if danger_level == 1:
+		var classified = DangerLevelSystem.classify_danger_level(
+			speed,
+			false,  # is_homing (not implemented yet)
+			accel > 0.0,  # is_accelerating
+			"normal"  # pattern_type
+		)
+		danger_level = classified
+	
+	# Get visual properties from DangerLevelSystem
+	var props = DangerLevelSystem.get_visual_properties(danger_level, false)
+	
+	# Apply settings from BulletReadability autoload
+	var readability = get_node_or_null("/root/BulletReadability")
+	if readability:
+		# Apply colorblind filter if enabled
+		if readability.colorblind_mode != "none":
+			props.base_color = DangerLevelSystem.apply_colorblind_filter(
+				props.base_color,
+				readability.colorblind_mode
+			)
+			props.outline_color = DangerLevelSystem.apply_colorblind_filter(
+				props.outline_color,
+				readability.colorblind_mode
+			)
+		
+		# Apply high contrast mode if enabled
+		if readability.high_contrast_mode:
+			props = DangerLevelSystem.apply_high_contrast(false)
+	
+	# Apply enhanced shader to main sprite
+	if has_node("Sprite2D"):
+		var sprite = $Sprite2D
+		var shader_material = ShaderMaterial.new()
+		shader_material.shader = load("res://shaders/bullet_enhanced_readability.gdshader")
+		
+		# Set shader parameters from props
+		shader_material.set_shader_parameter("base_color", props.base_color)
+		shader_material.set_shader_parameter("outline_color", props.outline_color)
+		shader_material.set_shader_parameter("glow_color", props.glow_color)
+		shader_material.set_shader_parameter("outline_thickness", props.outline_thickness)
+		shader_material.set_shader_parameter("enable_pulse", props.should_pulse)
+		shader_material.set_shader_parameter("pulse_speed", props.pulse_rate)
+		shader_material.set_shader_parameter("enable_far_glow", danger_level == 3)  # High danger only
+		shader_material.set_shader_parameter("high_contrast_mode", readability.high_contrast_mode if readability else false)
+		
+		# Apply settings multipliers
+		if readability:
+			shader_material.set_shader_parameter("glow_intensity", readability.glow_intensity)
+			sprite.scale = sprite.scale * readability.bullet_size_multiplier
+		
+		sprite.material = shader_material
 	
 	# Setup trail if enabled
-	if has_trail:
+	if has_trail and readability and readability.trail_intensity > 0.0:
 		_create_trail_system()
 
 func _update_visual_effects(delta: float) -> void:
-	"""Update visual effects for better clarity"""
-	# Update glow pulsing
-	if _glow_sprite:
-		var pulse = 0.8 + 0.2 * sin(_age * 10.0)
-		_glow_sprite.modulate.a = pulse * glow_intensity
-		_glow_sprite.modulate = _get_danger_color() * Color(1, 1, 1, _glow_sprite.modulate.a)
+	"""Update visual effects for better clarity with PROXIMITY BOOST"""
+	# Update proximity-based glow intensity
+	if has_node("Sprite2D") and $Sprite2D.material is ShaderMaterial:
+		var sprite_material = $Sprite2D.material as ShaderMaterial
+		
+		# Calculate distance to player for proximity boost
+		var player = get_tree().get_first_node_in_group("player")
+		if player:
+			var distance_to_player = global_position.distance_to(player.global_position)
+			var proximity_multiplier = DangerLevelSystem.get_proximity_glow_multiplier(distance_to_player)
+			
+			# Apply proximity boost to shader
+			sprite_material.set_shader_parameter("proximity_boost", proximity_multiplier)
 	
 	# Update trail
 	if has_trail and _trail_particles.size() > 0:
 		_update_trail_particles(delta)
 
 func _get_danger_color() -> Color:
-	"""Get color based on danger level for visual clarity"""
-	match danger_level:
-		1: return Color(0.8, 0.8, 1.0, 1.0)  # Light blue - low danger
-		2: return Color(1.0, 0.8, 0.2, 1.0)  # Yellow - medium danger  
-		3: return Color(1.0, 0.3, 0.3, 1.0)  # Red - high danger
-		_: return Color.WHITE
+	"""DEPRECATED: Get color based on danger level - Use DangerLevelSystem instead"""
+	# Legacy function - now using DangerLevelSystem
+	var props = DangerLevelSystem.get_visual_properties(danger_level, false)
+	return props.base_color
 
 func _create_trail_system() -> void:
 	"""Create particle trail for fast bullets"""
-	# Simple trail implementation - could be enhanced with proper particles
+	# TODO: Implement CPU/GPU particles based on trail_intensity setting
 	pass
 
 func _update_trail_particles(_delta: float) -> void:
 	"""Update trail particle effects"""
-	# Trail particle update logic
+	# TODO: Update trail positions and alpha
 	pass
 
 func set_danger_level(level: int) -> void:
 	"""Set the danger level and update visual appearance"""
 	danger_level = clamp(level, 1, 3)
-	if _glow_sprite:
-		_glow_sprite.modulate = _get_danger_color()
+	# Re-setup visual effects with new danger level
+	_setup_visual_effects()

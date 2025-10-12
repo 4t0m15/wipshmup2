@@ -9,9 +9,9 @@ const BULLET_SCENE: PackedScene = preload("res://scenes/bullet/Bullet.tscn")
 const ENEMY_BULLET_SCENE: PackedScene = preload("res://scenes/bullet/EnemyBullet.tscn")
 const ENEMY_SCENE: PackedScene = preload("res://scenes/enemy/Enemy.tscn")
 
-# Safety caps
-const MAX_ENEMY_BULLETS: int = 140
-const MAX_ENEMY_BULLETS_PER_SEC: int = 90
+# Safety caps - INCREASED FOR MORE CHAOS
+const MAX_ENEMY_BULLETS: int = 300  # Increased from 140
+const MAX_ENEMY_BULLETS_PER_SEC: int = 200  # Increased from 90
 
 # Simple rate limiter state
 var _bullet_rate_window_start_ms: int = 0

@@ -71,6 +71,6 @@ func _on_area_entered(area: Area2D) -> void:
 		if area.has_method("queue_free"):
 			area.queue_free()
 		take_damage(2, "shot")
-
+####
 func _on_body_entered(_body: Node) -> void:
 	pass
