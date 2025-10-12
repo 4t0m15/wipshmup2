@@ -162,7 +162,7 @@ func _on_boss_defeated(boss: Node) -> void:
 	
 	# Complete stage after delay - with tree safety check
 	if is_inside_tree():
-		await get_tree().create_timer(2.0).timeout
+ 		await get_tree().create_timer(2.0).timeout
 	_complete_stage()
 
 func _on_boss_hit_player() -> void:
