@@ -18,6 +18,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 AudioManager="*res://scripts/autoload/AudioManager.gd"
+SafetyWrapper="*res://scripts/autoload/SafetyWrapper.gd"
 DifficultyConfig="*res://scripts/core/DifficultyConfig.gd"
 RankManager="*res://scripts/core/RankManager.gd"
 ItemDropManager="*res://scripts/core/ItemDropManager.gd"

@@ -1,0 +1,25 @@
+---
+
+description: System architecture and how to integrate with it
+globs: ["wipshmup2/scripts/**/*.gd", "wipshmup2/scenes/**/*.tscn"]
+alwaysApply: true
+---
+
+# Autoload Systems
+- `EventBus`: global events (player/boss/combat/visual/audio). Emit instead of direct calls.
+- `GameState`: lives, bombs, score, game flags, chain; emits changes.
+- `EntityFactory`: pooling and safe creation; use it to spawn & cleanup entities.
+- Template Managers: `EnemyTemplateManager`, `BossTemplateManager`, `StageTemplateManager`.
+
+# Stage Flow
+- `StageController` consumes `StageDefinition` + `WaveDefinition` and coordinates waves/boss.
+- Spawns go through managers/factory; wave entries are safe dictionaries with defaults.
+
+# Enemy/Boss Behaviors
+- Component-based movement/attack (`MovementBehavior`, `AttackBehavior`, etc.).
+- Boss phases are data-driven; apply behaviors directly (no racing with deferred adds).
+
+# Integration Rules
+- Never spawn scenes directly in random places; go via managers/factory.
+- Keep events flowing through `EventBus`; don’t create new global singletons casually.
+- Use safe defaults on missing data to avoid hard crashes.

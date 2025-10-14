@@ -29,7 +29,7 @@ func _physics_process(delta: float) -> void:
 	_update_movement(delta)
 	enemy.position += velocity * delta
 
-func _update_movement(delta: float) -> void:
+func _update_movement(_delta: float) -> void:
 	# Override in subclasses
 	pass
 

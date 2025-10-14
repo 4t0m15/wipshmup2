@@ -47,6 +47,11 @@ func _setup_mode() -> void:
 
 func get_next_stage() -> int:
 	"""Get the next stage number"""
+	# Safety check for empty progression
+	if stage_progression.is_empty():
+		print("[GameMode] Stage progression is empty")
+		return -1
+	
 	if current_stage >= stage_progression.size():
 		if is_endless:
 			# Loop back to stage 1 with scaling
@@ -56,6 +61,11 @@ func get_next_stage() -> int:
 			# Mode complete
 			_complete_mode()
 			return -1
+	
+	# Safety check for valid index
+	if current_stage < 0 or current_stage >= stage_progression.size():
+		print("[GameMode] Invalid stage index: " + str(current_stage))
+		return -1
 	
 	var stage_number = stage_progression[current_stage]
 	current_stage += 1

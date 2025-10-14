@@ -7,7 +7,7 @@ class_name FanBehavior
 @export var bullet_count: int = 3
 @export var fan_center_angle: float = 90.0  # Center angle (90 = straight down)
 
-func _handle_attack(delta: float) -> void:
+func _handle_attack(_delta: float) -> void:
 	if can_attack():
 		_fire_fan_shot()
 

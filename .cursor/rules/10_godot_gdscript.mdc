@@ -1,0 +1,46 @@
+---
+
+description: Godot/GDScript conventions and patterns to follow
+globs: ["wipshmup2/**/*.gd", "wipshmup2/**/*.tscn", "wipshmup2/**/*.gdshader"]
+alwaysApply: true
+---
+
+# GDScript Style
+- Strong typing (e.g., `var lives: int = 3`). Avoid `Variant` where a precise type is known.
+- snake_case for variables/functions; PascalCase for class names.
+- Use `@export` for inspector fields with explicit types and sensible defaults.
+- Add concise docstrings for complex logic and invariants.
+- Prefer early returns and guard clauses over deep nesting.
+
+## Typing & Exports
+- Annotate function signatures explicitly for public APIs and signals.
+- Prefer typed collections (e.g., `Array[Node]`) and dictionaries (e.g., `Dictionary[String, float]`).
+- Example: `@export var bullet_speed: float = 180.0`.
+
+## Exceptions Policy
+- Avoid try/catch by default; use guard checks and safe defaults instead.
+- Only catch exceptions where recovery is expected; never swallow errors silently.
+- If catching, handle meaningfully and emit via `push_error()` when critical.
+
+# Signals and Safety
+- Connect with `Callable()` and guard with `is_instance_valid()`.
+- Prevent duplicate connections via `is_connected()` checks.
+- Disconnect signals on cleanup to avoid leaks.
+
+# Scene Tree Ops
+- Prefer `call_deferred()` for add/remove in lifecycle-sensitive points.
+- Use `get_node_or_null()`; never assume nodes exist.
+
+# Physics/Process
+- Keep per-frame work minimal; cache nodes and resources.
+- Avoid `get_tree().get_nodes_in_group()` in hot paths; batch or cache.
+
+# Shaders
+- Keep CRT/bullet readability shaders intact; tune via exported params.
+
+# Errors & Logging
+- Use `push_error()` for critical issues; `print()` for debug with class prefix.
+
+# Pooling & Spawning
+- Use `EntityFactory` for bullets/enemies/player; favor visibility toggles over frees in pools.
+- Respect rate limiting and MAX counts to avoid perf spikes.

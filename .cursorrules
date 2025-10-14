@@ -1,0 +1,74 @@
+# Cursor Rules for wipshmup2 – Godot 4.5 Shmup
+
+This file defines enforceable rules for Cursor agents. Detailed guidance lives in `.cursor/rules/*.mdc`.
+
+## Scope & Precedence
+- Root rules are mandatory. Use modular rules for details; do not duplicate.
+- Prefer minimal, reversible edits; never crash on bad data.
+
+## Cursor Execution Policy
+- Search-first: use semantic search to understand affected systems before edits.
+- Prefer parallel read-only queries; only sequence when outputs are dependent.
+- Always provide brief status updates when running tools and before/after batches.
+- End turns with a short high-signal summary of changes/answers when appropriate.
+- Prefer absolute paths in tool calls; avoid interactive prompts (use non-interactive flags).
+
+### Code Citation & Proposals
+- When referencing existing code, use CODE REFERENCES with the exact syntax:
+  - ```startLine:endLine:filepath
+    // code content
+    ```
+- For new/proposed code, use standard markdown code blocks with a language tag (e.g., ```gdscript, ```bash).
+- Never mix formats, never include line numbers inside code blocks, never indent the opening backticks.
+
+### Safety & Ops
+- Do not run long-lived commands in the foreground; background them when needed.
+- Keep edits minimal and reversible; prefer guard clauses to prevent crashes.
+
+## Core Integration Rules
+- Spawns: use `EntityFactory` (pooled). Do not instantiate scenes ad-hoc.
+- Events: use `EventBus`; avoid cross-calls between systems.
+- State: read/write via `GameState` only; do not duplicate.
+- Templates: use Enemy/Boss/Stage managers; keep params in data.
+
+## Godot Safety Cribsheet
+- Strong typing and `@export` for inspector-tunable values.
+- Use `call_deferred()` for lifecycle-sensitive adds/removes.
+- Guard with `is_instance_valid()`; prefer `get_node_or_null()`.
+- Validate signals; prevent duplicates; disconnect on cleanup.
+- Re-check validity after `await` points.
+
+## Performance & Pooling
+- Reuse pooled instances (toggle visibility vs `queue_free()` where suitable).
+- Respect bullet caps and rate limits; degrade gracefully under load.
+- Avoid heavy per-frame allocations; cache references.
+- Avoid `get_nodes_in_group()` in hot paths; batch or cache instead.
+
+## Pre-Edit Checklist
+- Read relevant manager/system code; confirm spawn/event/state paths.
+- Keep CRT/bullet readability shaders intact; tune via exported params only.
+- Consider rate limits and pooling implications; add guard clauses and safe defaults.
+- Ensure edits preserve event-driven decoupling; no ad-hoc cross-calls.
+- Update related docs/configs if behavior changes.
+
+## Protected Areas
+- CRT and dithering shaders.
+- Autoload registrations in `project.godot`.
+- Core factory/manager interfaces.
+
+## Mini Glossary
+- `EntityFactory`: centralized spawning and object pooling for player/enemies/bullets.
+- `EventBus`: global event hub for combat/visual/audio/game flow.
+- `GameState`: lives, bombs, score, flags, chain; emits changes.
+- Template Managers: `EnemyTemplateManager`, `BossTemplateManager`, `StageTemplateManager`.
+
+## See Also (authoritative)
+- `.cursor/rules/00_global_overview.mdc`
+- `.cursor/rules/10_godot_gdscript.mdc`
+- `.cursor/rules/20_architecture_systems.mdc`
+- `.cursor/rules/30_performance.mdc`
+- `.cursor/rules/40_safety_and_errors.mdc`
+- `.cursor/rules/50_code_style_and_quality.mdc`
+- `.cursor/rules/60_workflows.mdc`
+- `.cursor/rules/70_protected_and_sensitive.mdc`
+- `.cursor/rules/80_content_systems.mdc`

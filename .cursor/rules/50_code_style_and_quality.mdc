@@ -1,0 +1,27 @@
+---
+
+description: Code style and quality bar
+globs: ["wipshmup2/scripts/**/*.gd"]
+alwaysApply: true
+---
+
+# Style Rules
+- Strong typing, explicit exported fields, concise docstrings for complex functions.
+- Clear, meaningful names; avoid cryptic abbreviations.
+- Early returns; keep nesting shallow.
+
+# Comments
+- Only for non-obvious reasoning, invariants, or caveats. No noise.
+
+# Formatting
+- Match local style; prefer multi-line clarity over dense one-liners.
+
+# Linting
+- Keep linter clean. Fix integer division warnings explicitly.
+
+## Testing & Validation
+- Smoke-test stage flow (spawn → waves → boss) without errors in output.
+- Verify pooling: instances are reused, signals disconnected on reuse.
+- Confirm bullet caps and rate limits are respected under stress.
+- Check CRT/readability shaders after changes; adjust via exported params only.
+- Update related configs/docs when behavior changes.

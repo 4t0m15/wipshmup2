@@ -645,8 +645,9 @@ func _setup_viewport_and_crt() -> void:
 	_viewport_container.name = "View"
 	# Fill the whole viewport; SubViewport will be stretched by the container
 	_viewport_container.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_viewport_container.size = Vector2(320, 180)
 	_viewport_container.stretch = true
+	# Set size after anchor preset to avoid warning
+	_viewport_container.set_deferred("size", Vector2(320, 180))
 	add_child(_viewport_container)
 
 	_subviewport = SubViewport.new()
@@ -672,7 +673,8 @@ func _setup_viewport_and_crt() -> void:
 	_crt_rect.name = "CRT"
 	_crt_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_crt_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_crt_rect.size = Vector2(320, 180)
+	# Set size after anchor preset to avoid warning
+	_crt_rect.set_deferred("size", Vector2(320, 180))
 	add_child(_crt_rect)
 
 	var crt_shader: Shader = load("res://shaders/crt.gdshader")

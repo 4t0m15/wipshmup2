@@ -5,7 +5,7 @@ class_name AimedShotBehavior
 
 @export var aim_lead: float = 0.5  # How far ahead to aim
 
-func _handle_attack(delta: float) -> void:
+func _handle_attack(_delta: float) -> void:
 	if can_attack():
 		_fire_aimed_shot()
 

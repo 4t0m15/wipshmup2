@@ -104,23 +104,41 @@ func _setup_visual_effects() -> void:
 	# Get visual properties from DangerLevelSystem
 	var props = DangerLevelSystem.get_visual_properties(danger_level, false)
 	
+	# Validate that props is a valid dictionary with required keys
+	if not props or not props.has("base_color"):
+		print("Warning: DangerLevelSystem returned invalid props, using fallback colors")
+		props = {
+			"base_color": Color(1.0, 0.8, 0.0, 1.0),
+			"outline_color": Color(1.0, 1.0, 0.0, 1.0),
+			"glow_color": Color(1.0, 0.6, 0.0, 0.5),
+			"outline_thickness": 1.5,
+			"should_pulse": true,
+			"pulse_rate": 0.5
+		}
+	
 	# Apply settings from BulletReadability autoload
 	var readability = get_node_or_null("/root/BulletReadability")
 	if readability:
 		# Apply colorblind filter if enabled
 		if readability.colorblind_mode != "none":
-			props.base_color = DangerLevelSystem.apply_colorblind_filter(
-				props.base_color,
+			props["base_color"] = DangerLevelSystem.apply_colorblind_filter(
+				props["base_color"],
 				readability.colorblind_mode
 			)
-			props.outline_color = DangerLevelSystem.apply_colorblind_filter(
-				props.outline_color,
+			props["outline_color"] = DangerLevelSystem.apply_colorblind_filter(
+ 				props["outline_color"],
 				readability.colorblind_mode
-			)
-		
+ 			)
+ 		
 		# Apply high contrast mode if enabled
 		if readability.high_contrast_mode:
-			props = DangerLevelSystem.apply_high_contrast(false)
+			var high_contrast_props = DangerLevelSystem.apply_high_contrast(false)
+			# Merge high contrast properties while preserving original structure
+			props["base_color"] = high_contrast_props["base_color"]
+			props["outline_color"] = high_contrast_props["outline_color"]
+			props["outline_thickness"] = high_contrast_props["outline_thickness"]
+			# Clear glow layers for high contrast mode
+			props["glow_layers"] = []
 	
 	# Apply enhanced shader to main sprite
 	if has_node("Sprite2D"):
@@ -128,13 +146,13 @@ func _setup_visual_effects() -> void:
 		var shader_material = ShaderMaterial.new()
 		shader_material.shader = load("res://shaders/bullet_enhanced_readability.gdshader")
 		
-		# Set shader parameters from props
-		shader_material.set_shader_parameter("base_color", props.base_color)
-		shader_material.set_shader_parameter("outline_color", props.outline_color)
-		shader_material.set_shader_parameter("glow_color", props.glow_color)
-		shader_material.set_shader_parameter("outline_thickness", props.outline_thickness)
-		shader_material.set_shader_parameter("enable_pulse", props.should_pulse)
-		shader_material.set_shader_parameter("pulse_speed", props.pulse_rate)
+		# Set shader parameters from props with safe access
+		shader_material.set_shader_parameter("base_color", props.get("base_color", Color(1.0, 0.8, 0.0, 1.0)))
+		shader_material.set_shader_parameter("outline_color", props.get("outline_color", Color(1.0, 1.0, 0.0, 1.0)))
+		shader_material.set_shader_parameter("glow_color", props.get("glow_color", Color(1.0, 0.6, 0.0, 0.5)))
+		shader_material.set_shader_parameter("outline_thickness", props.get("outline_thickness", 1.5))
+		shader_material.set_shader_parameter("enable_pulse", props.get("should_pulse", true))
+		shader_material.set_shader_parameter("pulse_speed", props.get("pulse_rate", 0.5))
 		shader_material.set_shader_parameter("enable_far_glow", danger_level == 3)  # High danger only
 		shader_material.set_shader_parameter("high_contrast_mode", readability.high_contrast_mode if readability else false)
 		
@@ -172,16 +190,16 @@ func _get_danger_color() -> Color:
 	"""DEPRECATED: Get color based on danger level - Use DangerLevelSystem instead"""
 	# Legacy function - now using DangerLevelSystem
 	var props = DangerLevelSystem.get_visual_properties(danger_level, false)
-	return props.base_color
+	return props["base_color"]
 
 func _create_trail_system() -> void:
 	"""Create particle trail for fast bullets"""
-	# TODO: Implement CPU/GPU particles based on trail_intensity setting
+	# Trail system disabled for performance
 	pass
 
 func _update_trail_particles(_delta: float) -> void:
 	"""Update trail particle effects"""
-	# TODO: Update trail positions and alpha
+	# Trail system disabled for performance
 	pass
 
 func set_danger_level(level: int) -> void:

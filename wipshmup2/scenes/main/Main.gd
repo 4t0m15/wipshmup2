@@ -152,12 +152,13 @@ func _spawn_player() -> void:
 		player_hurtbox.collision_layer = 1   # Player layer
 		player_hurtbox.collision_mask = 2    # Enemy bullet layer
 
-	if player.has_signal("damaged"):
-		player.connect("damaged", Callable(self, "_on_player_damaged"))
-		print("[Main] Connected to player 'damaged' signal")
-	if player.has_signal("hit"):
-		player.connect("hit", Callable(self, "_on_player_hit"))
-		print("[Main] Connected to player 'hit' signal")
+	if player and is_instance_valid(player):
+		if player.has_signal("damaged") and not player.is_connected("damaged", Callable(self, "_on_player_damaged")):
+			player.connect("damaged", Callable(self, "_on_player_damaged"))
+			print("[Main] Connected to player 'damaged' signal")
+		if player.has_signal("hit") and not player.is_connected("hit", Callable(self, "_on_player_hit")):
+			player.connect("hit", Callable(self, "_on_player_hit"))
+			print("[Main] Connected to player 'hit' signal")
 
 func _process(delta: float) -> void:
 	# Handle game over restart in _process (UI-related) - with tree safety check
@@ -395,7 +396,7 @@ func _on_enemy_spawned(enemy: Area2D) -> void:
 	print("[Main] Enemy spawned, connecting signals")
 	
 	# Connect enemy hit_player signal if it exists
-	if enemy.has_signal("hit_player") and not enemy.is_connected("hit_player", Callable(self, "_on_enemy_hit_player")):
+	if enemy and is_instance_valid(enemy) and enemy.has_signal("hit_player") and not enemy.is_connected("hit_player", Callable(self, "_on_enemy_hit_player")):
 		enemy.connect("hit_player", Callable(self, "_on_enemy_hit_player"))
 		print("[Main] Connected enemy hit_player signal")
 

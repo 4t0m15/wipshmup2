@@ -167,12 +167,26 @@ func _show_score_milestone(score: int) -> void:
 	show_popup(milestone_text, Color(1.0, 1.0, 0.3, 1.0))
 
 func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
-	if not is_instance_valid(_popup_container):
+	if not is_instance_valid(_popup_container) or not is_inside_tree():
 		return
+	
+	# Safety check for text
+	if text.is_empty():
+		return
+	
 	var panel := PanelContainer.new()
+	if not panel or not is_instance_valid(panel):
+		push_error("[HUD] Failed to create popup panel")
+		return
+	
 	panel.name = "Popup"
 	# Style
 	var style := StyleBoxFlat.new()
+	if not style or not is_instance_valid(style):
+		push_error("[HUD] Failed to create popup style")
+		panel.queue_free()
+		return
+	
 	style.bg_color = Color(0.08, 0.04, 0.12, 0.95)
 	style.border_color = Color(0.9, 0.7, 1.0, 0.9)
 	style.border_width_left = 1
@@ -186,6 +200,11 @@ func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 	panel.add_theme_stylebox_override("panel", style)
 
 	var label := Label.new()
+	if not label or not is_instance_valid(label):
+		push_error("[HUD] Failed to create popup label")
+		panel.queue_free()
+		return
+	
 	label.text = text
 	label.add_theme_font_size_override("font_size", 12)
 	label.add_theme_color_override("font_color", color)
@@ -197,23 +216,34 @@ func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 	panel.modulate.a = 0.0
 	_popup_container.add_child(panel)
 
-	# Limit number of visible popups
+	# Limit number of visible popups safely
 	while _popup_container.get_child_count() > 4:
 		var old := _popup_container.get_child(0)
-		if is_instance_valid(old):
+		if old and is_instance_valid(old):
 			old.queue_free()
+		else:
+			break  # Prevent infinite loop
 
+	# Create tween safely
 	var fade_in := create_tween()
-	fade_in.tween_property(panel, "modulate:a", 1.0, 0.15)\
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	await get_tree().create_timer(1.6, false).timeout
+	if fade_in and is_instance_valid(fade_in):
+		fade_in.tween_property(panel, "modulate:a", 1.0, 0.15)\
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	
+	# Wait safely
+	if is_inside_tree():
+		await get_tree().create_timer(1.6, false).timeout
+	
 	if not is_instance_valid(panel):
 		return
 
+	# Create fade out tween safely
 	var fade_out := create_tween()
-	fade_out.tween_property(panel, "modulate:a", 0.0, 0.25)\
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	await fade_out.finished
+	if fade_out and is_instance_valid(fade_out):
+		fade_out.tween_property(panel, "modulate:a", 0.0, 0.25)\
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		await fade_out.finished
+	
 	if is_instance_valid(panel):
 		panel.queue_free()
 
@@ -230,7 +260,8 @@ func _create_boss_health_bar() -> void:
 	container.name = "BossHealthContainer"
 	container.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	container.position = Vector2(0, 30)  # Below the top bar
-	container.size = Vector2(320, 14)
+	# Set size after anchor preset to avoid warning
+	container.set_deferred("size", Vector2(320, 14))
 	add_child(container)
 	
 	# Create the boss health bar
@@ -242,7 +273,7 @@ func _create_boss_health_bar() -> void:
 	name_label.name = "NameLabel"
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.position = Vector2(0, 0)
-	name_label.size = Vector2(144, 7)
+	name_label.set_deferred("size", Vector2(144, 7))
 	name_label.add_theme_font_size_override("font_size", 5)
 	name_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6, 1.0))
 	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
@@ -252,12 +283,12 @@ func _create_boss_health_bar() -> void:
 	var health_container = Control.new()
 	health_container.name = "HealthContainer"
 	health_container.position = Vector2(0, 7)
-	health_container.size = Vector2(144, 7)
+	health_container.set_deferred("size", Vector2(144, 7))
 	_boss_health_bar.add_child(health_container)
 	
 	# Position the boss health bar in the center
 	_boss_health_bar.position = Vector2(88, 0)
-	_boss_health_bar.size = Vector2(144, 14)
+	_boss_health_bar.set_deferred("size", Vector2(144, 14))
 	_boss_health_bar.visible = false
 	
 	container.add_child(_boss_health_bar)

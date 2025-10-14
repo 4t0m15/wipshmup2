@@ -377,6 +377,501 @@ func _register_default_templates() -> void:
 		}
 	})
 	
+	# Stage 4 - Asteroid Field
+	_register_template("stage_4", {
+		"stage_name": "Stage 4 - Asteroid Field",
+		"stage_number": 4,
+		"background_type": "asteroid_field",
+		"music_track": "tense",
+		"spawn_interval": 0.08,
+		"waves": [
+			{
+				"wave_name": "Asteroid Swarm",
+				"spawn_interval": 0.06,
+				"enemy_spawns": [
+					# Large asteroid with escorts
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(140, -50), "delay": 0.1},
+					{"enemy_type": "basic_fighter", "position": Vector2(180, -50), "delay": 0.1},
+					{"enemy_type": "sine_fighter", "position": Vector2(120, -50), "delay": 0.2},
+					{"enemy_type": "sine_fighter", "position": Vector2(200, -50), "delay": 0.2},
+					# Side asteroids
+					{"enemy_type": "zigzag_fighter", "position": Vector2(60, -50), "delay": 0.4},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(260, -50), "delay": 0.4},
+					{"enemy_type": "dive_bomber", "position": Vector2(100, -50), "delay": 0.6},
+					{"enemy_type": "dive_bomber", "position": Vector2(220, -50), "delay": 0.6},
+					# Second wave
+					{"enemy_type": "heavy_bomber", "position": Vector2(80, -50), "delay": 1.0},
+					{"enemy_type": "heavy_bomber", "position": Vector2(240, -50), "delay": 1.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 1.2}
+				],
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Meteor Shower",
+				"spawn_interval": 0.05,
+				"enemy_spawns": [
+					# Rapid fire from multiple angles
+					{"enemy_type": "basic_fighter", "position": Vector2(40, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(80, -50), "delay": 0.1},
+					{"enemy_type": "basic_fighter", "position": Vector2(120, -50), "delay": 0.2},
+					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 0.3},
+					{"enemy_type": "basic_fighter", "position": Vector2(200, -50), "delay": 0.4},
+					{"enemy_type": "basic_fighter", "position": Vector2(240, -50), "delay": 0.5},
+					{"enemy_type": "basic_fighter", "position": Vector2(280, -50), "delay": 0.6},
+					# Counter-wave
+					{"enemy_type": "sine_fighter", "position": Vector2(280, -50), "delay": 0.8},
+					{"enemy_type": "sine_fighter", "position": Vector2(240, -50), "delay": 0.9},
+					{"enemy_type": "sine_fighter", "position": Vector2(200, -50), "delay": 1.0},
+					{"enemy_type": "sine_fighter", "position": Vector2(160, -50), "delay": 1.1},
+					{"enemy_type": "sine_fighter", "position": Vector2(120, -50), "delay": 1.2},
+					{"enemy_type": "sine_fighter", "position": Vector2(80, -50), "delay": 1.3},
+					{"enemy_type": "sine_fighter", "position": Vector2(40, -50), "delay": 1.4},
+					# Heavy finale
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 1.6},
+					{"enemy_type": "dive_bomber", "position": Vector2(100, -50), "delay": 1.7},
+					{"enemy_type": "dive_bomber", "position": Vector2(220, -50), "delay": 1.7}
+				],
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Asteroid Belt",
+				"spawn_interval": 0.04,
+				"enemy_spawns": [
+					# Dense formation
+					{"enemy_type": "zigzag_fighter", "position": Vector2(50, -50), "delay": 0.0},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(70, -50), "delay": 0.05},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(90, -50), "delay": 0.1},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(110, -50), "delay": 0.15},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(130, -50), "delay": 0.2},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(150, -50), "delay": 0.25},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(170, -50), "delay": 0.3},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(190, -50), "delay": 0.35},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(210, -50), "delay": 0.4},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(230, -50), "delay": 0.45},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(250, -50), "delay": 0.5},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(270, -50), "delay": 0.55},
+					# Heavy units mixed in
+					{"enemy_type": "heavy_bomber", "position": Vector2(100, -50), "delay": 0.7},
+					{"enemy_type": "heavy_bomber", "position": Vector2(220, -50), "delay": 0.7},
+					{"enemy_type": "dive_bomber", "position": Vector2(160, -50), "delay": 0.8}
+				],
+				"formation_type": "none"
+			}
+		],
+		"boss_encounter": {
+			"boss_template": "fortress",
+			"boss_position": Vector2(160, -50),
+			"boss_name": "Fortress",
+			"intro_effects": ["screen_shake", "flash", "explosion"],
+			"screen_shake_intensity": 1.3,
+			"background_tint": Color(0.8, 1.0, 0.8),
+			"music_pitch": 0.9
+		}
+	})
+	
+	# Stage 5 - Nebula
+	_register_template("stage_5", {
+		"stage_name": "Stage 5 - Nebula",
+		"stage_number": 5,
+		"background_type": "nebula",
+		"music_track": "mysterious",
+		"spawn_interval": 0.07,
+		"waves": [
+			{
+				"wave_name": "Phantom Squadron",
+				"spawn_interval": 0.06,
+				"enemy_spawns": [
+					# Ghostly formation
+					{"enemy_type": "sine_fighter", "position": Vector2(160, -50), "delay": 0.0},
+					{"enemy_type": "sine_fighter", "position": Vector2(120, -50), "delay": 0.1},
+					{"enemy_type": "sine_fighter", "position": Vector2(200, -50), "delay": 0.1},
+					{"enemy_type": "sine_fighter", "position": Vector2(80, -50), "delay": 0.2},
+					{"enemy_type": "sine_fighter", "position": Vector2(240, -50), "delay": 0.2},
+					{"enemy_type": "sine_fighter", "position": Vector2(40, -50), "delay": 0.3},
+					{"enemy_type": "sine_fighter", "position": Vector2(280, -50), "delay": 0.3},
+					# Dive bombers through the formation
+					{"enemy_type": "dive_bomber", "position": Vector2(100, -50), "delay": 0.5},
+					{"enemy_type": "dive_bomber", "position": Vector2(160, -50), "delay": 0.6},
+					{"enemy_type": "dive_bomber", "position": Vector2(220, -50), "delay": 0.7},
+					# Heavy phantom
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 0.9},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(140, -50), "delay": 1.0},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(180, -50), "delay": 1.0}
+				],
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Nebula Storm",
+				"spawn_interval": 0.05,
+				"enemy_spawns": [
+					# Chaotic storm pattern
+					{"enemy_type": "zigzag_fighter", "position": Vector2(60, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(100, -50), "delay": 0.1},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(140, -50), "delay": 0.2},
+					{"enemy_type": "basic_fighter", "position": Vector2(180, -50), "delay": 0.3},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(220, -50), "delay": 0.4},
+					{"enemy_type": "basic_fighter", "position": Vector2(260, -50), "delay": 0.5},
+					# Counter-chaos
+					{"enemy_type": "sine_fighter", "position": Vector2(40, -50), "delay": 0.7},
+					{"enemy_type": "sine_fighter", "position": Vector2(80, -50), "delay": 0.8},
+					{"enemy_type": "sine_fighter", "position": Vector2(120, -50), "delay": 0.9},
+					{"enemy_type": "sine_fighter", "position": Vector2(160, -50), "delay": 1.0},
+					{"enemy_type": "sine_fighter", "position": Vector2(200, -50), "delay": 1.1},
+					{"enemy_type": "sine_fighter", "position": Vector2(240, -50), "delay": 1.2},
+					{"enemy_type": "sine_fighter", "position": Vector2(280, -50), "delay": 1.3},
+					# Heavy storm
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 1.5},
+					{"enemy_type": "dive_bomber", "position": Vector2(100, -50), "delay": 1.6},
+					{"enemy_type": "dive_bomber", "position": Vector2(220, -50), "delay": 1.6}
+				],
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Void Rift",
+				"spawn_interval": 0.04,
+				"enemy_spawns": [
+					# Spiral from center
+					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(140, -50), "delay": 0.1},
+					{"enemy_type": "basic_fighter", "position": Vector2(180, -50), "delay": 0.1},
+					{"enemy_type": "basic_fighter", "position": Vector2(120, -50), "delay": 0.2},
+					{"enemy_type": "basic_fighter", "position": Vector2(200, -50), "delay": 0.2},
+					{"enemy_type": "basic_fighter", "position": Vector2(100, -50), "delay": 0.3},
+					{"enemy_type": "basic_fighter", "position": Vector2(220, -50), "delay": 0.3},
+					{"enemy_type": "basic_fighter", "position": Vector2(80, -50), "delay": 0.4},
+					{"enemy_type": "basic_fighter", "position": Vector2(240, -50), "delay": 0.4},
+					{"enemy_type": "basic_fighter", "position": Vector2(60, -50), "delay": 0.5},
+					{"enemy_type": "basic_fighter", "position": Vector2(260, -50), "delay": 0.5},
+					{"enemy_type": "basic_fighter", "position": Vector2(40, -50), "delay": 0.6},
+					{"enemy_type": "basic_fighter", "position": Vector2(280, -50), "delay": 0.6},
+					# Heavy void entities
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 0.8},
+					{"enemy_type": "heavy_bomber", "position": Vector2(120, -50), "delay": 0.9},
+					{"enemy_type": "heavy_bomber", "position": Vector2(200, -50), "delay": 0.9},
+					{"enemy_type": "dive_bomber", "position": Vector2(80, -50), "delay": 1.0},
+					{"enemy_type": "dive_bomber", "position": Vector2(240, -50), "delay": 1.0}
+				],
+				"formation_type": "none"
+			}
+		],
+		"boss_encounter": {
+			"boss_template": "grafzeppelin",
+			"boss_position": Vector2(160, -50),
+			"boss_name": "Graf Zeppelin",
+			"intro_effects": ["screen_shake", "flash", "explosion"],
+			"screen_shake_intensity": 1.4,
+			"background_tint": Color(0.7, 0.8, 1.2),
+			"music_pitch": 1.1
+		}
+	})
+	
+	# Stage 6 - Space Station
+	_register_template("stage_6", {
+		"stage_name": "Stage 6 - Space Station",
+		"stage_number": 6,
+		"background_type": "space_station",
+		"music_track": "industrial",
+		"spawn_interval": 0.06,
+		"waves": [
+			{
+				"wave_name": "Defense Grid",
+				"spawn_interval": 0.05,
+				"enemy_spawns": [
+					# Grid pattern
+					{"enemy_type": "basic_fighter", "position": Vector2(40, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(80, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(120, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(200, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(240, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(280, -50), "delay": 0.0},
+					# Second row
+					{"enemy_type": "sine_fighter", "position": Vector2(60, -50), "delay": 0.3},
+					{"enemy_type": "sine_fighter", "position": Vector2(100, -50), "delay": 0.3},
+					{"enemy_type": "sine_fighter", "position": Vector2(140, -50), "delay": 0.3},
+					{"enemy_type": "sine_fighter", "position": Vector2(180, -50), "delay": 0.3},
+					{"enemy_type": "sine_fighter", "position": Vector2(220, -50), "delay": 0.3},
+					{"enemy_type": "sine_fighter", "position": Vector2(260, -50), "delay": 0.3},
+					# Heavy units
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 0.6},
+					{"enemy_type": "dive_bomber", "position": Vector2(120, -50), "delay": 0.7},
+					{"enemy_type": "dive_bomber", "position": Vector2(200, -50), "delay": 0.7}
+				],
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Turret Assault",
+				"spawn_interval": 0.04,
+				"enemy_spawns": [
+					# Turret positions
+					{"enemy_type": "zigzag_fighter", "position": Vector2(50, -50), "delay": 0.0},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(100, -50), "delay": 0.1},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(150, -50), "delay": 0.2},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(200, -50), "delay": 0.3},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(250, -50), "delay": 0.4},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(300, -50), "delay": 0.5},
+					# Counter-attack
+					{"enemy_type": "basic_fighter", "position": Vector2(40, -50), "delay": 0.7},
+					{"enemy_type": "basic_fighter", "position": Vector2(80, -50), "delay": 0.8},
+					{"enemy_type": "basic_fighter", "position": Vector2(120, -50), "delay": 0.9},
+					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 1.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(200, -50), "delay": 1.1},
+					{"enemy_type": "basic_fighter", "position": Vector2(240, -50), "delay": 1.2},
+					{"enemy_type": "basic_fighter", "position": Vector2(280, -50), "delay": 1.3},
+					# Heavy turrets
+					{"enemy_type": "heavy_bomber", "position": Vector2(100, -50), "delay": 1.5},
+					{"enemy_type": "heavy_bomber", "position": Vector2(220, -50), "delay": 1.5},
+					{"enemy_type": "dive_bomber", "position": Vector2(160, -50), "delay": 1.6}
+				],
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Station Breach",
+				"spawn_interval": 0.03,
+				"enemy_spawns": [
+					# Breach pattern
+					{"enemy_type": "basic_fighter", "position": Vector2(80, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(120, -50), "delay": 0.05},
+					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 0.1},
+					{"enemy_type": "basic_fighter", "position": Vector2(200, -50), "delay": 0.15},
+					{"enemy_type": "basic_fighter", "position": Vector2(240, -50), "delay": 0.2},
+					# Reinforcements
+					{"enemy_type": "sine_fighter", "position": Vector2(60, -50), "delay": 0.3},
+					{"enemy_type": "sine_fighter", "position": Vector2(100, -50), "delay": 0.35},
+					{"enemy_type": "sine_fighter", "position": Vector2(140, -50), "delay": 0.4},
+					{"enemy_type": "sine_fighter", "position": Vector2(180, -50), "delay": 0.45},
+					{"enemy_type": "sine_fighter", "position": Vector2(220, -50), "delay": 0.5},
+					{"enemy_type": "sine_fighter", "position": Vector2(260, -50), "delay": 0.55},
+					# Heavy breach
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 0.7},
+					{"enemy_type": "dive_bomber", "position": Vector2(120, -50), "delay": 0.8},
+					{"enemy_type": "dive_bomber", "position": Vector2(200, -50), "delay": 0.8},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(80, -50), "delay": 0.9},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(240, -50), "delay": 0.9}
+				],
+				"formation_type": "none"
+			}
+		],
+		"boss_encounter": {
+			"boss_template": "blockade",
+			"boss_position": Vector2(160, -50),
+			"boss_name": "Blockade",
+			"intro_effects": ["screen_shake", "flash", "explosion"],
+			"screen_shake_intensity": 1.5,
+			"background_tint": Color(1.1, 0.9, 0.9),
+			"music_pitch": 1.2
+		}
+	})
+	
+	# Stage 7 - Deep Space
+	_register_template("stage_7", {
+		"stage_name": "Stage 7 - Deep Space",
+		"stage_number": 7,
+		"background_type": "deep_space",
+		"music_track": "epic",
+		"spawn_interval": 0.05,
+		"waves": [
+			{
+				"wave_name": "Void Hunters",
+				"spawn_interval": 0.04,
+				"enemy_spawns": [
+					# Elite formation
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 0.0},
+					{"enemy_type": "heavy_bomber", "position": Vector2(120, -50), "delay": 0.1},
+					{"enemy_type": "heavy_bomber", "position": Vector2(200, -50), "delay": 0.1},
+					{"enemy_type": "dive_bomber", "position": Vector2(80, -50), "delay": 0.2},
+					{"enemy_type": "dive_bomber", "position": Vector2(240, -50), "delay": 0.2},
+					{"enemy_type": "sine_fighter", "position": Vector2(60, -50), "delay": 0.3},
+					{"enemy_type": "sine_fighter", "position": Vector2(260, -50), "delay": 0.3},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(40, -50), "delay": 0.4},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(280, -50), "delay": 0.4},
+					# Elite escorts
+					{"enemy_type": "basic_fighter", "position": Vector2(100, -50), "delay": 0.5},
+					{"enemy_type": "basic_fighter", "position": Vector2(140, -50), "delay": 0.5},
+					{"enemy_type": "basic_fighter", "position": Vector2(180, -50), "delay": 0.5},
+					{"enemy_type": "basic_fighter", "position": Vector2(220, -50), "delay": 0.5}
+				],
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Cosmic Storm",
+				"spawn_interval": 0.03,
+				"enemy_spawns": [
+					# Storm pattern
+					{"enemy_type": "zigzag_fighter", "position": Vector2(40, -50), "delay": 0.0},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(80, -50), "delay": 0.05},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(120, -50), "delay": 0.1},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(160, -50), "delay": 0.15},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(200, -50), "delay": 0.2},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(240, -50), "delay": 0.25},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(280, -50), "delay": 0.3},
+					# Counter-storm
+					{"enemy_type": "sine_fighter", "position": Vector2(60, -50), "delay": 0.4},
+					{"enemy_type": "sine_fighter", "position": Vector2(100, -50), "delay": 0.45},
+					{"enemy_type": "sine_fighter", "position": Vector2(140, -50), "delay": 0.5},
+					{"enemy_type": "sine_fighter", "position": Vector2(180, -50), "delay": 0.55},
+					{"enemy_type": "sine_fighter", "position": Vector2(220, -50), "delay": 0.6},
+					{"enemy_type": "sine_fighter", "position": Vector2(260, -50), "delay": 0.65},
+					# Heavy storm
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 0.8},
+					{"enemy_type": "dive_bomber", "position": Vector2(120, -50), "delay": 0.9},
+					{"enemy_type": "dive_bomber", "position": Vector2(200, -50), "delay": 0.9}
+				],
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Void Convergence",
+				"spawn_interval": 0.02,
+				"enemy_spawns": [
+					# Converging pattern
+					{"enemy_type": "basic_fighter", "position": Vector2(20, -50), "delay": 0.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(60, -50), "delay": 0.1},
+					{"enemy_type": "basic_fighter", "position": Vector2(100, -50), "delay": 0.2},
+					{"enemy_type": "basic_fighter", "position": Vector2(140, -50), "delay": 0.3},
+					{"enemy_type": "basic_fighter", "position": Vector2(180, -50), "delay": 0.4},
+					{"enemy_type": "basic_fighter", "position": Vector2(220, -50), "delay": 0.5},
+					{"enemy_type": "basic_fighter", "position": Vector2(260, -50), "delay": 0.6},
+					{"enemy_type": "basic_fighter", "position": Vector2(300, -50), "delay": 0.7},
+					# Heavy convergence
+					{"enemy_type": "heavy_bomber", "position": Vector2(80, -50), "delay": 0.8},
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 0.9},
+					{"enemy_type": "heavy_bomber", "position": Vector2(240, -50), "delay": 1.0},
+					{"enemy_type": "dive_bomber", "position": Vector2(120, -50), "delay": 1.1},
+					{"enemy_type": "dive_bomber", "position": Vector2(200, -50), "delay": 1.1},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(100, -50), "delay": 1.2},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(220, -50), "delay": 1.2}
+				],
+				"formation_type": "none"
+			}
+		],
+		"boss_encounter": {
+			"boss_template": "crosssinker",
+			"boss_position": Vector2(160, -50),
+			"boss_name": "Cross Sinker",
+			"intro_effects": ["screen_shake", "flash", "explosion"],
+			"screen_shake_intensity": 1.6,
+			"background_tint": Color(0.6, 0.8, 1.4),
+			"music_pitch": 1.3
+		}
+	})
+	
+	# Stage 8 - Final Battle
+	_register_template("stage_8", {
+		"stage_name": "Stage 8 - Final Battle",
+		"stage_number": 8,
+		"background_type": "final_battle",
+		"music_track": "final",
+		"spawn_interval": 0.04,
+		"waves": [
+			{
+				"wave_name": "Armada Assault",
+				"spawn_interval": 0.03,
+				"enemy_spawns": [
+					# Massive formation
+					{"enemy_type": "heavy_bomber", "position": Vector2(40, -50), "delay": 0.0},
+					{"enemy_type": "heavy_bomber", "position": Vector2(80, -50), "delay": 0.05},
+					{"enemy_type": "heavy_bomber", "position": Vector2(120, -50), "delay": 0.1},
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 0.15},
+					{"enemy_type": "heavy_bomber", "position": Vector2(200, -50), "delay": 0.2},
+					{"enemy_type": "heavy_bomber", "position": Vector2(240, -50), "delay": 0.25},
+					{"enemy_type": "heavy_bomber", "position": Vector2(280, -50), "delay": 0.3},
+					# Dive bomber escort
+					{"enemy_type": "dive_bomber", "position": Vector2(60, -50), "delay": 0.4},
+					{"enemy_type": "dive_bomber", "position": Vector2(100, -50), "delay": 0.45},
+					{"enemy_type": "dive_bomber", "position": Vector2(140, -50), "delay": 0.5},
+					{"enemy_type": "dive_bomber", "position": Vector2(180, -50), "delay": 0.55},
+					{"enemy_type": "dive_bomber", "position": Vector2(220, -50), "delay": 0.6},
+					{"enemy_type": "dive_bomber", "position": Vector2(260, -50), "delay": 0.65},
+					# Elite fighters
+					{"enemy_type": "sine_fighter", "position": Vector2(50, -50), "delay": 0.8},
+					{"enemy_type": "sine_fighter", "position": Vector2(90, -50), "delay": 0.85},
+					{"enemy_type": "sine_fighter", "position": Vector2(130, -50), "delay": 0.9},
+					{"enemy_type": "sine_fighter", "position": Vector2(170, -50), "delay": 0.95},
+					{"enemy_type": "sine_fighter", "position": Vector2(210, -50), "delay": 1.0},
+					{"enemy_type": "sine_fighter", "position": Vector2(250, -50), "delay": 1.05},
+					{"enemy_type": "sine_fighter", "position": Vector2(290, -50), "delay": 1.1}
+				],
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Death Squadron",
+				"spawn_interval": 0.02,
+				"enemy_spawns": [
+					# Elite death squadron
+					{"enemy_type": "zigzag_fighter", "position": Vector2(30, -50), "delay": 0.0},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(70, -50), "delay": 0.05},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(110, -50), "delay": 0.1},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(150, -50), "delay": 0.15},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(190, -50), "delay": 0.2},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(230, -50), "delay": 0.25},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(270, -50), "delay": 0.3},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(310, -50), "delay": 0.35},
+					# Heavy support
+					{"enemy_type": "heavy_bomber", "position": Vector2(50, -50), "delay": 0.4},
+					{"enemy_type": "heavy_bomber", "position": Vector2(130, -50), "delay": 0.45},
+					{"enemy_type": "heavy_bomber", "position": Vector2(210, -50), "delay": 0.5},
+					{"enemy_type": "heavy_bomber", "position": Vector2(290, -50), "delay": 0.55},
+					# Dive bomber strike
+					{"enemy_type": "dive_bomber", "position": Vector2(80, -50), "delay": 0.6},
+					{"enemy_type": "dive_bomber", "position": Vector2(160, -50), "delay": 0.65},
+					{"enemy_type": "dive_bomber", "position": Vector2(240, -50), "delay": 0.7},
+					# Basic fighter swarm
+					{"enemy_type": "basic_fighter", "position": Vector2(40, -50), "delay": 0.8},
+					{"enemy_type": "basic_fighter", "position": Vector2(80, -50), "delay": 0.85},
+					{"enemy_type": "basic_fighter", "position": Vector2(120, -50), "delay": 0.9},
+					{"enemy_type": "basic_fighter", "position": Vector2(160, -50), "delay": 0.95},
+					{"enemy_type": "basic_fighter", "position": Vector2(200, -50), "delay": 1.0},
+					{"enemy_type": "basic_fighter", "position": Vector2(240, -50), "delay": 1.05},
+					{"enemy_type": "basic_fighter", "position": Vector2(280, -50), "delay": 1.1}
+				],
+				"formation_type": "none"
+			},
+			{
+				"wave_name": "Final Onslaught",
+				"spawn_interval": 0.01,
+				"enemy_spawns": [
+					# Ultimate wave - all enemy types
+					{"enemy_type": "heavy_bomber", "position": Vector2(160, -50), "delay": 0.0},
+					{"enemy_type": "heavy_bomber", "position": Vector2(120, -50), "delay": 0.05},
+					{"enemy_type": "heavy_bomber", "position": Vector2(200, -50), "delay": 0.05},
+					{"enemy_type": "dive_bomber", "position": Vector2(80, -50), "delay": 0.1},
+					{"enemy_type": "dive_bomber", "position": Vector2(240, -50), "delay": 0.1},
+					{"enemy_type": "sine_fighter", "position": Vector2(60, -50), "delay": 0.15},
+					{"enemy_type": "sine_fighter", "position": Vector2(100, -50), "delay": 0.15},
+					{"enemy_type": "sine_fighter", "position": Vector2(140, -50), "delay": 0.15},
+					{"enemy_type": "sine_fighter", "position": Vector2(180, -50), "delay": 0.15},
+					{"enemy_type": "sine_fighter", "position": Vector2(220, -50), "delay": 0.15},
+					{"enemy_type": "sine_fighter", "position": Vector2(260, -50), "delay": 0.15},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(40, -50), "delay": 0.2},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(80, -50), "delay": 0.2},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(120, -50), "delay": 0.2},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(160, -50), "delay": 0.2},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(200, -50), "delay": 0.2},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(240, -50), "delay": 0.2},
+					{"enemy_type": "zigzag_fighter", "position": Vector2(280, -50), "delay": 0.2},
+					{"enemy_type": "basic_fighter", "position": Vector2(50, -50), "delay": 0.25},
+					{"enemy_type": "basic_fighter", "position": Vector2(90, -50), "delay": 0.25},
+					{"enemy_type": "basic_fighter", "position": Vector2(130, -50), "delay": 0.25},
+					{"enemy_type": "basic_fighter", "position": Vector2(170, -50), "delay": 0.25},
+					{"enemy_type": "basic_fighter", "position": Vector2(210, -50), "delay": 0.25},
+					{"enemy_type": "basic_fighter", "position": Vector2(250, -50), "delay": 0.25},
+					{"enemy_type": "basic_fighter", "position": Vector2(290, -50), "delay": 0.25}
+				],
+				"formation_type": "none"
+			}
+		],
+		"boss_encounter": {
+			"boss_template": "bb",
+			"boss_position": Vector2(160, -50),
+			"boss_name": "BB",
+			"intro_effects": ["screen_shake", "flash", "explosion"],
+			"screen_shake_intensity": 2.0,
+			"background_tint": Color(1.5, 0.5, 0.5),
+			"music_pitch": 1.5
+		}
+	})
+	
 	print("[StageTemplateManager] Registered ", templates.size(), " stage templates")
 
 func _register_template(template_name: String, template_data: Dictionary) -> void:
@@ -480,3 +975,18 @@ func get_stage_2() -> StageDefinition:
 
 func get_stage_3() -> StageDefinition:
 	return get_template("stage_3")
+
+func get_stage_4() -> StageDefinition:
+	return get_template("stage_4")
+
+func get_stage_5() -> StageDefinition:
+	return get_template("stage_5")
+
+func get_stage_6() -> StageDefinition:
+	return get_template("stage_6")
+
+func get_stage_7() -> StageDefinition:
+	return get_template("stage_7")
+
+func get_stage_8() -> StageDefinition:
+	return get_template("stage_8")

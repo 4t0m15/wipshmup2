@@ -1,0 +1,24 @@
+---
+
+description: Performance rules for bullet-hell gameplay
+globs: ["wipshmup2/scripts/**/*.gd", "wipshmup2/shaders/**/*.gdshader"]
+alwaysApply: true
+---
+
+# Object Pooling
+- Reuse bullet/enemy instances; toggle `visible` instead of `queue_free()` where applicable.
+- Cleanup via factory; disconnect signals before reusing.
+
+# Rate Limiting
+- Respect MAX bullet counts and per-second caps; degrade gracefully when exceeded.
+
+# Per-Frame Budget
+- Avoid allocations in `_process/_physics_process`.
+- Cache nodes/resources; pre-load where hot.
+- Avoid unbounded loops; split work across frames if needed.
+
+# Math & Types
+- Prefer integer-safe ops where relevant (e.g., bit-shift for halves in counts).
+
+# Diagnostics
+- When adding logs, gate them or keep them terse to prevent spam during bullet storms.

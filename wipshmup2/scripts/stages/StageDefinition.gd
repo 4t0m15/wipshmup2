@@ -40,10 +40,14 @@ func _create_default_wave() -> void:
 
 func get_wave_count() -> int:
 	"""Get the total number of waves"""
+	if not waves:
+		return 0
 	return waves.size()
 
 func get_wave(index: int) -> WaveDefinition:
 	"""Get a wave by index"""
+	if not waves or waves.is_empty():
+		return null
 	if index >= 0 and index < waves.size():
 		return waves[index]
 	return null
@@ -66,25 +70,24 @@ func get_boss_position() -> Vector2:
 
 func apply_stage_effects() -> void:
 	"""Apply stage-specific visual and audio effects"""
-	# Apply background tint
-	if background_tint != Color.WHITE:
-		EventBus.emit_visual_effect("flash", {
-			"color": background_tint,
-			"duration": 1.0
-		})
+	# Apply background effects
+	EventBus.emit_visual_effect("background_change", {
+		"background_type": background_type,
+		"tint": background_tint,
+		"ambient_lighting": ambient_lighting
+	})
 	
-	# Apply ambient lighting
-	if ambient_lighting != 1.0:
-		# This would need to be implemented in the visual effects system
-		pass
-	
-	# Start particle effects
+	# Apply particle effects
 	for effect in particle_effects:
 		EventBus.emit_visual_effect("particle_effect", {
-			"effect_type": effect,
-			"duration": -1.0  # Infinite
+			"effect_name": effect,
+			"duration": -1.0  # Continuous
 		})
 	
-	# Play music
-	if music_track != "default":
-		EventBus.play_music.emit(music_track, true)
+	# Apply music change
+	EventBus.emit_audio("music_change", {
+		"track": music_track,
+		"fade_time": 1.0
+	})
+	
+	print("[StageDefinition] Applied effects for stage: ", stage_name)

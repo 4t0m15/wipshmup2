@@ -21,13 +21,22 @@ func _ready():
 	_create_environment(EnvironmentType.SPACE_DEEP)
 
 func _process(delta: float) -> void:
-	for layer in layers:
-		if not layer.has("sprite"):
+	# Create a copy of layers to avoid modification during iteration
+	var layers_copy = layers.duplicate()
+	
+	for layer in layers_copy:
+		if not layer or not layer.has("sprite"):
 			continue
 		var sprite: Sprite2D = layer["sprite"]
-		if not is_instance_valid(sprite):
+		if not sprite or not is_instance_valid(sprite):
 			continue
-		sprite.position.y += layer["scroll_speed"] * delta
+		
+		# Safety check for scroll_speed
+		var scroll_speed = layer.get("scroll_speed", 0.0)
+		if typeof(scroll_speed) != TYPE_FLOAT:
+			scroll_speed = 0.0
+		
+		sprite.position.y += scroll_speed * delta
 		if sprite.position.y > 220:
 			sprite.position.y = -220
 #god i wished I knew how this worked so I could fix it fuck my life
@@ -67,18 +76,35 @@ func _create_environment(env_type: EnvironmentType):
 
 	background_changed.emit(EnvironmentType.keys()[env_type])
 
-func _add_layer(texture_path: String, scroll_speed: float, color_modulate: Color, sprite_scale: Vector2, sprite_position: Vector2):
+func _add_layer(texture_path: String, scroll_speed: float, color_modulate: Color, sprite_scale: Vector2, sprite_pos: Vector2):
+	# Safety check for texture path
+	if texture_path.is_empty():
+		push_error("[BackgroundManager] Empty texture path provided")
+		return
+	
 	var texture := load(texture_path)
-	if not texture:
+	if not texture or not is_instance_valid(texture):
+		push_error("[BackgroundManager] Failed to load texture: " + texture_path)
 		return
 
 	var sprite := Sprite2D.new()
+	if not sprite or not is_instance_valid(sprite):
+		push_error("[BackgroundManager] Failed to create Sprite2D")
+		return
+	
 	sprite.texture = texture
-	sprite.position = sprite_position
+	sprite.position = sprite_pos
 	sprite.scale = sprite_scale
 	sprite.modulate = color_modulate
 	sprite.z_index = -10
-	add_child(sprite)
+	
+	# Safety check before adding child
+	if is_inside_tree():
+		add_child(sprite)
+	else:
+		push_error("[BackgroundManager] Cannot add sprite - not in tree")
+		sprite.queue_free()
+		return
 
 	var layer = {
 		"sprite": sprite,

@@ -1,0 +1,17 @@
+---
+
+description: Safety patterns and error handling
+globs: ["wipshmup2/scripts/**/*.gd"]
+alwaysApply: true
+---
+
+# Safety Patterns
+- Always check `is_instance_valid()` before using nodes.
+- Bounds-check arrays; use safe getters and defaults for dictionaries.
+- Validate signals exist before connecting; guard duplicate connections.
+- For async waits, re-check validity after `await`.
+
+# Error Handling
+- Use `push_error()` for critical faults.
+- Prefer safe defaults over stopping the game loop.
+- When recovery is possible, do so silently; log with a clear prefix (e.g., `[StageController]`).

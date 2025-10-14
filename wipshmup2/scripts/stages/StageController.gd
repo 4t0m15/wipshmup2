@@ -15,7 +15,7 @@ var current_wave_index: int = 0
 var current_stage_index: int = 0
 
 # Stage progression
-var stage_order: Array[int] = [1, 2, 3]  # Only 3 stages are registered
+var stage_order: Array[int] = [1, 2, 3, 4, 5, 6, 7, 8]  # All 8 stages
 var is_stage_active: bool = false
 var is_boss_active: bool = false
 
@@ -103,37 +103,68 @@ func _start_boss_encounter() -> void:
 	is_boss_active = true
 	
 	var boss_encounter = current_stage.boss_encounter
+	if not boss_encounter:
+		push_error("[StageController] Boss encounter is null")
+		is_boss_active = false
+		_complete_stage()
+		return
+	
 	print("[StageController] Starting boss: ", boss_encounter.boss_name)
 	
-	# Apply boss intro effects
-	boss_encounter.apply_intro_effects()
+	# Apply boss intro effects safely
+	if boss_encounter.has_method("apply_intro_effects"):
+		boss_encounter.apply_intro_effects()
 	
 	# Spawn boss after delay - with tree safety check
 	if is_inside_tree():
 		await get_tree().create_timer(current_stage.boss_delay).timeout
 	
-	# Create boss
-	var boss = BossTemplateManager.create_boss(
-		boss_encounter.get_boss_template_name(),
-		boss_encounter.get_spawn_position()
-	)
+	# Additional safety check after delay
+	if not is_inside_tree() or not current_stage or not boss_encounter:
+		print("[StageController] Stage or boss encounter became invalid during delay")
+		is_boss_active = false
+		return
 	
-	if boss:
+	# Create boss with safety checks
+	var boss_template_name = ""
+	var boss_spawn_position = Vector2(160, -50)
+	
+	if boss_encounter.has_method("get_boss_template_name"):
+		boss_template_name = boss_encounter.get_boss_template_name()
+	if boss_encounter.has_method("get_spawn_position"):
+		boss_spawn_position = boss_encounter.get_spawn_position()
+	
+	if boss_template_name.is_empty():
+		push_error("[StageController] Boss template name is empty")
+		is_boss_active = false
+		_complete_stage()
+		return
+	
+	var boss = null
+	if BossTemplateManager and BossTemplateManager.has_method("create_boss"):
+		boss = BossTemplateManager.create_boss(boss_template_name, boss_spawn_position)
+	
+	if boss and is_instance_valid(boss):
 		# Connect boss signals
 		_connect_boss_signals(boss)
 		
 		# Add boss to scene - with tree safety check
 		if is_inside_tree():
 			var container = get_tree().current_scene.get_node_or_null("GameViewport/Enemies")
-			if container:
+			if container and is_instance_valid(container):
 				container.add_child(boss)
 			else:
-				get_tree().current_scene.add_child(boss)
+				var current_scene = get_tree().current_scene
+				if current_scene and is_instance_valid(current_scene):
+					current_scene.add_child(boss)
 		
-		# Emit boss spawned event
-		EventBus.boss_spawned.emit(boss, boss_encounter.boss_name)
+		# Emit boss spawned event safely
+		var boss_name = boss_encounter.boss_name if boss_encounter.boss_name else "boss"
+		if EventBus and EventBus.has_signal("boss_spawned"):
+			EventBus.boss_spawned.emit(boss, boss_name)
 	else:
 		# Boss creation failed, reset flag
+		push_error("[StageController] Failed to create boss: " + boss_template_name)
 		is_boss_active = false
 
 func _connect_boss_signals(boss: Node) -> void:
@@ -152,6 +183,9 @@ func _on_boss_defeated(boss: Node) -> void:
 	if current_stage and current_stage.boss_encounter:
 		current_stage.boss_encounter.apply_outro_effects()
 	
+	# Drop bomb when boss is defeated
+	_drop_bomb_on_boss_defeat(boss)
+	
 	# Emit boss defeated event (validate values to avoid null type errors)
 	var name_val = boss.get("boss_name") if boss and boss.has_method("get") else null
 	var boss_name: String = name_val if (name_val is String and name_val != "") else "boss"
@@ -168,6 +202,26 @@ func _on_boss_defeated(boss: Node) -> void:
 func _on_boss_hit_player() -> void:
 	"""Handle boss hitting player"""
 	EventBus.player_hit.emit()
+
+func _drop_bomb_on_boss_defeat(boss: Node) -> void:
+	"""Drop a bomb when a boss is defeated"""
+	if not boss or not is_instance_valid(boss):
+		return
+	
+	# Get boss position for bomb drop
+	var boss_position = boss.global_position
+	
+	# Get ItemDropManager and force drop a bomb
+	var item_drop_manager = get_node_or_null("/root/ItemDropManager")
+	if item_drop_manager and item_drop_manager.has_method("force_drop_item"):
+		# Use the BOMB item type from ItemDropManager
+		var bomb_type = item_drop_manager.ItemType.BOMB
+		item_drop_manager.force_drop_item(bomb_type, boss_position)
+		print("[StageController] Dropped bomb at boss position: ", boss_position)
+	else:
+		# Fallback: emit item collected signal directly
+		EventBus.item_collected.emit("BOMB", 0)
+		print("[StageController] Fallback: Emitted bomb collection event")
  
 func _complete_stage() -> void:
 	"""Complete the current stage"""
@@ -181,9 +235,34 @@ func _complete_stage() -> void:
 	EventBus.stage_completed.emit(current_stage.stage_number)
 	stage_completed.emit(current_stage.stage_number)
 	
-	# Move to next stage
+	# Show stage transition
+	_show_stage_transition()
+	
+	# Move to next stage after transition
 	current_stage_index += 1
 	_start_current_stage()
+
+func _show_stage_transition() -> void:
+	"""Show transition between stages"""
+	# Create transition effect
+	EventBus.emit_visual_effect("screen_flash", {
+		"color": Color.WHITE,
+		"duration": 0.5
+	})
+	
+	# Show stage name
+	if current_stage_index + 1 < stage_order.size():
+		var next_stage_number = stage_order[current_stage_index + 1]
+		EventBus.emit_visual_effect("stage_transition", {
+			"stage_number": next_stage_number,
+			"duration": 2.0
+		})
+	else:
+		# Loop back to stage 1
+		EventBus.emit_visual_effect("stage_transition", {
+			"stage_number": 1,
+			"duration": 2.0
+		})
 
 func _process(delta: float) -> void:
 	"""Update stage progression"""
@@ -221,6 +300,11 @@ func _spawn_next_enemy() -> void:
 		return
 	
 	var spawn = current_wave.get_spawn(current_spawn_index)
+	if not spawn:
+		push_error("[StageController] Spawn data is null at index: " + str(current_spawn_index))
+		current_spawn_index += 1
+		return
+	
 	var enemy_type = spawn.get("enemy_type", "basic_fighter")
 	var position = spawn.get("position", Vector2(160, -50))
 	var delay = spawn.get("delay", 0.0)
@@ -235,31 +319,44 @@ func _spawn_next_enemy() -> void:
 	if delay > 0.0 and is_inside_tree():
 		await get_tree().create_timer(delay).timeout
 	
-	# Create enemy
-	var enemy = EnemyTemplateManager.create_enemy(enemy_type, position)
-	if enemy:
+	# Additional safety check after delay
+	if not is_inside_tree() or not current_wave:
+		print("[StageController] Wave became invalid during delay")
+		return
+	
+	# Create enemy with safety checks
+	var enemy = null
+	if EnemyTemplateManager and EnemyTemplateManager.has_method("create_enemy"):
+		enemy = EnemyTemplateManager.create_enemy(enemy_type, position)
+	
+	if enemy and is_instance_valid(enemy):
 		print("[StageController] Enemy created successfully: ", enemy.name)
 		
-		# Apply properties
+		# Apply properties safely
 		for key in properties:
-			if enemy.has_method("set") or enemy.get(key) != null:
+			if enemy.has_method("set"):
+				enemy.set(key, properties[key])
+			elif enemy.get(key) != null:
 				enemy.set(key, properties[key])
 		
 		# Add to scene - with tree safety check
 		if is_inside_tree():
 			var container = get_tree().current_scene.get_node_or_null("GameViewport/Enemies")
-			if container:
+			if container and is_instance_valid(container):
 				container.add_child(enemy)
 				print("[StageController] Enemy added to GameViewport/Enemies")
 			else:
-				get_tree().current_scene.add_child(enemy)
-				print("[StageController] Enemy added to current_scene")
+				var current_scene = get_tree().current_scene
+				if current_scene and is_instance_valid(current_scene):
+					current_scene.add_child(enemy)
+					print("[StageController] Enemy added to current_scene")
 		
 		# Connect enemy signals
 		_connect_enemy_signals(enemy)
 		
-		# Emit enemy spawned event
-		EventBus.enemy_spawned.emit(enemy, enemy_type)
+		# Emit enemy spawned event safely
+		if EventBus and EventBus.has_signal("enemy_spawned"):
+			EventBus.enemy_spawned.emit(enemy, enemy_type)
 		enemy_spawned.emit(enemy)
 	else:
 		push_error("[StageController] Failed to create enemy: " + enemy_type)

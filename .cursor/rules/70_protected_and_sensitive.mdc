@@ -1,0 +1,16 @@
+---
+
+description: Sensitive/protected areas and change policy
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Protected Areas (Think Twice Before Editing)
+- CRT and dithering shaders: keep retro look; tune via params, not rewrites.
+- Autoload registrations in `project.godot`: add new cautiously; prefer existing systems.
+- Core factories/managers: extend rather than fork; keep interfaces stable.
+
+# Change Policy
+- Prefer small, reversible edits.
+- When changing behavior, update docs/configs and run lints.
+- Do not bypass pooling/spawn systems for quick fixes.

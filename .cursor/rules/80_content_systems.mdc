@@ -1,0 +1,17 @@
+---
+
+description: Data/content rules for templates, stages, and balance
+globs: ["wipshmup2/scripts/**/*.gd", "wipshmup2/config/**/*"]
+alwaysApply: true
+---
+
+# Templates and Data
+- Enemies/Bosses/Stages are data-driven; keep logic generic and params in data.
+- Use config files (JSON/CFG) for tunables; avoid hardcoding numbers.
+
+# Balance
+- Respect difficulty scaling and rank pressure system; expose multipliers via config.
+- Keep early-stage difficulty accessible; scale density/speed via rank.
+
+# Serialization Safety
+- Use safe defaults when fields are missing; never crash on bad data.

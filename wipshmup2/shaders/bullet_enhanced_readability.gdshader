@@ -14,22 +14,22 @@ uniform float base_brightness : hint_range(0.5, 2.0) = 1.0;
 uniform float outline_thickness : hint_range(0.0, 4.0) = 2.0;
 uniform vec4 outline_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
 uniform float outline_alpha : hint_range(0.0, 1.0) = 0.9;
-uniform bool double_outline : hint_default(false) = false;
+uniform bool double_outline = false;
 uniform float inner_outline_thickness : hint_range(0.0, 2.0) = 0.5;
 uniform vec4 inner_outline_color : source_color = vec4(0.0, 0.0, 0.0, 1.0);
 
 // Glow system (multi-layer)
-uniform bool enable_glow : hint_default(true) = true;
+uniform bool enable_glow = true;
 uniform float glow_intensity : hint_range(0.0, 2.0) = 1.0;
 uniform vec4 glow_color : source_color = vec4(1.0, 0.5, 0.0, 0.5);
 uniform float inner_glow_size : hint_range(1.0, 2.0) = 1.1;
 uniform float mid_glow_size : hint_range(1.0, 3.0) = 1.5;
 uniform float outer_glow_size : hint_range(1.0, 4.0) = 2.0;
 uniform float far_glow_size : hint_range(1.0, 5.0) = 3.0;
-uniform bool enable_far_glow : hint_default(false) = false;
+uniform bool enable_far_glow = false;
 
 // Pulse animation
-uniform bool enable_pulse : hint_default(true) = true;
+uniform bool enable_pulse = true;
 uniform float pulse_speed : hint_range(0.1, 5.0) = 1.0;
 uniform float pulse_amplitude : hint_range(0.0, 0.5) = 0.2;
 
@@ -37,12 +37,12 @@ uniform float pulse_amplitude : hint_range(0.0, 0.5) = 0.2;
 uniform float proximity_boost : hint_range(1.0, 2.0) = 1.0;
 
 // Shadow (player bullets)
-uniform bool enable_shadow : hint_default(false) = false;
+uniform bool enable_shadow = false;
 uniform vec4 shadow_color : source_color = vec4(0.0, 0.1, 0.2, 0.3);
 uniform vec2 shadow_offset = vec2(1.0, 1.0);
 
 // High contrast mode
-uniform bool high_contrast_mode : hint_default(false) = false;
+uniform bool high_contrast_mode = false;
 
 // === HELPER FUNCTIONS ===
 
@@ -118,11 +118,9 @@ void fragment() {
 	// Early exit for transparent pixels (performance optimization)
 	if (tex_color.a < 0.01) {
 		COLOR = vec4(0.0);
-		return;
 	}
-	
 	// === HIGH CONTRAST MODE ===
-	if (high_contrast_mode) {
+	else if (high_contrast_mode) {
 		// Ultra-simple, maximum clarity
 		float outline = calculate_outline(TEXTURE, UV, 3.0);
 		
@@ -135,97 +133,96 @@ void fragment() {
 		} else {
 			COLOR = vec4(0.0);
 		}
-		return;
 	}
-	
 	// === NORMAL MODE ===
-	
-	// Calculate pulse animation
-	float pulse_factor = get_pulse_factor();
-	
-	// === SHADOW (Player bullets only) ===
-	vec3 final_color = vec3(0.0);
-	float final_alpha = 0.0;
-	
-	if (enable_shadow) {
-		float shadow = sample_alpha(TEXTURE, UV, -shadow_offset, 1.0 / vec2(textureSize(TEXTURE, 0)));
-		if (shadow > 0.1 && tex_color.a < 0.5) {
-			final_color = shadow_color.rgb;
-			final_alpha = shadow * shadow_color.a;
-		}
-	}
-	
-	// === GLOW LAYERS ===
-	if (enable_glow && glow_intensity > 0.0) {
-		float glow_alpha = 0.0;
-		vec3 glow_rgb = glow_color.rgb;
+	else {
+		// Calculate pulse animation
+		float pulse_factor = get_pulse_factor();
 		
-		// Far glow (high danger only)
-		if (enable_far_glow) {
-			float far_glow = calculate_glow(TEXTURE, UV, far_glow_size);
-			glow_alpha += far_glow * 0.15 * pulse_factor;
-		}
+		// === SHADOW (Player bullets only) ===
+		vec3 final_color = vec3(0.0);
+		float final_alpha = 0.0;
 		
-		// Outer glow
-		float outer_glow = calculate_glow(TEXTURE, UV, outer_glow_size);
-		glow_alpha += outer_glow * 0.3 * pulse_factor;
-		
-		// Mid glow
-		float mid_glow = calculate_glow(TEXTURE, UV, mid_glow_size);
-		glow_alpha += mid_glow * 0.5 * pulse_factor;
-		
-		// Inner glow
-		float inner_glow = calculate_glow(TEXTURE, UV, inner_glow_size);
-		glow_alpha += inner_glow * 0.8 * pulse_factor;
-		
-		// Apply proximity boost
-		glow_alpha *= proximity_boost;
-		
-		// Clamp and apply glow
-		glow_alpha = clamp(glow_alpha * glow_intensity, 0.0, 1.0);
-		
-		if (glow_alpha > final_alpha && tex_color.a < 0.5) {
-			final_color = mix(final_color, glow_rgb, glow_alpha);
-			final_alpha = max(final_alpha, glow_alpha * glow_color.a);
-		}
-	}
-	
-	// === OUTLINE ===
-	if (outline_thickness > 0.0) {
-		// Calculate main outline
-		float outline = calculate_outline(TEXTURE, UV, outline_thickness);
-		
-		// Calculate inner outline (for double outline effect)
-		float inner_outline = 0.0;
-		if (double_outline && inner_outline_thickness > 0.0) {
-			inner_outline = calculate_outline(TEXTURE, UV, inner_outline_thickness);
-		}
-		
-		// Apply outlines
-		if (tex_color.a < 0.5) {
-			if (double_outline && inner_outline > 0.5) {
-				// Inner outline (usually black for extra contrast)
-				final_color = inner_outline_color.rgb;
-				final_alpha = max(final_alpha, inner_outline * inner_outline_color.a);
-			} else if (outline > 0.1) {
-				// Main outline
-				final_color = mix(final_color, outline_color.rgb, outline);
-				final_alpha = max(final_alpha, outline * outline_alpha * pulse_factor);
+		if (enable_shadow) {
+			float shadow = sample_alpha(TEXTURE, UV, -shadow_offset, 1.0 / vec2(textureSize(TEXTURE, 0)));
+			if (shadow > 0.1 && tex_color.a < 0.5) {
+				final_color = shadow_color.rgb;
+				final_alpha = shadow * shadow_color.a;
 			}
 		}
-	}
-	
-	// === BASE SPRITE ===
-	if (tex_color.a > 0.5) {
-		// Apply base color tint
-		vec3 tinted = mix(tex_color.rgb, base_color.rgb, 0.7);
-		tinted *= base_brightness * pulse_factor;
 		
-		final_color = tinted;
-		final_alpha = tex_color.a * base_color.a;
+		// === GLOW LAYERS ===
+		if (enable_glow && glow_intensity > 0.0) {
+			float glow_alpha = 0.0;
+			vec3 glow_rgb = glow_color.rgb;
+			
+			// Far glow (high danger only)
+			if (enable_far_glow) {
+				float far_glow = calculate_glow(TEXTURE, UV, far_glow_size);
+				glow_alpha += far_glow * 0.15 * pulse_factor;
+			}
+			
+			// Outer glow
+			float outer_glow = calculate_glow(TEXTURE, UV, outer_glow_size);
+			glow_alpha += outer_glow * 0.3 * pulse_factor;
+			
+			// Mid glow
+			float mid_glow = calculate_glow(TEXTURE, UV, mid_glow_size);
+			glow_alpha += mid_glow * 0.5 * pulse_factor;
+			
+			// Inner glow
+			float inner_glow = calculate_glow(TEXTURE, UV, inner_glow_size);
+			glow_alpha += inner_glow * 0.8 * pulse_factor;
+			
+			// Apply proximity boost
+			glow_alpha *= proximity_boost;
+			
+			// Clamp and apply glow
+			glow_alpha = clamp(glow_alpha * glow_intensity, 0.0, 1.0);
+			
+			if (glow_alpha > final_alpha && tex_color.a < 0.5) {
+				final_color = mix(final_color, glow_rgb, glow_alpha);
+				final_alpha = max(final_alpha, glow_alpha * glow_color.a);
+			}
+		}
+		
+		// === OUTLINE ===
+		if (outline_thickness > 0.0) {
+			// Calculate main outline
+			float outline = calculate_outline(TEXTURE, UV, outline_thickness);
+			
+			// Calculate inner outline (for double outline effect)
+			float inner_outline = 0.0;
+			if (double_outline && inner_outline_thickness > 0.0) {
+				inner_outline = calculate_outline(TEXTURE, UV, inner_outline_thickness);
+			}
+			
+			// Apply outlines
+			if (tex_color.a < 0.5) {
+				if (double_outline && inner_outline > 0.5) {
+					// Inner outline (usually black for extra contrast)
+					final_color = inner_outline_color.rgb;
+					final_alpha = max(final_alpha, inner_outline * inner_outline_color.a);
+				} else if (outline > 0.1) {
+					// Main outline
+					final_color = mix(final_color, outline_color.rgb, outline);
+					final_alpha = max(final_alpha, outline * outline_alpha * pulse_factor);
+				}
+			}
+		}
+		
+		// === BASE SPRITE ===
+		if (tex_color.a > 0.5) {
+			// Apply base color tint
+			vec3 tinted = mix(tex_color.rgb, base_color.rgb, 0.7);
+			tinted *= base_brightness * pulse_factor;
+			
+			final_color = tinted;
+			final_alpha = tex_color.a * base_color.a;
+		}
+		
+		// === OUTPUT ===
+		COLOR = vec4(final_color, final_alpha);
 	}
-	
-	// === OUTPUT ===
-	COLOR = vec4(final_color, final_alpha);
 }
 

@@ -38,7 +38,7 @@ func _update_attack(delta: float) -> void:
 	# Override in subclasses for specific attack patterns
 	_handle_attack(delta)
 
-func _handle_attack(delta: float) -> void:
+func _handle_attack(_delta: float) -> void:
 	# Override in subclasses
 	pass
 

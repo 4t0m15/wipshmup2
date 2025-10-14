@@ -1,0 +1,49 @@
+---
+
+description: Step-by-step workflows for common tasks
+globs: ["**/*"]
+alwaysApply: false
+---
+
+## Add a new enemy type
+1) Define template in `EnemyTemplateManager` (type, HP, behaviors).
+2) Implement movement/attack behaviors if new; export parameters.
+3) Ensure bullets spawn through `EntityFactory`; connect signals safely.
+4) Add to a wave via `WaveDefinition` or stage JSON/CFG if applicable.
+5) Play-test; cap bullet counts; verify cleanup and pooling.
+
+## Add a new stage or wave
+1) Create `StageDefinition` and `WaveDefinition` resources.
+2) Use formation helpers; validate counts and defaults.
+3) Register stage in `StageTemplateManager` (only registered stages are traversed).
+4) Test progression and boss entry; ensure stage loops if fewer stages exist.
+
+## Add a new boss
+1) Define boss template + phases; use data-driven phase behaviors.
+2) Ensure behaviors are added directly (not deferred) once boss is in-tree.
+3) Hook defeat into `EventBus` and stage progression.
+
+## Tweak bullet readability
+1) Adjust bullet shaders/settings via exported parameters.
+2) Consider glow/trails sparingly; keep performance in mind.
+3) Validate readability across ranks and screen shake.
+
+## Connect a signal safely
+1) Check signal existence and prevent duplicates with `is_connected()`.
+2) Use `Callable(self, "method_name")`; disconnect on cleanup/reuse.
+3) Guard handlers with `is_instance_valid()` and safe dictionary/array access.
+
+## Add a pooled bullet/enemy type
+1) Add pool registration via `EntityFactory` with limits and defaults.
+2) Expose spawn params via templates/config; avoid hardcoding.
+3) Validate reuse path: visibility toggle, signal disconnect, state reset.
+
+## Validate stage/wave data
+1) Run resource/JSON validators; supply safe defaults on missing fields.
+2) Ensure `StageTemplateManager` registration for traversal.
+3) Test under MAX bullet caps; confirm graceful degradation.
+
+## Quick debug checklist (non-intrusive)
+1) Gate logs; prefix with system (e.g., `[StageController]`).
+2) Verify node validity before use; re-check after `await`.
+3) Reproduce with minimal scene; profile allocations per frame.

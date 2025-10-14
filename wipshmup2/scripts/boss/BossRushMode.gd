@@ -109,6 +109,9 @@ func _on_boss_defeated(boss: Node) -> void:
 	bosses_defeated += 1
 	print("[BossRushMode] Boss defeated! Total: ", bosses_defeated)
 	
+	# Drop bomb when boss is defeated
+	_drop_bomb_on_boss_defeat(boss)
+	
 	# Emit boss defeated event with validation
 	var name_val = boss.get("boss_name") if boss and boss.has_method("get") else null
 	var fallback_name = boss_order[max(0, current_boss_index - 1)] if boss_order.size() > 0 else "boss"
@@ -124,6 +127,26 @@ func _on_boss_defeated(boss: Node) -> void:
 func _on_boss_hit_player() -> void:
 	"""Handle boss hitting player"""
 	EventBus.player_hit.emit()
+
+func _drop_bomb_on_boss_defeat(boss: Node) -> void:
+	"""Drop a bomb when a boss is defeated"""
+	if not boss or not is_instance_valid(boss):
+		return
+	
+	# Get boss position for bomb drop
+	var boss_position = boss.global_position
+	
+	# Get ItemDropManager and force drop a bomb
+	var item_drop_manager = get_node_or_null("/root/ItemDropManager")
+	if item_drop_manager and item_drop_manager.has_method("force_drop_item"):
+		# Use the BOMB item type from ItemDropManager
+		var bomb_type = item_drop_manager.ItemType.BOMB
+		item_drop_manager.force_drop_item(bomb_type, boss_position)
+		print("[BossRushMode] Dropped bomb at boss position: ", boss_position)
+	else:
+		# Fallback: emit item collected signal directly
+		EventBus.item_collected.emit("BOMB", 0)
+		print("[BossRushMode] Fallback: Emitted bomb collection event")
 
 func get_boss_rush_info() -> Dictionary:
 	"""Get boss rush information"""

@@ -1,0 +1,38 @@
+---
+
+description: Global overview, goals, and must-follow principles for wipshmup2
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Project Overview
+- Godot 4.5 bullet-hell shmup (320x180) with CRT aesthetics and integer scaling.
+- Event-driven architecture via autoload singletons; enemies are component-based.
+- Data-driven content (templates/configs); performance relies on pooling and safe scene ops.
+
+# High-Level Goals for the AI
+- Prefer minimal, safe edits that fit the current architecture and patterns.
+- Maintain retro visual style and bullet readability at all times.
+- Preserve event-driven decoupling; avoid tight coupling or ad-hoc cross-calls.
+- Default to safe operations and guard-clauses; never crash on nulls or bad data.
+
+# Must-Follow Principles
+- Composition over inheritance for enemies/behaviors.
+- Use signals and `EventBus` for cross-system communication.
+- Use `EntityFactory` for all spawns (player, enemies, bullets) with object pooling.
+- Use `GameState` for centralized player/game state; do not duplicate state.
+- Use Template Managers (`EnemyTemplateManager`, `BossTemplateManager`, `StageTemplateManager`).
+- Use `@export` for inspector-tunable values; keep GDScript types explicit.
+- For scene-tree modifications, prefer `call_deferred()` when needed.
+- Always check `is_instance_valid()` before using nodes; prefer `get_node_or_null()`.
+- Bounds-check arrays; return safe defaults for missing data.
+
+# When Unsure
+- Read the relevant manager/system code; follow its existing patterns.
+- Ask clarifying questions only if blocked; otherwise choose conservative, reversible edits.
+
+# Do / Don’t
+- Do keep diffs small and targeted; update related docs/configs when behavior changes.
+- Do keep performance in mind (pooling, rate limiters, low allocation per frame).
+- Don’t introduce synchronous heavy loops per frame; cache references and reuse.
+- Don’t bypass factories or managers to “just make it work.”
