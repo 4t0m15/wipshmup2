@@ -10,6 +10,12 @@ var score: int = 0
 var player_invincible: bool = false
 var player_position: Vector2 = Vector2(160, 150)
 
+# Cho Ren Sha 68K Mechanics
+var has_shield: bool = false
+var weapon_power: int = 1
+var current_loop: int = 1
+var last_extend_score: int = 0
+
 # Game Flow State
 var game_over: bool = false
 var game_paused: bool = false
@@ -74,6 +80,8 @@ func set_score(new_score: int) -> void:
 
 func add_score(amount: int) -> void:
 	set_score(score + amount)
+	# Check for million-point extends
+	_check_score_extends()
 
 # Player Invincibility
 func set_invincible(invincible: bool) -> void:
@@ -122,6 +130,12 @@ func reset_game() -> void:
 	max_chain = 0
 	last_kill_time = 0.0
 	_game_start_time = Time.get_ticks_msec() / 1000.0
+	
+	# Reset Cho Ren Sha mechanics
+	has_shield = false
+	weapon_power = 1
+	current_loop = 1
+	last_extend_score = 0
 
 # Streak System
 func update_streak() -> void:
@@ -198,3 +212,65 @@ func get_game_state() -> Dictionary:
 		"current_wave": current_wave,
 		"game_time": get_game_time()
 	}
+
+# Cho Ren Sha 68K Mechanics
+
+# Shield System
+func set_shield(shield_active: bool) -> void:
+	var old_shield = has_shield
+	has_shield = shield_active
+	if has_shield != old_shield:
+		if has_shield:
+			EventBus.shield_gained.emit()
+		else:
+			EventBus.shield_lost.emit()
+
+func consume_shield() -> bool:
+	if has_shield:
+		has_shield = false
+		EventBus.shield_absorbed.emit()
+		return true
+	return false
+
+# Weapon Power System
+func add_weapon_power(amount: int = 1) -> void:
+	weapon_power = min(weapon_power + amount, 8)
+	EventBus.weapon_power_changed.emit(weapon_power)
+
+func reset_weapon_power() -> void:
+	weapon_power = 1
+	EventBus.weapon_power_changed.emit(weapon_power)
+
+# Loop System
+func increment_loop() -> void:
+	current_loop += 1
+	EventBus.loop_incremented.emit(current_loop)
+
+# Score Extends
+func _check_score_extends() -> void:
+	# We want integer division here to get millions (e.g., 1,500,000 -> 1)
+	var current_millions = floor(score / 1000000.0)
+	var last_millions = floor(last_extend_score / 1000000.0)
+	
+	if current_millions > last_millions:
+		add_lives(1)
+		last_extend_score = score
+		EventBus.life_extended.emit("score_threshold")
+
+# Stage Completion Bonuses
+func calculate_stage_bonus() -> int:
+	var bonus = 0
+	
+	# Max weapon power bonus
+	if weapon_power >= 8:
+		bonus += 10000
+	
+	# Full bomb stock bonus (assuming max 9 bombs)
+	if bombs >= 9:
+		bonus += bombs * 5000
+	
+	# Active shield bonus
+	if has_shield:
+		bonus += 20000
+	
+	return bonus

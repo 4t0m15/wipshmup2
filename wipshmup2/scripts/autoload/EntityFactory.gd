@@ -169,6 +169,11 @@ func spawn_player_bullet(spawn_position: Vector2, direction: Vector2 = Vector2.U
 		EventBus.entity_spawned.emit(bullet, "player_bullet")
 	return bullet
 
+# Generic bullet spawn method for testing
+func spawn_bullet(spawn_position: Vector2, direction: Vector2 = Vector2.UP, speed: float = 200.0) -> Node:
+	"""Generic bullet spawn method for testing - defaults to player bullet"""
+	return spawn_player_bullet(spawn_position, direction, speed)
+
 func spawn_enemy_bullet(spawn_position: Vector2, direction: Vector2 = Vector2.DOWN, speed: float = 140.0, damage: int = 1) -> Node:
 	if not ENEMY_BULLET_SCENE:
 		push_error("[EntityFactory] Enemy bullet scene not loaded")
@@ -336,8 +341,8 @@ func _connect_enemy_signals(enemy: Node) -> void:
 		if not enemy.hit_player.is_connected(_on_enemy_hit_player):
 			enemy.hit_player.connect(_on_enemy_hit_player)
 
-func _on_enemy_killed(points: int) -> void:
-	EventBus.emit_enemy_kill(points, Vector2.ZERO, "enemy")
+func _on_enemy_killed(points: int, enemy_type: String) -> void:
+	EventBus.emit_enemy_kill(points, Vector2.ZERO, enemy_type)
 	EventBus.emit_audio("enemy_death")
 
 func _on_enemy_hit_player() -> void:

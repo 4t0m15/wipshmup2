@@ -63,9 +63,9 @@ func _start_floating_animation() -> void:
 	position.y += randf_range(-5.0, 5.0)
 
 # Static function to create damage numbers
-static func create_damage_number(parent: Node, position: Vector2, damage: int, color: Color = Color(1.0, 0.8, 0.2, 1.0)) -> DamageNumber:
+static func create_damage_number(parent: Node, spawn_position: Vector2, damage: int, color: Color = Color(1.0, 0.8, 0.2, 1.0)) -> DamageNumber:
 	var damage_number = DamageNumber.new()
-	damage_number.global_position = position
+	damage_number.global_position = spawn_position
 	damage_number.set_damage(damage)
 	damage_number.set_color(color)
 	parent.add_child(damage_number)

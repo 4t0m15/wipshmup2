@@ -121,10 +121,10 @@ func _create_simple_explosion(position: Vector2, size: float) -> void:
 	tween.tween_callback(explosion.queue_free)
 
 # Utility methods for common visual effects
-func create_damage_number(position: Vector2, damage: int, color: Color = Color.WHITE) -> void:
+func create_damage_number(spawn_position: Vector2, damage: int, color: Color = Color.WHITE) -> void:
 	"""Create a floating damage number"""
 	var damage_number = load("res://scripts/ui/DamageNumber.gd").new()
-	damage_number.global_position = position
+	damage_number.global_position = spawn_position
 	damage_number.setup(damage, color)
 	
 	var container = get_tree().current_scene.get_node_or_null("GameViewport")

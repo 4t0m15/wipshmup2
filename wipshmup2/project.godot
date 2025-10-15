@@ -33,6 +33,12 @@ GameModeManager="*res://scripts/autoload/GameModeManager.gd"
 ConfigManager="*res://scripts/autoload/ConfigManager.gd"
 CombatSystem="*res://scripts/systems/CombatSystem.gd"
 BulletReadability="*res://scripts/bullet_readability/BulletReadabilitySettings.gd"
+ErrorHandler="*res://scripts/autoload/ErrorHandler.gd"
+StabilityManager="*res://scripts/autoload/StabilityManager.gd"
+DevelopmentTools="*res://scripts/autoload/DevelopmentTools.gd"
+ParallelProcessor="*res://scripts/autoload/ParallelProcessor.gd"
+TestingFramework="*res://scripts/autoload/TestingFramework.gd"
+DevelopmentWorkflow="*res://scripts/autoload/DevelopmentWorkflow.gd"
 
 [display]
 

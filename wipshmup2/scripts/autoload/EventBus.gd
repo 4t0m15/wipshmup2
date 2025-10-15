@@ -35,7 +35,16 @@ signal wave_completed(wave_number: int)
 
 # Item Events
 signal item_dropped(item_type: String, position: Vector2)
-signal item_collected(item_type: String, value: int)
+signal item_collected(item_type: String, value: int) 
+
+# Cho Ren Sha 68K Events
+# These signals are used by HUD and other systems - not unused
+signal shield_gained
+signal shield_lost
+signal shield_absorbed
+signal weapon_power_changed(new_power: int)
+signal loop_incremented(new_loop: int)
+signal life_extended(reason: String)
 
 # Visual Effects Events
 signal screen_shake_requested(intensity: float, duration: float)
@@ -94,6 +103,14 @@ func _ready() -> void:
 	streak_changed.connect(_on_streak_changed)
 	entity_spawned.connect(_on_entity_spawned)
 	entity_destroyed.connect(_on_entity_destroyed)
+	
+	# Connect Cho Ren Sha 68K signals for basic logging
+	shield_gained.connect(_on_shield_gained)
+	shield_lost.connect(_on_shield_lost)
+	shield_absorbed.connect(_on_shield_absorbed)
+	weapon_power_changed.connect(_on_weapon_power_changed)
+	loop_incremented.connect(_on_loop_incremented)
+	life_extended.connect(_on_life_extended)
 
 # Convenience methods for common event patterns
 func emit_player_damage(amount: int) -> void:
@@ -233,3 +250,22 @@ func _on_entity_spawned(_entity: Node, entity_type: String) -> void:
 
 func _on_entity_destroyed(_entity: Node, entity_type: String) -> void:
 	print("[EventBus] Entity destroyed: ", entity_type)
+
+# Cho Ren Sha 68K Event Handlers
+func _on_shield_gained() -> void:
+	print("[EventBus] Shield gained")
+
+func _on_shield_lost() -> void:
+	print("[EventBus] Shield lost")
+
+func _on_shield_absorbed() -> void:
+	print("[EventBus] Shield absorbed")
+
+func _on_weapon_power_changed(new_power: int) -> void:
+	print("[EventBus] Weapon power changed to: ", new_power)
+
+func _on_loop_incremented(new_loop: int) -> void:
+	print("[EventBus] Loop incremented to: ", new_loop)
+
+func _on_life_extended(reason: String) -> void:
+	print("[EventBus] Life extended: ", reason)

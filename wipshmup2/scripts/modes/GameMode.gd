@@ -49,13 +49,15 @@ func get_next_stage() -> int:
 	"""Get the next stage number"""
 	# Safety check for empty progression
 	if stage_progression.is_empty():
-		print("[GameMode] Stage progression is empty")
+		print("[GameMode] Stage progression is nonexistant")
 		return -1
 	
 	if current_stage >= stage_progression.size():
 		if is_endless:
 			# Loop back to stage 1 with scaling
 			current_stage = 1
+			# Increment loop counter (Cho Ren Sha 68K mechanic)
+			GameState.increment_loop()
 			_apply_endless_scaling()
 		else:
 			# Mode complete

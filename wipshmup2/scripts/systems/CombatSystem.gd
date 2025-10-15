@@ -11,6 +11,7 @@ func _ready() -> void:
 	EventBus.boss_defeated.connect(_on_boss_defeated)
 	EventBus.bomb_used.connect(_on_bomb_used)
 	EventBus.player_hit.connect(_on_player_hit)
+	EventBus.shield_absorbed.connect(_on_shield_absorbed)
 
 func _on_bullet_hit_enemy(enemy_position: Vector2, damage: int) -> void:
 	# Find the enemy at this position and apply damage
@@ -101,6 +102,10 @@ func _on_player_hit() -> void:
 	GameState.take_lives(1)
 	EventBus.player_damaged.emit(1)
 	
+	# Reset Cho Ren Sha mechanics on death (minimal changes)
+	GameState.reset_weapon_power()
+	GameState.set_shield(false)
+	
 	# Start invincibility
 	GameState.set_invincible(true)
 	_start_invincibility_timer()
@@ -120,3 +125,36 @@ func _start_invincibility_timer() -> void:
 func _end_invincibility() -> void:
 	GameState.set_invincible(false)
 	EventBus.player_invincibility_ended.emit()
+
+func _on_shield_absorbed() -> void:
+	"""Handle shield absorption with explosion effect"""
+	print("[CombatSystem] Shield absorbed - triggering explosion effect")
+	
+	# Create visual explosion effect
+	EventBus.emit_visual_effect("explosion", {
+		"position": GameState.player_position,
+		"size": 2.0
+	})
+	
+	# Screen shake for impact
+	EventBus.emit_visual_effect("screen_shake", {
+		"intensity": 0.8,
+		"duration": 0.15
+	})
+	
+	# Damage nearby enemies (shield explosion effect)
+	_damage_nearby_enemies(GameState.player_position, 50.0, 10)
+	
+	# Play shield absorption sound
+	EventBus.emit_audio("shield_absorb")
+
+func _damage_nearby_enemies(center: Vector2, radius: float, damage: int) -> void:
+	"""Damage all enemies within radius of center point"""
+	var enemies = get_tree().get_nodes_in_group("enemy")
+	for enemy in enemies:
+		if enemy and is_instance_valid(enemy):
+			var distance = enemy.global_position.distance_to(center)
+			if distance <= radius:
+				if enemy.has_method("take_damage"):
+					enemy.take_damage(damage, "shield_explosion")
+				print("[CombatSystem] Shield explosion damaged enemy at distance: ", distance)

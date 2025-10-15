@@ -3,7 +3,7 @@ extends Area2D
 
 const GameUtils = preload("res://scripts/core/GameUtils.gd")
 
-signal killed(points: int)
+signal killed(points: int, enemy_type: String)
 signal hit_player
 
 enum Movement { STRAIGHT_DOWN, SIDE_TO_SIDE, DIVE_ATTACK, FORMATION, ESCORT, PATROL, ASCEND, SURFACE }
@@ -176,7 +176,7 @@ func take_damage(amount: int, source: String = "shot") -> void:
 		if _last_damage_source == "bomb":
 			awarded = bomb_points_override if bomb_points_override >= 0 else \
 				int(round(float(points) * max(1.0, bomb_points_multiplier)))
-		emit_signal("killed", awarded)
+		emit_signal("killed", awarded, enemy_type)
 		queue_free()
 
 func _on_area_entered(area: Area2D) -> void:

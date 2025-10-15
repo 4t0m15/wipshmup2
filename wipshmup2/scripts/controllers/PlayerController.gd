@@ -79,6 +79,15 @@ func _fire_bullet() -> void:
 func _use_bomb() -> void:
 	print("[PlayerController] BOMB USED! Remaining bombs: ", GameState.bombs)
 	
+	# Grant brief invincibility during bomb (Cho Ren Sha 68K mechanic)
+	GameState.set_invincible(true)
+	var bomb_invincibility_timer = Timer.new()
+	bomb_invincibility_timer.wait_time = 0.5
+	bomb_invincibility_timer.one_shot = true
+	bomb_invincibility_timer.timeout.connect(func(): GameState.set_invincible(false))
+	add_child(bomb_invincibility_timer)
+	bomb_invincibility_timer.start()
+	
 	# Create visual flash effect
 	EventBus.emit_visual_effect("flash", {
 		"color": Color.WHITE,
@@ -120,7 +129,7 @@ func _on_game_over() -> void:
 	# Stop player input processing
 	pass
 
-func _on_player_damaged(amount: int) -> void:
+func _on_player_damaged(_amount: int) -> void:
 	# Handle player damage feedback
 	EventBus.emit_visual_effect("screen_shake", {
 		"intensity": 0.9,

@@ -1,6 +1,6 @@
 extends Area2D
 
-signal killed(points: int)
+signal killed(points: int, enemy_type: String)
 signal hit_player
 
 @export var speed: float = 50.0
@@ -99,7 +99,7 @@ func take_damage(amount: int, source: String = "shot") -> void:
 				awarded = bomb_points_override
 			else:
 				awarded = int(round(float(points) * max(1.0, bomb_points_multiplier)))
-		emit_signal("killed", awarded)
+		emit_signal("killed", awarded, enemy_type)
 		queue_free()
 
 func _on_area_entered(area: Area2D) -> void:

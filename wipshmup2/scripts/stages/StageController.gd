@@ -231,6 +231,12 @@ func _complete_stage() -> void:
 	
 	print("[StageController] Stage completed: ", current_stage.stage_name)
 	
+	# Calculate and award stage completion bonus (Cho Ren Sha 68K mechanic)
+	var bonus = GameState.calculate_stage_bonus()
+	if bonus > 0:
+		GameState.add_score(bonus)
+		print("[StageController] Stage bonus awarded: ", bonus, " points")
+	
 	# Emit stage completed event
 	EventBus.stage_completed.emit(current_stage.stage_number)
 	stage_completed.emit(current_stage.stage_number)
@@ -368,9 +374,9 @@ func _connect_enemy_signals(enemy: Node) -> void:
 	if enemy.has_signal("hit_player"):
 		enemy.hit_player.connect(_on_enemy_hit_player)
 
-func _on_enemy_killed(points: int) -> void:
+func _on_enemy_killed(points: int, enemy_type: String) -> void:
 	"""Handle enemy killed"""
-	EventBus.emit_enemy_kill(points, Vector2.ZERO, "enemy")
+	EventBus.emit_enemy_kill(points, Vector2.ZERO, enemy_type)
 	enemy_killed.emit(points, Vector2.ZERO)
 
 func _on_enemy_hit_player() -> void:

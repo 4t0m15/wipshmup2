@@ -13,6 +13,9 @@ var _rainbow_streak_active: bool = false
 @onready var _fps_label: Label = $TopBar/HBox/TPSLabel
 @onready var _bombs_label: Label = $TopBar/HBox/BombsLabel
 @onready var _streak_label: Label = $TopBar/HBox/StreakLabel
+@onready var _shield_label: Label = $TopBar/HBox/ShieldLabel
+@onready var _power_label: Label = $TopBar/HBox/PowerLabel
+@onready var _loop_label: Label = $TopBar/HBox/LoopLabel
 @onready var _streak_timer_bar: ProgressBar = $StreakTimer/ProgressBar
 @onready var _overlay_dim: ColorRect = $CenterOverlay/OverlayDim
 @onready var _msg_panel: PanelContainer = $CenterOverlay/MessagePanel
@@ -29,6 +32,16 @@ func _ready() -> void:
 	
 	# Create boss health bar dynamically
 	_create_boss_health_bar()
+	
+	# Connect Cho Ren Sha 68K signals
+	EventBus.shield_gained.connect(_on_shield_gained)
+	EventBus.shield_lost.connect(_on_shield_lost)
+	EventBus.weapon_power_changed.connect(_on_weapon_power_changed)
+	EventBus.loop_incremented.connect(_on_loop_incremented)
+	EventBus.life_extended.connect(_on_life_extended)
+	
+	# Initialize Cho Ren Sha displays with current values
+	_update_cho_ren_sha_displays()
 
 func _process(delta: float) -> void:
 	_rainbow_time += delta * 3.0  # Speed up the rainbow effect
@@ -260,8 +273,7 @@ func _create_boss_health_bar() -> void:
 	container.name = "BossHealthContainer"
 	container.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	container.position = Vector2(0, 30)  # Below the top bar
-	# Set size after anchor preset to avoid warning
-	container.set_deferred("size", Vector2(320, 14))
+	container.size = Vector2(320, 14)  # Set size before adding to scene
 	add_child(container)
 	
 	# Create the boss health bar
@@ -273,7 +285,7 @@ func _create_boss_health_bar() -> void:
 	name_label.name = "NameLabel"
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.position = Vector2(0, 0)
-	name_label.set_deferred("size", Vector2(144, 7))
+	name_label.size = Vector2(144, 7)  # Set size before adding to scene
 	name_label.add_theme_font_size_override("font_size", 5)
 	name_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6, 1.0))
 	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
@@ -283,12 +295,12 @@ func _create_boss_health_bar() -> void:
 	var health_container = Control.new()
 	health_container.name = "HealthContainer"
 	health_container.position = Vector2(0, 7)
-	health_container.set_deferred("size", Vector2(144, 7))
+	health_container.size = Vector2(144, 7)  # Set size before adding to scene
 	_boss_health_bar.add_child(health_container)
 	
 	# Position the boss health bar in the center
 	_boss_health_bar.position = Vector2(88, 0)
-	_boss_health_bar.set_deferred("size", Vector2(144, 14))
+	_boss_health_bar.size = Vector2(144, 14)  # Set size before adding to scene
 	_boss_health_bar.visible = false
 	
 	container.add_child(_boss_health_bar)
@@ -302,3 +314,66 @@ func hide_boss_health() -> void:
 	"""Hide the boss health bar"""
 	if is_instance_valid(_boss_health_bar) and _boss_health_bar.has_method("hide_boss_health"):
 		_boss_health_bar.hide_boss_health()
+
+# Cho Ren Sha 68K Display Methods
+func set_shield(has_shield: bool) -> void:
+	"""Update shield display"""
+	if has_shield:
+		_shield_label.text = "Shield: ON"
+		_shield_label.add_theme_color_override("font_color", Color(0.4, 1.0, 0.4, 1.0))  # Green when active
+	else:
+		_shield_label.text = "Shield: OFF"
+		_shield_label.add_theme_color_override("font_color", Color(0.4, 0.8, 1, 1))  # Blue when off
+
+func set_weapon_power(power_level: int) -> void:
+	"""Update weapon power display"""
+	_power_label.text = "Power: %d" % power_level
+	
+	# Color coding based on power level
+	if power_level >= 8:
+		_power_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2, 1.0))  # Red for max
+	elif power_level >= 5:
+		_power_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2, 1.0))  # Orange for high
+	elif power_level >= 3:
+		_power_label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.2, 1.0))  # Yellow for medium
+	else:
+		_power_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2, 1.0))  # Default orange
+
+func set_loop(loop_number: int) -> void:
+	"""Update loop display"""
+	_loop_label.text = "Loop: %d" % loop_number
+	
+	# Color coding based on loop number
+	if loop_number >= 3:
+		_loop_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2, 1.0))  # Red for high loops
+	elif loop_number >= 2:
+		_loop_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2, 1.0))  # Orange for loop 2
+	else:
+		_loop_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.8, 1.0))  # Pink for loop 1
+
+# Cho Ren Sha 68K Signal Handlers
+func _on_shield_gained() -> void:
+	set_shield(true)
+	show_popup("SHIELD ACTIVATED", Color(0.4, 1.0, 0.4, 1.0))
+
+func _on_shield_lost() -> void:
+	set_shield(false)
+
+func _on_weapon_power_changed(new_power: int) -> void:
+	set_weapon_power(new_power)
+	if new_power > 1:
+		show_popup("POWER UP: %d" % new_power, Color(1.0, 0.8, 0.2, 1.0))
+
+func _on_loop_incremented(new_loop: int) -> void:
+	set_loop(new_loop)
+	show_popup("LOOP %d STARTED!" % new_loop, Color(1.0, 0.4, 0.8, 1.0))
+
+func _on_life_extended(reason: String) -> void:
+	if reason == "score_threshold":
+		show_popup("EXTEND! +1 LIFE", Color(1.0, 0.9, 0.3, 1.0))
+
+func _update_cho_ren_sha_displays() -> void:
+	"""Initialize Cho Ren Sha displays with current GameState values"""
+	set_shield(GameState.has_shield)
+	set_weapon_power(GameState.weapon_power)
+	set_loop(GameState.current_loop)

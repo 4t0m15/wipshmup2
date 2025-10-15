@@ -72,6 +72,11 @@ func take_damage(amount: int = 1) -> void:
 		print("[Player] take_damage called but player is invincible - ignoring")
 		return
 	
+	# Check shield first (Cho Ren Sha 68K mechanic)
+	if GameState.consume_shield():
+		print("[Player] Shield absorbed damage")
+		return
+	
 	print("[Player] Taking damage: amount=", amount, " position=", position)
 	
 	# Start invincibility period

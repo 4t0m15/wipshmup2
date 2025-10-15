@@ -12,9 +12,14 @@ var crash_count: int = 0
 var max_crashes: int = 10
 
 func _ready() -> void:
-	# Set up error handling
-	Engine.get_singleton("Engine").set_error_handler(_on_error)
-	print("[ErrorHandler] Error handler initialized")
+	# Initialize error handler
+	print("[ErrorHandler] Enhanced error handler initialized")
+	
+	# Connect to stability manager if available
+	var stability_manager = get_node_or_null("/root/StabilityManager")
+	if stability_manager and stability_manager.has_method("_on_error_occurred"):
+		error_occurred.connect(stability_manager._on_error_occurred)
+		critical_error_occurred.connect(stability_manager._on_critical_error)
 
 func _on_error(error_message: String, error_type: String, error_file: String, error_line: int) -> void:
 	"""Handle engine errors"""
@@ -58,7 +63,7 @@ func _handle_crash_limit_reached() -> void:
 	"""Handle when crash limit is reached"""
 	print("[ErrorHandler] CRITICAL: Too many crashes detected, attempting recovery")
 	
-	# Try to recover by restarting the game
+	# Try to recover by restarting the game6
 	if get_tree():
 		get_tree().reload_current_scene()
 	else:
@@ -133,9 +138,11 @@ func clear_error_log() -> void:
 	error_log.clear()
 	crash_count = 0
 
+
+#yo pierre you wanna come out here
 func get_recent_errors(count: int = 10) -> Array[Dictionary]:
 	"""Get recent errors"""
-	var start_index = max(0, error_log.size() - count)
+	var start_index = max(0, error_log.size() - count)#
 	return error_log.slice(start_index)
 
 func is_stable() -> bool:

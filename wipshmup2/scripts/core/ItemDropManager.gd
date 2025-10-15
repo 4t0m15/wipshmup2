@@ -42,14 +42,23 @@ func _ready() -> void:
 
 # Public API -------------------------------------------------------
 
-func try_drop_item(position: Vector2, enemy_points: int = 100) -> void:
+func try_drop_item(position: Vector2, enemy_points: int = 100, enemy_type: String = "") -> void:
+	# Cho Ren Sha 68K: All enemies drop triangle items instead of individual items
 	var drop_chance: float = _calculate_drop_chance(enemy_points)
 	if _rng.randf() <= drop_chance:
+		# Spawn triangle item instead of individual items
+		spawn_triangle_item(position)
+		return
+	
+	# Legacy individual item spawning (kept for backward compatibility)
+	# Only used if triangle spawning is disabled or for special cases
+	if enemy_type == "legacy_individual":
 		var item_type: ItemType = _select_item_type()
 		_spawn_item(item_type, position)
 
-func force_drop_item(item_type: ItemType, position: Vector2) -> void:
-	_spawn_item(item_type, position)
+func force_drop_item(_item_type: ItemType, position: Vector2) -> void:
+	# Cho Ren Sha 68K: Force drop triangle items instead of individual items
+	spawn_triangle_item(position)
 
 func get_drop_rate(item_type: ItemType) -> float:
 	return drop_rates.get(item_type, 0.0)
@@ -101,3 +110,44 @@ func _deferred_emit_collected(item_type: ItemType) -> void:
 func _emit_collected(item_type: ItemType) -> void:
 	var value: int = int(score_values.get(item_type, 0))
 	emit_signal("item_collected", str(item_type), value)
+
+# Triangle Item System (Cho Ren Sha 68K)
+func spawn_triangle_item(position: Vector2) -> void:
+	"""Spawn a triangle item with three pickups"""
+	const TRIANGLE_SCENE = preload("res://scenes/items/TriangleItem.tscn")
+	
+	if not TRIANGLE_SCENE:
+		push_error("TriangleItem scene not found")
+		return
+	
+	var triangle = TRIANGLE_SCENE.instantiate()
+	if not triangle:
+		push_error("Failed to instantiate TriangleItem")
+		return
+	
+	# Add to scene tree using call_deferred to avoid physics query conflicts
+	var main_scene = get_tree().current_scene
+	if main_scene:
+		# Set position first, then add to scene deferred
+		triangle.global_position = position
+		main_scene.call_deferred("add_child", triangle)
+		print("[ItemDropManager] Spawned triangle item at ", position)
+	else:
+		push_error("No current scene to add triangle item")
+		triangle.queue_free()
+
+# Test method for triangle items (can be called from debug)
+func test_spawn_triangle() -> void:
+	"""Test method to spawn a triangle item at center screen"""
+	spawn_triangle_item(Vector2(160, 100))
+
+# Test method for red carrier enemy (can be called from debug)
+func test_spawn_red_carrier() -> void:
+	"""Test method to spawn a red carrier enemy that drops triangle items"""
+	# Create a simple test enemy with red_carrier type
+	var test_enemy = preload("res://scenes/enemy/Enemy.tscn").instantiate()
+	if test_enemy:
+		test_enemy.enemy_type = "red_carrier"
+		test_enemy.global_position = Vector2(160, 50)
+		get_tree().current_scene.add_child(test_enemy)
+		print("[ItemDropManager] Spawned test red carrier enemy")

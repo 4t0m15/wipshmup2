@@ -207,7 +207,7 @@ func _update_bomb_display() -> void:
 	if is_instance_valid(hud):
 		hud.call("set_bombs", bombs)
 
-func _on_enemy_killed(points: int, enemy_position: Vector2) -> void:
+func _on_enemy_killed(points: int, enemy_position: Vector2, enemy_type: String = "enemy") -> void:
 	"""Handle enemy killed event"""
 	score += points
 	_update_score_label()
@@ -227,7 +227,7 @@ func _on_enemy_killed(points: int, enemy_position: Vector2) -> void:
 
 	# Try to drop items when enemies are killed using actual enemy position
 	if item_drop_manager:
-		item_drop_manager.try_drop_item(enemy_position, points)
+		item_drop_manager.try_drop_item(enemy_position, points, enemy_type)
 
 	# Screen shake: low base intensity, scaled logarithmically by streak
 	if is_instance_valid(screen_shake):

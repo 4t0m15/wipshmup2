@@ -3,7 +3,14 @@
     "basic_fighter": {
       "health": 10,
       "speed": 50,
-      "points": 100
+      "points": 100,
+      "drops_triangle_item": false
+    },
+    "red_carrier": {
+      "health": 15,
+      "speed": 30,
+      "points": 200,
+      "drops_triangle_item": true
     }
   }
 }
