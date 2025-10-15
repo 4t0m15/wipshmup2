@@ -16,6 +16,11 @@ var weapon_power: int = 1
 var current_loop: int = 1
 var last_extend_score: int = 0
 
+# Fire Rate Boost System
+var fire_rate_boost_active: bool = false
+var fire_rate_boost_timer: float = 0.0
+var fire_rate_multiplier: float = 1.0
+
 # Game Flow State
 var game_over: bool = false
 var game_paused: bool = false
@@ -40,6 +45,10 @@ var _game_start_time: float = 0.0
 func _ready() -> void:
 	print("[GameState] Game state system initialized")
 	_game_start_time = Time.get_ticks_msec() / 1000.0
+
+func _process(delta: float) -> void:
+	# Update fire rate boost timer
+	update_fire_rate_boost(delta)
 
 # Player State Management
 func set_lives(new_lives: int) -> void:
@@ -136,6 +145,11 @@ func reset_game() -> void:
 	weapon_power = 1
 	current_loop = 1
 	last_extend_score = 0
+	
+	# Reset fire rate boost
+	fire_rate_boost_active = false
+	fire_rate_boost_timer = 0.0
+	fire_rate_multiplier = 1.0
 
 # Streak System
 func update_streak() -> void:
@@ -274,3 +288,26 @@ func calculate_stage_bonus() -> int:
 		bonus += 20000
 	
 	return bonus
+
+# Fire Rate Boost System
+func activate_fire_rate_boost(duration: float = 10.0) -> void:
+	"""Activate fire rate boost for specified duration"""
+	fire_rate_boost_active = true
+	fire_rate_boost_timer = duration
+	fire_rate_multiplier = 2.0  # Double fire rate
+	EventBus.fire_rate_boost_activated.emit(duration)
+	print("[GameState] Fire rate boost activated for ", duration, " seconds")
+
+func update_fire_rate_boost(delta: float) -> void:
+	"""Update fire rate boost timer"""
+	if fire_rate_boost_active:
+		fire_rate_boost_timer -= delta
+		if fire_rate_boost_timer <= 0.0:
+			fire_rate_boost_active = false
+			fire_rate_multiplier = 1.0
+			EventBus.fire_rate_boost_ended.emit()
+			print("[GameState] Fire rate boost ended")
+
+func get_fire_rate_multiplier() -> float:
+	"""Get current fire rate multiplier"""
+	return fire_rate_multiplier if fire_rate_boost_active else 1.0

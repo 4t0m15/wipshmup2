@@ -45,10 +45,16 @@ func _ready() -> void:
 func try_drop_item(position: Vector2, enemy_points: int = 100, enemy_type: String = "") -> void:
 	# Cho Ren Sha 68K: All enemies drop triangle items instead of individual items
 	var drop_chance: float = _calculate_drop_chance(enemy_points)
-	if _rng.randf() <= drop_chance:
+	print("[ItemDropManager] Trying to drop item at ", position, " with ", drop_chance * 100, "% chance")
+	var roll = _rng.randf()
+	print("[ItemDropManager] Roll: ", roll, " vs chance: ", drop_chance)
+	if roll <= drop_chance:
 		# Spawn triangle item instead of individual items
+		print("[ItemDropManager] Drop successful! Spawning triangle item")
 		spawn_triangle_item(position)
 		return
+	else:
+		print("[ItemDropManager] Drop failed - no item spawned")
 	
 	# Legacy individual item spawning (kept for backward compatibility)
 	# Only used if triangle spawning is disabled or for special cases
@@ -77,7 +83,7 @@ func get_drop_chance(_enemy_type: String) -> float:
 # Internal logic ---------------------------------------------------
 
 func _calculate_drop_chance(enemy_points: int) -> float:
-	var base_chance := 0.2
+	var base_chance := 0.8  # Increased from 0.2 to 0.8 for testing
 	var point_multiplier: float = min(enemy_points / 1000.0, 2.0)
 	return base_chance * point_multiplier
 
@@ -114,6 +120,7 @@ func _emit_collected(item_type: ItemType) -> void:
 # Triangle Item System (Cho Ren Sha 68K)
 func spawn_triangle_item(position: Vector2) -> void:
 	"""Spawn a triangle item with three pickups"""
+	print("[ItemDropManager] spawn_triangle_item called at position: ", position)
 	const TRIANGLE_SCENE = preload("res://scenes/items/TriangleItem.tscn")
 	
 	if not TRIANGLE_SCENE:
@@ -125,12 +132,14 @@ func spawn_triangle_item(position: Vector2) -> void:
 		push_error("Failed to instantiate TriangleItem")
 		return
 	
-	# Add to scene tree using call_deferred to avoid physics query conflicts
+	print("[ItemDropManager] Triangle item instantiated successfully")
+	
+	# Add to scene tree - try immediate first, then deferred if needed
 	var main_scene = get_tree().current_scene
 	if main_scene:
-		# Set position first, then add to scene deferred
+		# Set position first, then add to scene
 		triangle.global_position = position
-		main_scene.call_deferred("add_child", triangle)
+		main_scene.add_child(triangle)
 		print("[ItemDropManager] Spawned triangle item at ", position)
 	else:
 		push_error("No current scene to add triangle item")
@@ -139,7 +148,14 @@ func spawn_triangle_item(position: Vector2) -> void:
 # Test method for triangle items (can be called from debug)
 func test_spawn_triangle() -> void:
 	"""Test method to spawn a triangle item at center screen"""
+	print("[ItemDropManager] TEST: Force spawning triangle item")
 	spawn_triangle_item(Vector2(160, 100))
+
+func force_spawn_triangle_at_player() -> void:
+	"""Force spawn triangle item at player position for testing"""
+	var player_pos = GameState.player_position
+	print("[ItemDropManager] TEST: Force spawning triangle at player position: ", player_pos)
+	spawn_triangle_item(player_pos)
 
 # Test method for red carrier enemy (can be called from debug)
 func test_spawn_red_carrier() -> void:

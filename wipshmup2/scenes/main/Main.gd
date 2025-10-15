@@ -12,6 +12,11 @@ var stage_controller: StageController
 var space_background: Node
 var item_drop_manager: Node
 var bgm_player: AudioStreamPlayer
+var item_popup: Node
+
+# Triangle item collection tracking
+var _collected_items: Array[String] = []
+var _collection_timer: Timer
 
 var game_over := false
 var lives := 3
@@ -20,9 +25,9 @@ var score := 0
 
 # Rank pressure system
 var rank_manager: Node
-var base_background_color: Color = Color.WHITE
+var base_background_color: Color = Color.WHITE #why all caps its like WHITE like WHITE WHITE like my neck is red and my collar is blue type WHITE lmao
 
-# Streak system for kills (used to scale screen shake)
+# Streak system for eliminations (used to scale screen shake -- now it is defunct)
 var chain_count: int = 0
 var max_chain: int = 0
 var last_kill_time_s: float = 0.0
@@ -64,6 +69,15 @@ func _ready() -> void:
 	_setup_visual_clarity_systems()
 
 	hud = $HUD
+	item_popup = $ItemPopup
+	
+	# Setup triangle item collection timer
+	_collection_timer = Timer.new()
+	_collection_timer.wait_time = 0.1  # Small delay to collect multiple items
+	_collection_timer.one_shot = true
+	_collection_timer.timeout.connect(_show_collected_items)
+	add_child(_collection_timer)
+	
 	_update_score_label()
 	_update_lives_display()
 	_update_bomb_display()
@@ -258,6 +272,19 @@ func _on_item_collected(item_type: String, value: int) -> void:
 		"POWER_UP", "SHIELD":
 			# Handle power-up effects here
 			pass
+		# Triangle item types
+		"HEART", "FIRE_RATE", "BOMB":
+			# Collect triangle items for batch display
+			_collected_items.append(item_type)
+			_collection_timer.start()  # Restart timer for batch collection
+			print("[Main] Triangle item collected: ", item_type)
+
+func _show_collected_items() -> void:
+	"""Show popup with all collected triangle items"""
+	if _collected_items.size() > 0 and item_popup and item_popup.has_method("show_items_collected"):
+		item_popup.show_items_collected(_collected_items)
+		print("[Main] Showing collected items: ", _collected_items)
+		_collected_items.clear()
 
 func _fire_bullet() -> void:
 	"""Fire a bullet from the player"""

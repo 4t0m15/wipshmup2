@@ -45,6 +45,8 @@ signal shield_absorbed
 signal weapon_power_changed(new_power: int)
 signal loop_incremented(new_loop: int)
 signal life_extended(reason: String)
+signal fire_rate_boost_activated(duration: float)
+signal fire_rate_boost_ended
 
 # Visual Effects Events
 signal screen_shake_requested(intensity: float, duration: float)
@@ -111,6 +113,8 @@ func _ready() -> void:
 	weapon_power_changed.connect(_on_weapon_power_changed)
 	loop_incremented.connect(_on_loop_incremented)
 	life_extended.connect(_on_life_extended)
+	fire_rate_boost_activated.connect(_on_fire_rate_boost_activated)
+	fire_rate_boost_ended.connect(_on_fire_rate_boost_ended)
 
 # Convenience methods for common event patterns
 func emit_player_damage(amount: int) -> void:
@@ -269,3 +273,9 @@ func _on_loop_incremented(new_loop: int) -> void:
 
 func _on_life_extended(reason: String) -> void:
 	print("[EventBus] Life extended: ", reason)
+
+func _on_fire_rate_boost_activated(duration: float) -> void:
+	print("[EventBus] Fire rate boost activated for ", duration, " seconds")
+
+func _on_fire_rate_boost_ended() -> void:
+	print("[EventBus] Fire rate boost ended")

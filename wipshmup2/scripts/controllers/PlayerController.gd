@@ -18,6 +18,10 @@ func _ready() -> void:
 	bullet_timer.wait_time = GameState.shot_cooldown
 	bullet_timer.one_shot = true
 	add_child(bullet_timer)
+	
+	# Connect to fire rate boost signals
+	EventBus.fire_rate_boost_activated.connect(_on_fire_rate_boost_activated)
+	EventBus.fire_rate_boost_ended.connect(_on_fire_rate_boost_ended)
 
 func initialize(player_node: Node) -> void:
 	player = player_node
@@ -31,6 +35,7 @@ func _process(delta: float) -> void:
 	_handle_movement(delta)
 	_handle_shooting()
 	_handle_bomb()
+	_handle_debug_input()
 
 func _handle_movement(delta: float) -> void:
 	if not player or not is_instance_valid(player):
@@ -67,6 +72,12 @@ func _handle_bomb() -> void:
 		if GameState.use_bomb():
 			EventBus.input_bomb.emit(true)
 			_use_bomb()
+
+func _handle_debug_input() -> void:
+	# Debug: Press F key to spawn triangle item
+	if Input.is_key_pressed(KEY_F):
+		print("[PlayerController] DEBUG: Spawning triangle item")
+		ItemDropManager.force_spawn_triangle_at_player()
 
 func _fire_bullet() -> void:
 	if not player or not is_instance_valid(player):
@@ -135,6 +146,17 @@ func _on_player_damaged(_amount: int) -> void:
 		"intensity": 0.9,
 		"duration": 0.10
 	})
-	
-	# Break streak on damage
-	GameState.break_streak()
+
+func _on_fire_rate_boost_activated(_duration: float) -> void:
+	"""Handle fire rate boost activation"""
+	_update_fire_rate()
+
+func _on_fire_rate_boost_ended() -> void:
+	"""Handle fire rate boost ending"""
+	_update_fire_rate()
+
+func _update_fire_rate() -> void:
+	"""Update bullet timer based on current fire rate multiplier"""
+	var multiplier = GameState.get_fire_rate_multiplier()
+	bullet_timer.wait_time = GameState.shot_cooldown / multiplier
+	print("[PlayerController] Fire rate updated: multiplier = ", multiplier)

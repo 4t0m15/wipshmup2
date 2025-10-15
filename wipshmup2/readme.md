@@ -240,10 +240,6 @@ controls: arrow keys to move x to deploy bomb and space to shoot
 
 ---
 
-## Event-Driven Architecture Refactor
-
-The codebase has been completely refactored from a tightly-coupled signal-based architecture to a clean, event-driven architecture with data-driven content creation.
-
 ### Core Infrastructure
 
 ```
@@ -456,85 +452,4 @@ scripts/
    └─ PracticeMode.gd    # Practice mode
 ```
 
-### Key Benefits
-
-**Maintainability**
-- Clear separation of concerns
-- Single responsibility principle
-- Easy to locate and fix issues
-- Modular architecture
-
-**Extensibility**
-- Easy to add new enemy types
-- Easy to add new stages
-- Easy to add new game modes
-- Easy to add new visual effects
-
-**Performance**
-- Object pooling for bullets
-- Efficient event system
-- Reduced signal overhead
-- Optimized entity spawning
-
-**Development Experience**
-- Faster iteration cycles
-- Less debugging time
-- Clearer code structure
-- Better documentation
-- Hot-reload configuration
-
-### Migration Guide
-
-**For Developers**
-1. Use EventBus instead of direct signal connections
-2. Use GameState for game state instead of scattered variables
-3. Use EntityFactory for spawning entities
-4. Use template managers for content creation
-5. Use ConfigManager for configuration
-
-**For Content Creators**
-1. Define enemies in EnemyTemplateManager
-2. Define bosses in BossTemplateManager
-3. Define stages in StageTemplateManager
-4. Use JSON/CFG files for configuration
-
-### Validation Checklist
-
-**Core Systems**
-- EventBus system functions correctly
-- GameState management works
-- EntityFactory spawning works
-- All autoload systems initialize
-
-**Game Systems**
-- PlayerController handles input
-- CombatSystem manages damage
-- VisualEffectsSystem applies effects
-- RankPressureSystem provides feedback
-
-**Content Systems**
-- Enemy templates spawn correctly
-- Boss templates work with phases
-- Stage definitions load properly
-- Game modes function as expected
-
-**Performance**
-- 60 FPS maintained
-- No memory leaks
-- Object pooling works
-- Event system is efficient
-
-**Functionality**
-- All existing features preserved
-- No regressions introduced
-- New capabilities work
-- User experience maintained
-
----
-
 *Thanks for reading! :)*
-=======
-need to redo this
-Campaign planning:
-    - No scoring just a ranking system based on ratios of k/d accuracy and enemies missed like a lot of fighting games
-    - Choice between animated cutscenes
