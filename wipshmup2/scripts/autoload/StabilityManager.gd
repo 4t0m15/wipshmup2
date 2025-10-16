@@ -20,6 +20,12 @@ var memory_usage: Array[int] = []
 var bullet_count_history: Array[int] = []
 var max_history_size: int = 60  # 1 second at 60fps
 
+# Bullet tracking (event-driven with sampling fallback)
+var bullet_count: int = 0
+var bullet_sample_accum: float = 0.0
+@export var bullet_sample_interval: float = 0.25
+var last_bullet_count: int = 0
+
 # Development tools
 var debug_overlay_enabled: bool = false
 var performance_overlay_enabled: bool = false
@@ -70,6 +76,11 @@ func _connect_events() -> void:
 			EventBus.bullet_hit_enemy.connect(_on_bullet_hit)
 		if EventBus.has_signal("enemy_killed"):
 			EventBus.enemy_killed.connect(_on_enemy_killed)
+		# Track bullets via entity events to avoid group scans
+		if EventBus.has_signal("entity_spawned") and not EventBus.entity_spawned.is_connected(_on_entity_spawned):
+			EventBus.entity_spawned.connect(_on_entity_spawned)
+		if EventBus.has_signal("entity_destroyed") and not EventBus.entity_destroyed.is_connected(_on_entity_destroyed):
+			EventBus.entity_destroyed.connect(_on_entity_destroyed)
 
 func _update_performance_metrics(delta: float) -> void:
 	"""Update performance metrics"""
@@ -84,9 +95,12 @@ func _update_performance_metrics(delta: float) -> void:
 	if memory_usage.size() > max_history_size:
 		memory_usage.pop_front()
 	
-	# Bullet count tracking
-	var bullet_count = _get_bullet_count()
-	bullet_count_history.append(bullet_count)
+	# Bullet count tracking (sampled)
+	bullet_sample_accum += delta
+	if bullet_sample_accum >= bullet_sample_interval:
+		last_bullet_count = _get_bullet_count()
+		bullet_sample_accum = 0.0
+	bullet_count_history.append(last_bullet_count)
 	if bullet_count_history.size() > max_history_size:
 		bullet_count_history.pop_front()
 	
@@ -94,9 +108,16 @@ func _update_performance_metrics(delta: float) -> void:
 	_check_performance_thresholds()
 
 func _get_bullet_count() -> int:
-	"""Get current bullet count"""
-	var bullets = get_tree().get_nodes_in_group("player_bullet") + get_tree().get_nodes_in_group("enemy_bullet")
-	return bullets.size()
+	"""Get current bullet count (event-driven)"""
+	return bullet_count
+
+func _on_entity_spawned(_entity: Node, entity_type: String) -> void:
+	if entity_type == "player_bullet" or entity_type == "enemy_bullet":
+		bullet_count += 1
+
+func _on_entity_destroyed(_entity: Node, entity_type: String) -> void:
+	if entity_type == "player_bullet" or entity_type == "enemy_bullet":
+		bullet_count = max(0, bullet_count - 1)
 
 func _check_performance_thresholds() -> void:
 	"""Check for performance issues"""

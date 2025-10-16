@@ -44,13 +44,14 @@ func _ready() -> void:
 	# Apply high-quality font settings
 	_apply_high_quality_font_settings()
 	
-	# Connect Cho Ren Sha 68K signals
+	# Connect Cho Ren Sha 68K signals - 
+	#i have to give this a new name bc im sick of typing it out and maybe i should just type out the kanji -- atleast i think it kanji or maybe its katakana i have no idea, and also who gives a shit?
 	EventBus.shield_gained.connect(_on_shield_gained)
 	EventBus.shield_lost.connect(_on_shield_lost)
 	EventBus.weapon_power_changed.connect(_on_weapon_power_changed)
 	EventBus.loop_incremented.connect(_on_loop_incremented)
 	EventBus.life_extended.connect(_on_life_extended)
-	
+	 
 	# Initialize Cho Ren Sha displays with current values
 	_update_cho_ren_sha_displays()
 
@@ -140,7 +141,7 @@ func set_bombs(value: int) -> void:
 
 func set_chain(current_chain: int, max_chain: int) -> void:
 	if current_chain > 0:
-		_streak_label.text = "Streak: %d (Best: %d)" % [current_chain, max_chain]
+		_streak_label.text = "S: %d (B: %d)" % [current_chain, max_chain]
 		# Add visual emphasis for longer streaks
 		if current_chain >= 10:
 			_rainbow_streak_active = true  # Enable rainbow effect for 10+ kill streaks!
@@ -158,7 +159,7 @@ func set_chain(current_chain: int, max_chain: int) -> void:
 		_streak_timer_bar.value = 1.0
 		_streak_timer_bar.modulate = Color(0.4, 1.0, 0.4, 1.0)  # Start with green
 	else:
-		_streak_label.text = "Streak: 0 (Best: %d)" % max_chain
+		_streak_label.text = "S: 0 (B: %d)" % max_chain
 		_rainbow_streak_active = false
 		_streak_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1.0))  # Gray when no streak
 		# Hide the timer bar when no streak
@@ -292,7 +293,7 @@ func _create_boss_health_bar() -> void:
 	container.name = "BossHealthContainer"
 	container.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	container.position = Vector2(0, 30)  # Below the top bar
-	call_deferred("_set_boss_container_size", container, Vector2(320, 12))
+	container.size = Vector2(320, 16)  # Set size before adding to scene
 	add_child(container)
 	
 	# Create the boss health bar
@@ -304,11 +305,11 @@ func _create_boss_health_bar() -> void:
 	name_label.name = "NameLabel"
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.position = Vector2(0, 0)
-	call_deferred("_set_label_size", name_label, Vector2(144, 10))
-	name_label.add_theme_font_size_override("font_size", 6)
+	name_label.size = Vector2(144, 12)  # Set size before adding to scene
+	name_label.add_theme_font_size_override("font_size", 7)
 	name_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6, 1.0))
-	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
-	name_label.add_theme_constant_override("outline_size", 1)
+	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
+	name_label.add_theme_constant_override("outline_size", 2)
 	_boss_health_bar.add_child(name_label)
 	
 	var health_container = Control.new()
@@ -317,7 +318,7 @@ func _create_boss_health_bar() -> void:
 	health_container.size = Vector2(144, 7)  # Set size before adding to scene
 	_boss_health_bar.add_child(health_container)
 	
-	# Position the boss health bar in the center
+	# Position the boss health in the center
 	_boss_health_bar.position = Vector2(88, 0)
 	_boss_health_bar.size = Vector2(144, 14)  # Set size before adding to scene
 	_boss_health_bar.visible = false
@@ -407,8 +408,7 @@ func _apply_high_quality_font_settings() -> void:
 		if label is Label:
 			# Enable font oversampling for better quality at small sizes
 			label.add_theme_constant_override("outline_size", 1)
-			# Use high-quality font rendering
-			label.add_theme_font_override("font", null)  # Use default font with better settings
+			# Use high-quality font rendering - removed null font override
 			# Ensure crisp rendering
 			label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 

@@ -14,6 +14,10 @@ var development_mode: bool = false
 var auto_testing_enabled: bool = false
 var auto_validation_enabled: bool = false
 
+# Stability auto-fix cooldown
+var last_stability_fix_ms: int = 0
+@export var stability_fix_cooldown_ms: int = 5000
+
 # Development phases
 var phases: Array[String] = ["idle", "testing", "validation", "optimization", "stability_check", "deployment"]
 var current_phase_index: int = 0
@@ -174,15 +178,21 @@ func _optimize_bullet_count() -> void:
 	_log_development_event("Bullet count optimization applied")
 
 func _improve_stability() -> void:
-	"""Improve system stability"""
+	"""Improve system stability with cooldown to avoid spam"""
+	var now := Time.get_ticks_msec()
+	if now - last_stability_fix_ms < stability_fix_cooldown_ms:
+		return
+	last_stability_fix_ms = now
+
 	var error_handler = get_node_or_null("/root/ErrorHandler")
 	if error_handler and error_handler.has_method("clear_error_log"):
 		error_handler.clear_error_log()
-	
+
 	var stability_manager = get_node_or_null("/root/StabilityManager")
 	if stability_manager and stability_manager.has_method("clear_error_log"):
 		stability_manager.clear_error_log()
-	
+
+	workflow_metrics["stability_improvements"] = workflow_metrics.get("stability_improvements", 0) + 1
 	_log_development_event("Stability improvements applied")
 
 func _handle_crashes() -> void:

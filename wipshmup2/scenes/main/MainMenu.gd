@@ -653,7 +653,7 @@ func _setup_viewport_and_crt() -> void:
 	_viewport_container.name = "View"
 	# Fill the whole viewport; SubViewport will be stretched by the container
 	_viewport_container.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_viewport_container.stretch = true
+	_viewport_container.stretch = false  # Disable stretch to allow manual size control
 	# Use the actual viewport size for proper scaling
 	var vp := get_viewport()
 	if vp:
