@@ -24,6 +24,7 @@ var _rainbow_streak_active: bool = false
 @onready var _popup_container: VBoxContainer = $Popups
 @onready var _shiba_label: Label = $ShibaLabel
 @onready var _boss_health_bar: Control = null  # Will be created dynamically
+@onready var _frametime_graph: Control = null
 
 func _ready() -> void:
 	# Ensure HUD is rendered crisp by disabling any filtering
@@ -40,6 +41,9 @@ func _ready() -> void:
 	
 	# Create boss health bar dynamically
 	_create_boss_health_bar()
+
+	# Create frametime graph (bottom-right, long span)
+	_create_frametime_graph()
 	
 	# Apply high-quality font settings
 	_apply_high_quality_font_settings()
@@ -54,6 +58,40 @@ func _ready() -> void:
 	 
 	# Initialize Cho Ren Sha displays with current values
 	_update_cho_ren_sha_displays()
+
+func _create_frametime_graph() -> void:
+	var GraphScript = load("res://scripts/ui/FrameTimeGraph.gd")
+	if not GraphScript:
+		push_error("[HUD] Failed to load FrameTimeGraph.gd")
+		return
+	
+	if is_instance_valid(_frametime_graph):
+		return
+	
+	var graph: Control = GraphScript.new()
+	if not graph or not is_instance_valid(graph):
+		push_error("[HUD] Failed to instantiate FrameTimeGraph")
+		return
+	
+	# Configure: slightly longer, slim, subdued background
+	graph.set("graph_width", 180)
+	graph.set("graph_height", 14)
+	graph.set("max_samples", 240)
+	graph.set("background_color", Color(0.08, 0.04, 0.12, 0.75))
+	
+	add_child(graph)
+	_frametime_graph = graph
+
+	# Place directly under the streak timer with a safe gap and right margin
+	var top_y: float = 18.0
+	if is_instance_valid(_streak_timer_bar):
+		var streak_container := _streak_timer_bar.get_parent()
+		if is_instance_valid(streak_container) and streak_container is Control:
+			top_y = float(streak_container.offset_bottom) + 6.0
+	# Match streak bar width (TopBar has 4px margins, streak timer spans 320 - 8)
+	var matched_width: int = 312
+	if _frametime_graph.has_method("configure_layout_top_right"):
+		_frametime_graph.configure_layout_top_right(matched_width, 14, top_y, 4)
 
 func _process(delta: float) -> void:
 	_rainbow_time += delta * 3.0  # Speed up the rainbow effect
@@ -165,6 +203,8 @@ func set_chain(current_chain: int, max_chain: int) -> void:
 		# Hide the timer bar when no streak
 		_streak_active = false
 		_streak_timer_bar.visible = false
+
+	# Frametime graph layout handled once in _create_frametime_graph()
 
 func reset_streak_timer() -> void:
 	# Called when streak is broken due to timeout or player getting hit

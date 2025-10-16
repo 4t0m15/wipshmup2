@@ -114,9 +114,9 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
 
 [node name="StreakTimer" type="MarginContainer" parent="."]
-offset_top = 10.0
+offset_top = 14.0
 offset_right = 320.0
-offset_bottom = 12.0
+offset_bottom = 16.0
 theme_override_constants/margin_left = 4
 theme_override_constants/margin_right = 4
 
