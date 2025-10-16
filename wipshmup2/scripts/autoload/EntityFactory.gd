@@ -369,11 +369,14 @@ func spawn_boss(boss_scene: PackedScene, spawn_position: Vector2, properties: Di
 
 func _connect_boss_signals(boss: Node) -> void:
 	if boss.has_signal("defeated"):
-		if not boss.defeated.is_connected(_on_boss_defeated):
-			boss.defeated.connect(_on_boss_defeated)
+		if not boss.is_connected("defeated", Callable(self, "_on_boss_defeated")):
+			boss.connect("defeated", Callable(self, "_on_boss_defeated"))
+	elif boss.has_signal("killed"):
+		if not boss.is_connected("killed", Callable(self, "_on_boss_defeated")):
+			boss.connect("killed", Callable(self, "_on_boss_defeated"))
 	if boss.has_signal("hit_player"):
-		if not boss.hit_player.is_connected(_on_boss_hit_player):
-			boss.hit_player.connect(_on_boss_hit_player)
+		if not boss.is_connected("hit_player", Callable(self, "_on_boss_hit_player")):
+			boss.connect("hit_player", Callable(self, "_on_boss_hit_player"))
 
 func _on_boss_defeated() -> void:
 	EventBus.emit_boss_defeat("boss", 10000)

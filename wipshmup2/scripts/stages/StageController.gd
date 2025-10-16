@@ -171,9 +171,11 @@ func _connect_boss_signals(boss: Node) -> void:
 	"""Connect boss signals"""
 	if boss.has_signal("defeated"):
 		# Bind boss so we can read its name/points on defeat
-		boss.defeated.connect(_on_boss_defeated.bind(boss))
+		boss.connect("defeated", Callable(self, "_on_boss_defeated").bind(boss))
+	elif boss.has_signal("killed"):
+		boss.connect("killed", Callable(self, "_on_boss_defeated").bind(boss))
 	if boss.has_signal("hit_player"):
-		boss.hit_player.connect(_on_boss_hit_player)
+		boss.connect("hit_player", Callable(self, "_on_boss_hit_player"))
 
 func _on_boss_defeated(boss: Node) -> void:
 	"""Handle boss defeat"""

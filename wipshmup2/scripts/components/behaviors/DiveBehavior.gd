@@ -13,7 +13,7 @@ func _ready() -> void:
 	super._ready()
 	dive_start_y = enemy.global_position.y
 
-func _update_movement(delta: float) -> void:
+func _update_movement(_delta: float) -> void:
 	if not has_dived:
 		# Dive down faster
 		velocity = direction * speed * dive_speed_multiplier

@@ -57,7 +57,7 @@ horizontal_alignment = 1
 offset_left = 20.0
 offset_top = 76.0
 offset_right = 300.0
-offset_bottom = 152.0
+offset_bottom = 170.0
 theme_override_styles/panel = SubResource("1_panel")
 
 [node name="MenuList" type="VBoxContainer" parent="Canvas/MenuPanel"]
@@ -79,6 +79,14 @@ focus_mode = 2
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.7, 0.9, 1, 1)
 theme_override_colors/font_outline_color = Color(0.1, 0.3, 0.5, 0.8)
+theme_override_constants/outline_size = 1
+
+[node name="BossRush" type="Button" parent="Canvas/MenuPanel/MenuList"]
+text = "Boss Rush"
+focus_mode = 2
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(1, 0.5, 0.5, 1)
+theme_override_colors/font_outline_color = Color(0.5, 0.1, 0.1, 0.8)
 theme_override_constants/outline_size = 1
 
 [node name="Quit" type="Button" parent="Canvas/MenuPanel/MenuList"]

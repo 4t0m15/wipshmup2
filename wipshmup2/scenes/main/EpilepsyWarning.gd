@@ -1,9 +1,30 @@
 # Epilepsy warning screen
 extends Node2D
 
-@onready var _warning_label: Label = $CanvasLayer/WarningLabel
+var _warning_label: Label
 
 func _ready() -> void:
+	# Get the warning label safely - try different paths
+	_warning_label = get_node_or_null("CanvasLayer/WarningLabel")
+	if not _warning_label:
+		# Try alternative path
+		_warning_label = get_node_or_null("WarningLabel")
+	if not _warning_label:
+		# Try getting from CanvasLayer directly
+		var canvas_layer = get_node_or_null("CanvasLayer")
+		if canvas_layer:
+			_warning_label = canvas_layer.get_node_or_null("WarningLabel")
+	
+	if not _warning_label:
+		# Debug: Check what's actually in the CanvasLayer
+		var canvas_layer = get_node_or_null("CanvasLayer")
+		if canvas_layer:
+			push_error("[EpilepsyWarning] WarningLabel not found in CanvasLayer! CanvasLayer children: " + str(canvas_layer.get_children()))
+		else:
+			push_error("[EpilepsyWarning] CanvasLayer not found! Available children: " + str(get_children()))
+		_go_to_main_menu()
+		return
+	
 	# Fade in the warning
 	_warning_label.modulate.a = 0.0
 	var fade_in := create_tween()

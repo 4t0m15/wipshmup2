@@ -26,12 +26,23 @@ var _rainbow_streak_active: bool = false
 @onready var _boss_health_bar: Control = null  # Will be created dynamically
 
 func _ready() -> void:
+	# Ensure HUD is rendered crisp by disabling any filtering
+	# Set the CanvasLayer to use pixel-perfect rendering
+	var canvas_layer = get_node(".")
+	if canvas_layer is CanvasLayer:
+		canvas_layer.follow_viewport_enabled = false
+		# Force pixel-perfect rendering
+		canvas_layer.transform = Transform2D.IDENTITY
+	
 	# Initialize streak timer bar
 	if is_instance_valid(_streak_timer_bar):
 		_streak_timer_bar.visible = false
 	
 	# Create boss health bar dynamically
 	_create_boss_health_bar()
+	
+	# Apply high-quality font settings
+	_apply_high_quality_font_settings()
 	
 	# Connect Cho Ren Sha 68K signals
 	EventBus.shield_gained.connect(_on_shield_gained)
@@ -260,6 +271,14 @@ func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 	if is_instance_valid(panel):
 		panel.queue_free()
 
+func _set_boss_container_size(container: Control, size: Vector2) -> void:
+	if is_instance_valid(container):
+		container.size = size
+
+func _set_label_size(label: Label, size: Vector2) -> void:
+	if is_instance_valid(label):
+		label.size = size
+
 func _create_boss_health_bar() -> void:
 	"""Create the boss health bar UI element"""
 	# Load the BossHealthBar script
@@ -273,7 +292,7 @@ func _create_boss_health_bar() -> void:
 	container.name = "BossHealthContainer"
 	container.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	container.position = Vector2(0, 30)  # Below the top bar
-	container.size = Vector2(320, 14)  # Set size before adding to scene
+	call_deferred("_set_boss_container_size", container, Vector2(320, 12))
 	add_child(container)
 	
 	# Create the boss health bar
@@ -285,8 +304,8 @@ func _create_boss_health_bar() -> void:
 	name_label.name = "NameLabel"
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.position = Vector2(0, 0)
-	name_label.size = Vector2(144, 7)  # Set size before adding to scene
-	name_label.add_theme_font_size_override("font_size", 5)
+	call_deferred("_set_label_size", name_label, Vector2(144, 10))
+	name_label.add_theme_font_size_override("font_size", 6)
 	name_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6, 1.0))
 	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	name_label.add_theme_constant_override("outline_size", 1)
@@ -377,3 +396,26 @@ func _update_cho_ren_sha_displays() -> void:
 	set_shield(GameState.has_shield)
 	set_weapon_power(GameState.weapon_power)
 	set_loop(GameState.current_loop)
+
+func _apply_high_quality_font_settings() -> void:
+	"""Apply high-quality font settings to improve readability at small sizes"""
+	# Get all labels in the HUD
+	var labels = []
+	_collect_labels_recursive(self, labels)
+	
+	for label in labels:
+		if label is Label:
+			# Enable font oversampling for better quality at small sizes
+			label.add_theme_constant_override("outline_size", 1)
+			# Use high-quality font rendering
+			label.add_theme_font_override("font", null)  # Use default font with better settings
+			# Ensure crisp rendering
+			label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+
+func _collect_labels_recursive(node: Node, labels: Array) -> void:
+	"""Recursively collect all Label nodes"""
+	if node is Label:
+		labels.append(node)
+	
+	for child in node.get_children():
+		_collect_labels_recursive(child, labels)

@@ -55,9 +55,17 @@ func get_phase_count() -> int:
 
 func create_boss_instance() -> Node:
 	"""Create a boss instance from this template"""
-	# Load the base boss scene
-	var boss_scene = load("res://scenes/boss/bb/BB.tscn")  # Use a default boss scene
+	# Load the appropriate boss scene based on sprite_key
+	var boss_scene_path = _get_boss_scene_path()
+	print("[BossTemplate] Loading boss scene: ", boss_scene_path)
+	var boss_scene = load(boss_scene_path)
+	if not boss_scene:
+		push_error("Boss scene not found: " + boss_scene_path)
+		return null
+	
+	print("[BossTemplate] Scene loaded, instantiating")
 	var boss = boss_scene.instantiate()
+	print("[BossTemplate] Boss instantiated: ", boss)
 	
 	# Apply template properties
 	boss.set("max_hp", max_hp)
@@ -108,3 +116,21 @@ func _add_phase_management(boss: Node) -> void:
 	phase_manager.boss_template = self
 	# Use call_deferred to avoid "Parent node is busy setting up children" error
 	boss.add_child.call_deferred(phase_manager)
+
+func _get_boss_scene_path() -> String:
+	"""Get the boss scene path based on sprite_key"""
+	# Map sprite_key to actual boss scene paths
+	var scene_mapping = {
+		"gliath": "res://scenes/boss/gliath/Gliath.tscn",
+		"type0": "res://scenes/boss/type0/Type0.tscn", 
+		"iron_casket": "res://scenes/boss/ironcasket/IronCasket.tscn",
+		"bb": "res://scenes/boss/bb/BB.tscn",
+		"blockade": "res://scenes/boss/blockade/BlockAde.tscn",
+		"crosssinker": "res://scenes/boss/crosssinker/CrossSinker.tscn",
+		"fgr": "res://scenes/boss/fgr/FGR.tscn",
+		"fortress": "res://scenes/boss/fortress/Fortress.tscn",
+		"grafzeppelin": "res://scenes/boss/grafzeppelin/GrafZeppelin.tscn"
+	}
+	
+	# Return mapped path or default to BB if not found
+	return scene_mapping.get(sprite_key, "res://scenes/boss/bb/BB.tscn")

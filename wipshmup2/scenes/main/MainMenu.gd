@@ -286,6 +286,8 @@ func _ready() -> void:
 				b.pressed.connect(_on_freeplay_pressed)
 			"Campaign":
 				b.pressed.connect(_on_campaign_pressed)
+			"BossRush":
+				b.pressed.connect(_on_boss_rush_pressed)
 			"Quit":
 				b.pressed.connect(_on_quit_pressed)
 
@@ -614,6 +616,8 @@ func _activate_current() -> void:
 		1:
 			_on_campaign_pressed()
 		2:
+			_on_boss_rush_pressed()
+		3:
 			_on_quit_pressed()
 
 func _on_freeplay_pressed() -> void:
@@ -623,6 +627,10 @@ func _on_freeplay_pressed() -> void:
 func _on_campaign_pressed() -> void:
 	_play_confirm_beep()
 	_transition_to_campaign()
+
+func _on_boss_rush_pressed() -> void:
+	_play_confirm_beep()
+	_transition_to_boss_rush()
 
 func _on_quit_pressed() -> void:
 	_play_confirm_beep()
@@ -646,13 +654,21 @@ func _setup_viewport_and_crt() -> void:
 	# Fill the whole viewport; SubViewport will be stretched by the container
 	_viewport_container.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_viewport_container.stretch = true
-	# Set size before adding to scene to avoid anchor conflicts
-	_viewport_container.size = Vector2(320, 180)
+	# Use the actual viewport size for proper scaling
+	var vp := get_viewport()
+	if vp:
+		call_deferred("_set_viewport_container_size", vp.get_visible_rect().size)
+	else:
+		call_deferred("_set_viewport_container_size", Vector2(320, 180))
 	add_child(_viewport_container)
 
 	_subviewport = SubViewport.new()
 	_subviewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	_subviewport.size = Vector2(320, 180)
+	# Use the actual viewport size for proper scaling
+	if vp:
+		call_deferred("_set_subviewport_size", vp.get_visible_rect().size)
+	else:
+		call_deferred("_set_subviewport_size", Vector2(320, 180))
 	_viewport_container.add_child(_subviewport)
 
 	_viewport_world = Node2D.new()
@@ -673,8 +689,11 @@ func _setup_viewport_and_crt() -> void:
 	_crt_rect.name = "CRT"
 	_crt_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_crt_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	# Set size before adding to scene to avoid anchor conflicts
-	_crt_rect.size = Vector2(320, 180)
+	# Use the actual viewport size for proper scaling
+	if vp:
+		call_deferred("_set_crt_rect_size", vp.get_visible_rect().size)
+	else:
+		call_deferred("_set_crt_rect_size", Vector2(320, 180))
 	add_child(_crt_rect)
 
 	var crt_shader: Shader = load("res://shaders/crt.gdshader")
@@ -729,6 +748,18 @@ func _update_crt_aspect() -> void:
 	if rect.size.x > 0.0:
 		var aspect := rect.size.y / rect.size.x
 		_crt_material.set_shader_parameter("aspect", aspect)
+
+func _set_viewport_container_size(size: Vector2) -> void:
+	if is_instance_valid(_viewport_container):
+		_viewport_container.size = size
+
+func _set_subviewport_size(size: Vector2) -> void:
+	if is_instance_valid(_subviewport):
+		_subviewport.size = size
+
+func _set_crt_rect_size(size: Vector2) -> void:
+	if is_instance_valid(_crt_rect):
+		_crt_rect.size = size
 
 func _start_environment_cycle() -> void:
 	# Periodically adjust background while idle. Supports both BackgroundManager and SpaceBackground.
@@ -793,6 +824,18 @@ func _transition_to_campaign() -> void:
 	var tw := create_tween()
 	tw.tween_property(fade, "color:a", 1.0, 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	tw.finished.connect(func(): get_tree().change_scene_to_file("res://scenes/main/CampaignScreen.tscn"))
+
+func _transition_to_boss_rush() -> void:
+	# Start boss rush mode via GameModeManager
+	GameModeManager.start_boss_rush()
+	# Transition to main game scene
+	var fade := ColorRect.new()
+	fade.color = Color(0, 0, 0, 0)
+	fade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(fade)
+	var tw := create_tween()
+	tw.tween_property(fade, "color:a", 1.0, 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tw.finished.connect(func(): get_tree().change_scene_to_file("res://scenes/main/Main.tscn"))
 
 func _play_nav_beep() -> void:
 	var am := get_node_or_null("/root/AudioManager")

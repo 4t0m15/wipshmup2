@@ -134,16 +134,21 @@ func spawn_triangle_item(position: Vector2) -> void:
 	
 	print("[ItemDropManager] Triangle item instantiated successfully")
 	
-	# Add to scene tree - try immediate first, then deferred if needed
+	# Add to scene tree using deferred call to avoid query flushing issues
 	var main_scene = get_tree().current_scene
 	if main_scene:
-		# Set position first, then add to scene
+		# Set position first, then add to scene using deferred call
 		triangle.global_position = position
-		main_scene.add_child(triangle)
+		call_deferred("_add_triangle_to_scene", triangle, main_scene)
 		print("[ItemDropManager] Spawned triangle item at ", position)
 	else:
 		push_error("No current scene to add triangle item")
 		triangle.queue_free()
+
+func _add_triangle_to_scene(triangle: Node, parent: Node) -> void:
+	"""Helper function to add triangle to scene using deferred call"""
+	if is_instance_valid(triangle) and is_instance_valid(parent):
+		parent.add_child(triangle)
 
 # Test method for triangle items (can be called from debug)
 func test_spawn_triangle() -> void:

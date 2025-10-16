@@ -17,6 +17,7 @@ func _register_default_templates() -> void:
 		"boss_name": "Gliath",
 		"max_hp": 60,
 		"points_value": 5000,
+		"sprite_key": "gliath",
 		"phases": [
 			{
 				"phase_name": "Phase 1",
@@ -34,6 +35,7 @@ func _register_default_templates() -> void:
 		"boss_name": "Type0",
 		"max_hp": 80,
 		"points_value": 7500,
+		"sprite_key": "type0",
 		"phases": [
 			{
 				"phase_name": "Phase 1",
@@ -61,6 +63,7 @@ func _register_default_templates() -> void:
 		"boss_name": "Iron Casket",
 		"max_hp": 100,
 		"points_value": 10000,
+		"sprite_key": "iron_casket",
 		"phases": [
 			{
 				"phase_name": "Phase 1",
@@ -141,13 +144,19 @@ func get_template(template_name: String) -> BossTemplate:
 
 func create_boss(template_name: String, position: Vector2) -> Node:
 	"""Create a boss from a template"""
+	print("[BossTemplateManager] Creating boss: ", template_name)
 	var template = get_template(template_name)
 	if not template:
 		push_error("Boss template not found: " + template_name)
 		return null
 	
+	print("[BossTemplateManager] Template found, creating instance")
 	var boss = template.create_boss_instance()
-	boss.global_position = position
+	if boss:
+		boss.global_position = position
+		print("[BossTemplateManager] Boss instance created successfully")
+	else:
+		print("[BossTemplateManager] Failed to create boss instance")
 	
 	return boss
 

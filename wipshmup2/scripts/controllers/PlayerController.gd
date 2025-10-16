@@ -8,45 +8,32 @@ var bullet_timer: Timer
 var is_initialized: bool = false
 
 func _ready() -> void:
-	# Connect to EventBus for game state changes
 	EventBus.game_started.connect(_on_game_started)
 	EventBus.game_over.connect(_on_game_over)
 	EventBus.player_damaged.connect(_on_player_damaged)
-	
-	# Setup bullet timer
 	bullet_timer = Timer.new()
 	bullet_timer.wait_time = GameState.shot_cooldown
 	bullet_timer.one_shot = true
 	add_child(bullet_timer)
-	
-	# Connect to fire rate boost signals
 	EventBus.fire_rate_boost_activated.connect(_on_fire_rate_boost_activated)
 	EventBus.fire_rate_boost_ended.connect(_on_fire_rate_boost_ended)
-
 func initialize(player_node: Node) -> void:
 	player = player_node
 	is_initialized = true
 	print("[PlayerController] Player controller initialized")
-
 func _process(delta: float) -> void:
 	if not is_initialized or not GameState.is_game_active():
 		return
-	
 	_handle_movement(delta)
 	_handle_shooting()
 	_handle_bomb()
 	_handle_debug_input()
-
 func _handle_movement(delta: float) -> void:
 	if not player or not is_instance_valid(player):
 		return
-	
-	# Get input vector
 	var input_vector := Vector2.ZERO
 	input_vector.x = Input.get_action_strength("ui_right") - Input.get_action_strength("ui_left")
 	input_vector.y = Input.get_action_strength("ui_down") - Input.get_action_strength("ui_up")
-	
-	# Apply movement
 	var new_position = player.position + input_vector * GameState.player_speed * delta
 	GameState.update_player_position(new_position)
 	player.position = GameState.player_position

@@ -57,7 +57,7 @@ func _ready() -> void:
 	_setup_background()
 	_setup_item_drops()
 	_spawn_player()
-	_setup_stage_controller()
+	_setup_game_mode()
 
 	# Screen shake hooked to the game viewport root so all children move together
 	screen_shake = load("res://scripts/ui/ScreenShake.gd").new()
@@ -111,6 +111,54 @@ func _setup_item_drops() -> void:
 	item_drop_manager = ITEM_DROP_MANAGER_SCRIPT.new()
 	add_child(item_drop_manager)
 	item_drop_manager.item_collected.connect(_on_item_collected)
+func _setup_game_mode() -> void:
+	"""Setup the appropriate game mode controller"""
+	var current_mode = GameModeManager.get_current_mode()
+	if not current_mode:
+		print("[Main] No active game mode, starting default stage controller")
+		_setup_stage_controller()
+		return
+	
+	print("[Main] Active game mode: ", current_mode.mode_name)
+	
+	# Check if this is boss rush mode
+	if current_mode is BossRushMode:
+		print("[Main] Starting boss rush mode")
+		_setup_boss_rush_mode()
+	else:
+		print("[Main] Starting stage controller for mode: ", current_mode.mode_name)
+		_setup_stage_controller()
+
+func _setup_boss_rush_mode() -> void:
+	"""Setup boss rush mode - let the mode handle its own spawning"""
+	# Add BossRushMode to the scene tree so it can access get_tree() and spawn bosses
+	var current_mode = GameModeManager.get_current_mode()
+	if current_mode and current_mode is BossRushMode:
+		var container = game_viewport if game_viewport else self
+		container.add_child(current_mode)
+		print("[Main] Added BossRushMode to scene tree")
+	
+	# Monitor for boss spawns to show health bar
+	_start_boss_monitoring()
+	
+	# Start lightweight performance watchdog to prevent runaway node counts
+	_start_perf_watchdog()
+	
+	# Connect any bullets that already exist in the scene
+	if is_inside_tree():
+		for bullet in get_tree().get_nodes_in_group("enemy_bullet"):
+			_connect_enemy_bullet(bullet)
+	
+	# Start the boss rush mode progression after a short delay to ensure scene is ready
+	call_deferred("_start_boss_rush_progression")
+
+func _start_boss_rush_progression() -> void:
+	"""Start the boss rush mode progression"""
+	print("[Main] Starting boss rush progression")
+	if GameModeManager.current_mode and GameModeManager.current_mode is BossRushMode:
+		GameModeManager.current_mode.get_next_stage()
+	else:
+		push_error("[Main] No active boss rush mode found")
 
 func _setup_stage_controller() -> void:
 	stage_controller = STAGE_CONTROLLER_SCRIPT.new()
@@ -537,7 +585,9 @@ func _check_for_bosses() -> void:
 				
 				# Connect to boss defeated signal to hide health bar
 				if boss.has_signal("defeated"):
-					boss.defeated.connect(_on_boss_health_depleted.bind(boss))
+					boss.connect("defeated", Callable(self, "_on_boss_health_depleted").bind(boss))
+				elif boss.has_signal("killed"):
+					boss.connect("killed", Callable(self, "_on_boss_health_depleted").bind(boss))
 
 func _on_boss_health_depleted(_boss: Node) -> void:
 	"""Handle when a boss is defeated"""

@@ -129,10 +129,10 @@ func _run_test_suite(suite_name: String, test_list: Array[Dictionary]) -> void:
 			passed += 1
 		else:
 			failed += 1
-	
+
 	test_suite_completed.emit(suite_name, passed, failed)
 	print("[TestingFramework] ", suite_name, " completed: ", passed, " passed, ", failed, " failed")
-
+#Runs a single test
 func _run_single_test(test: Dictionary) -> Dictionary:
 	"""Run a single test"""
 	var test_name = test.name

@@ -33,9 +33,11 @@ func _process(_delta: float) -> void:
 	if _boss and is_instance_valid(_boss):
 		if _boss.has_method("get") or "hp" in _boss:
 			var new_hp = _boss.hp if "hp" in _boss else _boss.get("hp")
-			if new_hp != _current_hp:
-				_current_hp = new_hp
-				queue_redraw()
+			# Safety check: ensure new_hp is a valid integer
+			if new_hp != null and typeof(new_hp) == TYPE_INT:
+				if new_hp != _current_hp:
+					_current_hp = new_hp
+					queue_redraw()
 	else:
 		if visible:
 			hide_boss_health()
@@ -114,25 +116,39 @@ func show_boss_health(boss: Node) -> void:
 	if not boss or not is_instance_valid(boss):
 		return
 	
-	# Get boss properties
-	_max_hp = boss.max_hp if "max_hp" in boss else 100
-	_current_hp = boss.hp if "hp" in boss else _max_hp
-	_current_phase = boss.current_phase if "current_phase" in boss else 1
-	_total_phases = boss.phases_total if "phases_total" in boss else 1
+	# Get boss properties with safety checks
+	_max_hp = boss.max_hp if "max_hp" in boss and boss.max_hp != null else 100
+	_current_hp = boss.hp if "hp" in boss and boss.hp != null else _max_hp
+	_current_phase = boss.current_phase if "current_phase" in boss and boss.current_phase != null else 1
+	_total_phases = boss.phases_total if "phases_total" in boss and boss.phases_total != null else 1
 	_boss_name = str(boss.name) if boss.name != "" else "BOSS"
 	
 	# Update name label
 	if _name_label:
 		_name_label.text = _boss_name.to_upper()
 	
-	# Connect to boss signals
+	# Connect to boss signals with safety checks
 	if boss.has_signal("phase_changed"):
 		if not boss.is_connected("phase_changed", _on_boss_phase_changed):
 			boss.phase_changed.connect(_on_boss_phase_changed)
 	
+	# Connect to defeat signal - try defeated first, then killed as fallback
+	var defeat_signal_connected = false
+	var defeated_cb := Callable(self, "_on_boss_defeated")
 	if boss.has_signal("defeated"):
-		if not boss.is_connected("defeated", _on_boss_defeated):
-			boss.defeated.connect(_on_boss_defeated)
+		if not boss.is_connected("defeated", defeated_cb):
+			boss.connect("defeated", defeated_cb)
+			defeat_signal_connected = true
+			print("[BossHealthBar] Connected to defeated signal")
+	
+	if not defeat_signal_connected and boss.has_signal("killed"):
+		if not boss.is_connected("killed", defeated_cb):
+			boss.connect("killed", defeated_cb)
+			defeat_signal_connected = true
+			print("[BossHealthBar] Connected to killed signal as fallback")
+	
+	if not defeat_signal_connected:
+		print("[BossHealthBar] Warning: No defeat signal found for boss: ", boss.name)
 	
 	# Show with animation
 	visible = true
@@ -150,10 +166,16 @@ func hide_boss_health() -> void:
 	
 	# Disconnect signals if boss is valid
 	if _boss and is_instance_valid(_boss):
-		if _boss.has_signal("phase_changed") and _boss.is_connected("phase_changed", _on_boss_phase_changed):
-			_boss.phase_changed.disconnect(_on_boss_phase_changed)
-		if _boss.has_signal("defeated") and _boss.is_connected("defeated", _on_boss_defeated):
-			_boss.defeated.disconnect(_on_boss_defeated)
+		if _boss.has_signal("phase_changed"):
+			var phase_cb := Callable(self, "_on_boss_phase_changed")
+			if _boss.is_connected("phase_changed", phase_cb):
+				_boss.disconnect("phase_changed", phase_cb)
+		# Disconnect defeat signals safely
+		var defeated_cb := Callable(self, "_on_boss_defeated")
+		if _boss.has_signal("defeated") and _boss.is_connected("defeated", defeated_cb):
+			_boss.disconnect("defeated", defeated_cb)
+		elif _boss.has_signal("killed") and _boss.is_connected("killed", defeated_cb):
+			_boss.disconnect("killed", defeated_cb)
 	
 	var tween = create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.3)\
@@ -168,7 +190,9 @@ func _on_boss_phase_changed(new_phase: int) -> void:
 	
 	# Optionally recalculate max HP if boss adjusts it per phase
 	if _boss and is_instance_valid(_boss):
-		_current_hp = _boss.hp if "hp" in _boss else _current_hp
+		var boss_hp = _boss.hp if "hp" in _boss else null
+		if boss_hp != null and typeof(boss_hp) == TYPE_INT:
+			_current_hp = boss_hp
 	
 	queue_redraw()
 
@@ -181,4 +205,3 @@ func update_health(current: int, maximum: int) -> void:
 	_current_hp = current
 	_max_hp = maximum
 	queue_redraw()
-
