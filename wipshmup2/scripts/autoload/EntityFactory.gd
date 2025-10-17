@@ -1,26 +1,27 @@
 extends Node
 
-# EntityFactory - Centralized entity spawning and management
-# Handles all entity creation with proper setup and object pooling
+# Centralized entity spawning and pooling
 
-# Scene references - loaded safely
+# Scene refs
 var PLAYER_SCENE: PackedScene
 var BULLET_SCENE: PackedScene
 var ENEMY_BULLET_SCENE: PackedScene
 var ENEMY_SCENE: PackedScene
 
-# Safety caps - INCREASED FOR MORE CHAOS
+# Safety caps
 const MAX_ENEMY_BULLETS: int = 300  # Increased from 140
 const MAX_ENEMY_BULLETS_PER_SEC: int = 200  # Increased from 90
 
-# Simple rate limiter state
+# Rate limiter
 var _bullet_rate_window_start_ms: int = 0
 var _bullet_rate_count: int = 0
 
-# Object pools for performance
+# Object pools
 var bullet_pool: Array[Node] = []
 var enemy_bullet_pool: Array[Node] = []
-var max_pool_size: int = 100
+var max_pool_size: int = 200  # Increased pool size
+var pool_cleanup_timer: float = 0.0
+var pool_cleanup_interval: float = 3.0  # Clean pools every 3 seconds
 
 var game_viewport: Node
 var bullets_container: Node
@@ -31,8 +32,18 @@ func _ready() -> void:
 	_load_scenes()
 	_initialize_pools()
 
+func _process(delta: float) -> void:
+	# Pool cleanup
+	pool_cleanup_timer += delta
+	if pool_cleanup_timer >= pool_cleanup_interval:
+		_cleanup_pools()
+		pool_cleanup_timer = 0.0
+
 func _load_scenes() -> void:
-	"""Load scene resources safely"""
+	# Load scenes
+	# Wait for validator
+	await get_tree().process_frame
+	
 	var rv := get_node_or_null("/root/ResourceValidator")
 	if rv and is_instance_valid(rv) and rv.has_method("safe_load_scene"):
 		PLAYER_SCENE = rv.safe_load_scene("res://scenes/player/Player.tscn")
@@ -40,6 +51,7 @@ func _load_scenes() -> void:
 		ENEMY_BULLET_SCENE = rv.safe_load_scene("res://scenes/bullet/EnemyBullet.tscn")
 		ENEMY_SCENE = rv.safe_load_scene("res://scenes/enemy/Enemy.tscn")
 	else:
+		# Fallback to direct loading
 		PLAYER_SCENE = load("res://scenes/player/Player.tscn")
 		BULLET_SCENE = load("res://scenes/bullet/Bullet.tscn")
 		ENEMY_BULLET_SCENE = load("res://scenes/bullet/EnemyBullet.tscn")
@@ -56,23 +68,25 @@ func _load_scenes() -> void:
 		push_error("[EntityFactory] Failed to load enemy scene")
 
 func _initialize_pools() -> void:
-	# Pre-populate bullet pools for performance
+	# Pre-populate bullet pools
 	if BULLET_SCENE:
-		for i in range(20):
+		for i in range(50):  # Increased pool size
 			var bullet = BULLET_SCENE.instantiate()
 			if bullet and is_instance_valid(bullet):
 				bullet.visible = false
 				bullet.set_meta("pooled", true)
 				bullet.set_meta("pool_kind", "player")
+				bullet.set_meta("pool_created_time", Time.get_ticks_msec())
 				bullet_pool.append(bullet)
-		#yo pierre you wanna come out here
+	
 	if ENEMY_BULLET_SCENE:
-		for i in range(20):
+		for i in range(100):  # Larger pool for enemy bullets
 			var enemy_bullet = ENEMY_BULLET_SCENE.instantiate()
 			if enemy_bullet and is_instance_valid(enemy_bullet):
 				enemy_bullet.visible = false
 				enemy_bullet.set_meta("pooled", true)
 				enemy_bullet.set_meta("pool_kind", "enemy")
+				enemy_bullet.set_meta("pool_created_time", Time.get_ticks_msec())
 				enemy_bullet_pool.append(enemy_bullet)
 
 func set_containers(game_viewport_node: Node) -> void:
@@ -267,27 +281,21 @@ func _get_pooled_bullet(pool: Array, scene: PackedScene) -> Node:
 		push_error("[EntityFactory] Invalid scene provided to _get_pooled_bullet")
 		return null
 	
-	# Try to get from pool first, cleaning up invalid entries
-	var valid_bullets = []
-	for bullet in pool:
-		if bullet and is_instance_valid(bullet):
-			if not bullet.get_parent():
-				valid_bullets.append(bullet)
+	# Fast path: try to get from pool without full cleanup
+	for i in range(pool.size() - 1, -1, -1):
+		var bullet = pool[i]
+		if bullet and is_instance_valid(bullet) and not bullet.get_parent():
+			pool.remove_at(i)
+			return bullet
+		elif not bullet or not is_instance_valid(bullet):
+			# Remove invalid bullets immediately
+			pool.remove_at(i)
 	
-	# Update pool with only valid bullets
-	pool.clear()
-	pool.append_array(valid_bullets)
-	
-	# Return first available bullet if any
-	if pool.size() > 0:
-		var pooled_bullet = pool.pop_front()
-		if pooled_bullet and is_instance_valid(pooled_bullet):
-			return pooled_bullet
-	
-	# Create new if pool is empty
+	# Create new if pool is empty or all bullets are in use
 	var new_bullet = scene.instantiate()
 	if new_bullet and is_instance_valid(new_bullet):
 		new_bullet.set_meta("pooled", true)
+		new_bullet.set_meta("pool_created_time", Time.get_ticks_msec())
 		return new_bullet
 	else:
 		push_error("[EntityFactory] Failed to instantiate bullet from scene")
@@ -410,6 +418,31 @@ func destroy_entity(entity: Node) -> void:
 	
 	EventBus.entity_destroyed.emit(entity, "entity")
 
+func _cleanup_pools() -> void:
+	"""Clean up invalid entries in pools to prevent memory leaks"""
+	var current_time = Time.get_ticks_msec()
+	var max_age = 30000  # 30 seconds
+	
+	# Clean player bullet pool
+	for i in range(bullet_pool.size() - 1, -1, -1):
+		var bullet = bullet_pool[i]
+		if not bullet or not is_instance_valid(bullet):
+			bullet_pool.remove_at(i)
+		elif bullet.get_meta("pool_created_time", 0) + max_age < current_time:
+			# Remove old bullets to prevent memory buildup
+			bullet.queue_free()
+			bullet_pool.remove_at(i)
+	
+	# Clean enemy bullet pool
+	for i in range(enemy_bullet_pool.size() - 1, -1, -1):
+		var bullet = enemy_bullet_pool[i]
+		if not bullet or not is_instance_valid(bullet):
+			enemy_bullet_pool.remove_at(i)
+		elif bullet.get_meta("pool_created_time", 0) + max_age < current_time:
+			# Remove old bullets to prevent memory buildup
+			bullet.queue_free()
+			enemy_bullet_pool.remove_at(i)
+
 func cleanup_all_entities() -> void:
 	# Clean up all bullets
 	var all_bullets = get_tree().get_nodes_in_group("player_bullet") + get_tree().get_nodes_in_group("enemy_bullet")
@@ -433,11 +466,17 @@ func _disconnect_bullet_signals(bullet: Node) -> void:
 	if not bullet or not is_instance_valid(bullet):
 		return
 	
-	if bullet.has_signal("area_entered") and bullet.area_entered.is_connected(_on_player_bullet_hit):
-		bullet.area_entered.disconnect(_on_player_bullet_hit)
+	# Safely disconnect player bullet signals
+	if bullet.has_signal("area_entered"):
+		var signal_obj = bullet.get("area_entered")
+		if signal_obj and signal_obj.is_connected(_on_player_bullet_hit):
+			signal_obj.disconnect(_on_player_bullet_hit)
 	
-	if bullet.has_signal("hit_player") and bullet.hit_player.is_connected(_on_enemy_bullet_hit_player):
-		bullet.hit_player.disconnect(_on_enemy_bullet_hit_player)
+	# Safely disconnect enemy bullet signals
+	if bullet.has_signal("hit_player"):
+		var signal_obj = bullet.get("hit_player")
+		if signal_obj and signal_obj.is_connected(_on_enemy_bullet_hit_player):
+			signal_obj.disconnect(_on_enemy_bullet_hit_player)
 
 func _disconnect_enemy_signals(enemy: Node) -> void:
 	"""Disconnect enemy signals to prevent memory leaks"""
@@ -450,17 +489,3 @@ func _disconnect_enemy_signals(enemy: Node) -> void:
 	if enemy.has_signal("hit_player") and enemy.hit_player.is_connected(_on_enemy_hit_player):
 		enemy.hit_player.disconnect(_on_enemy_hit_player)
 
-func _cleanup_pools() -> void:
-	"""Clean up object pools"""
-	# Clean up bullet pools
-	for bullet in bullet_pool:
-		if bullet and is_instance_valid(bullet):
-			_disconnect_bullet_signals(bullet)
-			bullet.queue_free()
-	bullet_pool.clear()
-	
-	for bullet in enemy_bullet_pool:
-		if bullet and is_instance_valid(bullet):
-			_disconnect_bullet_signals(bullet)
-			bullet.queue_free()
-	enemy_bullet_pool.clear()

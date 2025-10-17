@@ -1,38 +1,43 @@
 extends Node
 
-# StabilityManager - Enhanced stability and development tools
-# Provides comprehensive error handling, performance monitoring, and development aids
+# Enhanced stability and dev tools
 
-# signal stability_warning(message: String, severity: String)  # Reserved for future use
+# Reserved signal
 signal performance_warning(metric: String, value: float, threshold: float)
 signal development_log(message: String, category: String)
 
-# Stability tracking
+# Stability
 var error_count: int = 0
 var warning_count: int = 0
 var crash_count: int = 0
 var last_error_time: float = 0.0
 var stability_score: float = 100.0
 
-# Performance monitoring
+# Performance
 var frame_times: Array[float] = []
 var memory_usage: Array[int] = []
 var bullet_count_history: Array[int] = []
 var max_history_size: int = 60  # 1 second at 60fps
 
-# Bullet tracking (event-driven with sampling fallback)
+# Enhanced tracking
+var performance_metrics: Dictionary = {}
+var auto_optimization_enabled: bool = true
+var optimization_cooldown: float = 0.0
+var optimization_interval: float = 5.0  # 5 seconds between optimizations
+
+# Bullet tracking
 var bullet_count: int = 0
 var bullet_sample_accum: float = 0.0
 @export var bullet_sample_interval: float = 0.25
 var last_bullet_count: int = 0
 
-# Development tools
+# Dev tools
 var debug_overlay_enabled: bool = false
 var performance_overlay_enabled: bool = false
 var hot_reload_enabled: bool = false
 var development_mode: bool = false
 
-# Parallel processing
+# Parallel
 var thread_pool: Array[Thread] = []
 var max_threads: int = 4
 var task_queue: Array[Dictionary] = []
@@ -53,6 +58,7 @@ func _process(delta: float) -> void:
 	_update_performance_metrics(delta)
 	_process_parallel_tasks()
 	_update_stability_score()
+	_update_auto_optimization(delta)
 
 func _initialize_thread_pool() -> void:
 	"""Initialize thread pool for parallel processing"""
@@ -153,17 +159,21 @@ func _calculate_average(array: Array) -> float:
 
 func _process_parallel_tasks() -> void:
 	"""Process parallel tasks"""
+	# Create a copy to avoid modification during iteration
+	var tasks_to_process = task_queue.duplicate()
+	task_queue.clear()
+	
 	# Check for completed tasks
-	for i in range(task_queue.size() - 1, -1, -1):
-		var task = task_queue[i]
+	for task in tasks_to_process:
 		if task.has("thread") and task.thread.is_started() and not task.thread.is_alive():
 			# Task completed
 			completed_tasks.append(task)
-			task_queue.remove_at(i)
+		else:
+			# Re-queue incomplete tasks
+			task_queue.append(task)
 	
 	# Start new tasks if threads are available
-	for i in range(task_queue.size()):
-		var task = task_queue[i]
+	for task in task_queue:
 		if not task.has("thread") or not task.thread.is_started():
 			_start_parallel_task(task)
 
@@ -289,6 +299,84 @@ func _parallel_audio_processing(task_data: Dictionary) -> Array:
 		processed_events.append(processed_event)
 	
 	return processed_events
+
+func _update_auto_optimization(delta: float) -> void:
+	"""Update auto-optimization system"""
+	if not auto_optimization_enabled:
+		return
+	
+	optimization_cooldown += delta
+	if optimization_cooldown < optimization_interval:
+		return
+	
+	optimization_cooldown = 0.0
+	_analyze_performance_and_optimize()
+
+func _analyze_performance_and_optimize() -> void:
+	"""Analyze performance metrics and apply optimizations"""
+	if frame_times.size() < 10:
+		return
+	
+	var avg_frame_time = _calculate_average(frame_times)
+	var target_frame_time = 1.0 / 60.0
+	
+	# Check if we need optimization
+	if avg_frame_time > target_frame_time * 1.5:  # 50% slower than target
+		_apply_performance_optimizations()
+	
+	# Check memory usage
+	if memory_usage.size() > 0:
+		var current_memory = memory_usage[-1]
+		if current_memory > 80 * 1024 * 1024:  # 80MB
+			_apply_memory_optimizations()
+	
+	# Check bullet count
+	if bullet_count_history.size() > 0:
+		var current_bullets = bullet_count_history[-1]
+		if current_bullets > 300:  # High bullet count
+			_apply_bullet_optimizations()
+
+func _apply_performance_optimizations() -> void:
+	"""Apply performance optimizations"""
+	print("[StabilityManager] Applying performance optimizations")
+	
+	# Reduce visual effects quality
+	var bullet_readability = get_node_or_null("/root/BulletReadability")
+	if bullet_readability and bullet_readability.has_method("set_quality"):
+		bullet_readability.set_quality("medium")
+	
+	# Enable parallel processing for heavy tasks
+	var parallel_processor = get_node_or_null("/root/ParallelProcessor")
+	if parallel_processor and parallel_processor.has_method("enable_aggressive_processing"):
+		parallel_processor.enable_aggressive_processing(true)
+
+func _apply_memory_optimizations() -> void:
+	"""Apply memory optimizations"""
+	print("[StabilityManager] Applying memory optimizations")
+	
+	# Trigger memory cleanup
+	var memory_manager = get_node_or_null("/root/MemoryManager")
+	if memory_manager and memory_manager.has_method("force_cleanup"):
+		memory_manager.force_cleanup()
+	
+	# Clean up bullet pools
+	var entity_factory = get_node_or_null("/root/EntityFactory")
+	if entity_factory and entity_factory.has_method("_cleanup_pools"):
+		entity_factory._cleanup_pools()
+
+func _apply_bullet_optimizations() -> void:
+	"""Apply bullet-specific optimizations"""
+	print("[StabilityManager] Applying bullet optimizations")
+	
+	# Reduce bullet quality
+	var bullet_readability = get_node_or_null("/root/BulletReadability")
+	if bullet_readability and bullet_readability.has_method("set_bullet_quality"):
+		bullet_readability.set_bullet_quality("low")
+	
+	# Enable bullet culling
+	var entity_factory = get_node_or_null("/root/EntityFactory")
+	if entity_factory and entity_factory.has_method("enable_bullet_culling"):
+		entity_factory.enable_bullet_culling(true)
 
 func queue_parallel_task(task_type: String, data: Dictionary) -> void:
 	"""Queue a parallel task"""

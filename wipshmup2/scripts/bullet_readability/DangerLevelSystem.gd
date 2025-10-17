@@ -83,39 +83,45 @@ static func get_visual_properties(danger_level: DangerLevel, is_player_bullet: b
 	"""
 	if is_player_bullet:
 		return {
-			"base_color": PLAYER_BULLET_COLORS.base,
-			"outline_color": PLAYER_BULLET_COLORS.outline,
-			"glow_color": PLAYER_BULLET_COLORS.glow,
-			"shadow_color": PLAYER_BULLET_COLORS.shadow,
-			"outline_thickness": PLAYER_BULLET_COLORS.outline_thickness,
+			"base_color": PLAYER_BULLET_COLORS["base"],
+			"outline_color": PLAYER_BULLET_COLORS["outline"],
+			"glow_color": PLAYER_BULLET_COLORS["glow"],
+			"shadow_color": PLAYER_BULLET_COLORS["shadow"],
+			"outline_thickness": PLAYER_BULLET_COLORS["outline_thickness"],
 			"pulse_rate": 0.0,  # Player bullets don't pulse
 			"should_pulse": false,
 			"glow_layers": [
-				GLOW_LAYERS.inner,
-				GLOW_LAYERS.mid,
-				GLOW_LAYERS.outer
+				GLOW_LAYERS["inner"],
+				GLOW_LAYERS["mid"],
+				GLOW_LAYERS["outer"]
 			],
 			"has_shadow": true
 		}
 	
-	var props = DANGER_COLORS[danger_level].duplicate(true)
+	# Build normalized properties dictionary for enemy bullets
+	var color_def: Dictionary = DANGER_COLORS[danger_level]
 	
 	# Add glow layer configuration based on danger level
-	var layers = [
-		GLOW_LAYERS.inner,
-		GLOW_LAYERS.mid,
-		GLOW_LAYERS.outer
+	var layers: Array = [
+		GLOW_LAYERS["inner"],
+		GLOW_LAYERS["mid"],
+		GLOW_LAYERS["outer"]
 	]
 	
 	# High danger gets the extra far glow layer
 	if danger_level == DangerLevel.HIGH:
-		layers.append(GLOW_LAYERS.far)
+		layers.append(GLOW_LAYERS["far"])
 	
-	props["glow_layers"] = layers
-	props["should_pulse"] = true
-	props["has_shadow"] = false
-	
-	return props
+	return {
+		"base_color": color_def["base"],
+		"outline_color": color_def["outline"],
+		"glow_color": color_def["glow"],
+		"outline_thickness": color_def["outline_thickness"],
+		"pulse_rate": color_def["pulse_rate"],
+		"glow_layers": layers,
+		"should_pulse": true,
+		"has_shadow": false
+	}
 
 ## Classify bullet danger level based on properties
 static func classify_danger_level(bullet_speed: float, is_homing: bool, is_accelerating: bool, pattern_type: String = "normal") -> DangerLevel:
@@ -163,7 +169,7 @@ static func get_pulse_intensity(danger_level: DangerLevel, time: float) -> float
 		Float between 0.7 and 1.0 (pulse amplitude)
 	"""
 	var props = DANGER_COLORS[danger_level]
-	var pulse_rate = props.pulse_rate
+	var pulse_rate = props["pulse_rate"]
 	
 	# Sine wave pulse with 70% to 100% range
 	var pulse = 0.85 + 0.15 * sin(time * pulse_rate * TAU)

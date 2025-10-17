@@ -26,13 +26,12 @@ func _ready() -> void:
 	
 	# Setup visual clarity for player bullets
 	_setup_player_bullet_effects()
-#okokokokok
 func _physics_process(delta: float) -> void:
 	position += direction * speed * delta
 	position = position.round()
 	
 	# Update glow effect
-	if _glow_sprite:
+	if _glow_sprite and is_instance_valid(_glow_sprite):
 		var pulse = 0.7 + 0.3 * sin(Time.get_ticks_msec() * 0.01)
 		_glow_sprite.modulate.a = pulse * 0.6
 	
@@ -67,11 +66,11 @@ func _on_screen_exited() -> void:
 	queue_free()
 
 func _setup_player_bullet_effects() -> void:
-	"""Setup visual effects for player bullet clarity"""
-	# Create bright glow for player bullets
-	_glow_sprite = Sprite2D.new()
-	_glow_sprite.texture = $Sprite2D.texture
-	_glow_sprite.scale = $Sprite2D.scale * 1.3
-	_glow_sprite.modulate = Color(0.2, 1.0, 0.8, 0.6)  # Bright cyan glow
-	_glow_sprite.z_index = -1
-	add_child(_glow_sprite)
+	# Setup visual effects for player bullet clarity
+	if has_node("Sprite2D") and $Sprite2D.texture:
+		_glow_sprite = Sprite2D.new()
+		_glow_sprite.texture = $Sprite2D.texture
+		_glow_sprite.scale = $Sprite2D.scale * 1.3
+		_glow_sprite.modulate = Color(0.2, 1.0, 0.8, 0.6)  # Bright cyan glow
+		_glow_sprite.z_index = -1
+		add_child(_glow_sprite)

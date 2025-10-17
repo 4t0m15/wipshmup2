@@ -19,19 +19,13 @@ var _collected_items: Array[String] = []
 var _collection_timer: Timer
 
 var game_over := false
-var lives := 3
-var bombs := 3
-var score := 0
+# Use GameState for all game state - remove local duplicates
 
 # Rank pressure system
 var rank_manager: Node
-var base_background_color: Color = Color.WHITE #why all caps its like WHITE like WHITE WHITE like my neck is red and my collar is blue type WHITE lmao
+var base_background_color: Color = Color.WHITE
 
-# Streak system for eliminations (used to scale screen shake -- now it is defunct)
-var chain_count: int = 0
-var max_chain: int = 0
-var last_kill_time_s: float = 0.0
-var chain_timeout: float = 2.0
+# Streak system now handled by GameState
 
 var shot_cooldown := 0.1
 var bullet_timer: Timer
@@ -66,7 +60,7 @@ func _ready() -> void:
 	screen_shake.set_target(target_2d)
 	
 	# Setup visual clarity systems
-	_setup_visual_clarity_systems()
+	call_deferred("_setup_visual_clarity_systems")
 
 	hud = $HUD
 	item_popup = $ItemPopup
@@ -78,9 +72,7 @@ func _ready() -> void:
 	_collection_timer.timeout.connect(_show_collected_items)
 	add_child(_collection_timer)
 	
-	_update_score_label()
-	_update_lives_display()
-	_update_bomb_display()
+	# HUD will be updated automatically via EventBus signals from GameState
 	
 	# Setup rank pressure system
 	_setup_rank_pressure_system()
@@ -112,7 +104,7 @@ func _setup_item_drops() -> void:
 	add_child(item_drop_manager)
 	item_drop_manager.item_collected.connect(_on_item_collected)
 func _setup_game_mode() -> void:
-	"""Setup the appropriate game mode controller"""
+	# Setup game mode
 	var current_mode = GameModeManager.get_current_mode()
 	if not current_mode:
 		print("[Main] No active game mode, starting default stage controller")
@@ -130,13 +122,14 @@ func _setup_game_mode() -> void:
 		_setup_stage_controller()
 
 func _setup_boss_rush_mode() -> void:
-	"""Setup boss rush mode - let the mode handle its own spawning"""
-	# Add BossRushMode to the scene tree so it can access get_tree() and spawn bosses
+	# Setup boss rush mode
+	# Add BossRushMode to the scene tree
 	var current_mode = GameModeManager.get_current_mode()
-	if current_mode and current_mode is BossRushMode:
+	if current_mode and is_instance_valid(current_mode) and current_mode is BossRushMode:
 		var container = game_viewport if game_viewport else self
-		container.add_child(current_mode)
-		print("[Main] Added BossRushMode to scene tree")
+		if container and is_instance_valid(container):
+			container.add_child(current_mode)
+			print("[Main] Added BossRushMode to scene tree")
 	
 	# Monitor for boss spawns to show health bar
 	_start_boss_monitoring()
@@ -144,16 +137,17 @@ func _setup_boss_rush_mode() -> void:
 	# Start lightweight performance watchdog to prevent runaway node counts
 	_start_perf_watchdog()
 	
-	# Connect any bullets that already exist in the scene
+	# Connect existing bullets
 	if is_inside_tree():
 		for bullet in get_tree().get_nodes_in_group("enemy_bullet"):
-			_connect_enemy_bullet(bullet)
+			if bullet and is_instance_valid(bullet):
+				_connect_enemy_bullet(bullet)
 	
 	# Start the boss rush mode progression after a short delay to ensure scene is ready
 	call_deferred("_start_boss_rush_progression")
 
 func _start_boss_rush_progression() -> void:
-	"""Start the boss rush mode progression"""
+	# Start boss rush progression
 	print("[Main] Starting boss rush progression")
 	if GameModeManager.current_mode and GameModeManager.current_mode is BossRushMode:
 		GameModeManager.current_mode.get_next_stage()
@@ -179,10 +173,11 @@ func _setup_stage_controller() -> void:
 	# Start lightweight performance watchdog to prevent runaway node counts
 	_start_perf_watchdog()
 
-	# Connect any bullets that already exist in the scene (e.g. preloaded tutorials) - with tree safety check
+	# Connect existing bullets
 	if is_inside_tree():
 		for bullet in get_tree().get_nodes_in_group("enemy_bullet"):
-			_connect_enemy_bullet(bullet)
+			if bullet and is_instance_valid(bullet):
+				_connect_enemy_bullet(bullet)
 
 func _spawn_player() -> void:
 	print("[Main] Spawning player")
@@ -252,41 +247,21 @@ func _physics_process(delta: float) -> void:
 		if bullet_timer.is_stopped():
 			_fire_bullet()
 			bullet_timer.start()
+			# Emit input_shoot so rank can respond to shots
+			EventBus.input_shoot.emit(true)
 
 	# Bomb usage (X key or Left Shift)
-	if Input.is_action_just_pressed("bomb") and bombs > 0:
+	if Input.is_action_just_pressed("bomb") and GameState.bombs > 0:
 		_use_bomb()
 
-func _update_score_label() -> void:
-	if is_instance_valid(hud):
-		hud.call("set_score", score)
-
-func _update_lives_display() -> void:
-	if is_instance_valid(hud):
-		hud.call("set_lives", lives)
-
-func _update_bomb_display() -> void:
-	if is_instance_valid(hud):
-		hud.call("set_bombs", bombs)
+# HUD update methods removed - now handled by EventBus signals from GameState
 
 func _on_enemy_killed(points: int, enemy_position: Vector2, enemy_type: String = "enemy") -> void:
 	"""Handle enemy killed event"""
-	score += points
-	_update_score_label()
-
-	# Update streak (chain) based on time between kills
-	var now_s := float(Time.get_ticks_msec()) / 1000.0
-	if last_kill_time_s > 0.0 and (now_s - last_kill_time_s) <= chain_timeout:
-		chain_count += 1
-	else:
-		chain_count = 1
-	last_kill_time_s = now_s
-	max_chain = max(max_chain, chain_count)
-	if is_instance_valid(hud) and hud.has_method("set_chain"):
-		hud.set_chain(chain_count, max_chain)
-	if is_instance_valid(screen_shake):
-		screen_shake.shake(2.0, 0.06)
-
+	# Use GameState for score and streak management
+	GameState.add_score(points)
+	GameState.update_streak()
+	
 	# Try to drop items when enemies are killed using actual enemy position
 	if item_drop_manager:
 		item_drop_manager.try_drop_item(enemy_position, points, enemy_type)
@@ -299,8 +274,7 @@ func _on_enemy_killed(points: int, enemy_position: Vector2, enemy_type: String =
 func _on_boss_defeated() -> void:
 	"""Handle boss defeated event"""
 	var boss_score = 10000
-	score += boss_score
-	_update_score_label()
+	GameState.add_score(boss_score)
 	if is_instance_valid(screen_shake):
 		var shake_mult := _get_shake_scale_from_streak()
 		screen_shake.shake(1.5 * shake_mult, 0.22)
@@ -309,14 +283,11 @@ func _on_item_collected(item_type: String, value: int) -> void:
 	"""Handle item collection"""
 	match item_type:
 		"SCORE_SMALL", "SCORE_LARGE":
-			score += value
-			_update_score_label()
+			GameState.add_score(value)
 		"LIFE_EXTEND":
-			lives += 1
-			_update_lives_display()
+			GameState.add_lives(1)
 		"BOMB":
-			bombs += 1
-			_update_bomb_display()
+			GameState.add_bombs(1)
 		"POWER_UP", "SHIELD":
 			# Handle power-up effects here
 			pass
@@ -359,13 +330,12 @@ func _fire_bullet() -> void:
 
 func _use_bomb() -> void:
 	"""Use a bomb to clear enemies"""
-	if bombs <= 0:
+	if GameState.bombs <= 0:
 		return
 
-	bombs -= 1
-	_update_bomb_display()
+	GameState.use_bomb()
 	
-	print("[Main] BOMB USED! Remaining bombs: ", bombs)
+	print("[Main] BOMB USED! Remaining bombs: ", GameState.bombs)
 
 	# Create visual flash effect
 	_create_bomb_flash()
@@ -419,32 +389,29 @@ func _create_bomb_flash() -> void:
 	tween.tween_callback(flash.queue_free)
 
 func _on_player_damaged(amount: int) -> void:
-	print("[Main] _on_player_damaged called: amount=", amount, " current_lives=", lives, " game_over=", game_over)
+	print("[Main] _on_player_damaged called: amount=", amount, " current_lives=", GameState.lives, " game_over=", game_over)
 	
 	if game_over:
 		print("[Main] Game already over, ignoring damage")
 		return
 	
-	lives -= amount
-	lives = max(lives, 0)
-	print("[Main] Lives after damage: ", lives)
-	_update_lives_display()
+	# Use GameState for damage handling
+	GameState.take_lives(amount)
+	print("[Main] Lives after damage: ", GameState.lives)
 	
 	# Damage causes a subtle shake; still scaled by current streak for feedback
 	if is_instance_valid(screen_shake):
 		var shake_mult := _get_shake_scale_from_streak()
 		screen_shake.shake(0.9 * shake_mult, 0.10)
 
-	# Breaking the streak on damage feels fair; reset chain and update HUD
-	chain_count = 0
-	if is_instance_valid(hud) and hud.has_method("set_chain"):
-		hud.set_chain(0, max_chain)
+	# Breaking the streak on damage feels fair; reset chain
+	GameState.break_streak()
 	
-	if lives <= 0:
+	if GameState.lives <= 0:
 		print("[Main] No lives left, triggering game over")
 		_on_player_hit()
 	else:
-		print("[Main] Player has ", lives, " lives remaining")
+		print("[Main] Player has ", GameState.lives, " lives remaining")
 
 func _on_player_hit() -> void:
 	print("[Main] _on_player_hit called, game_over=", game_over)
@@ -455,7 +422,7 @@ func _on_player_hit() -> void:
 	
 	print("[Main] Setting game_over=true")
 	game_over = true
-	_update_lives_display()
+	GameState.trigger_game_over()
 	
 	if hud and hud.has_method("show_game_over"):
 		print("[Main] Showing game over screen")
@@ -554,7 +521,7 @@ func _setup_visual_clarity_systems() -> void:
 func _get_shake_scale_from_streak() -> float:
 	# Logarithmic scale: 1 + k * ln(1 + streak)
 	var k: float = 0.18
-	var streak: float = float(chain_count)
+	var streak: float = float(GameState.chain_count)
 	return 1.0 + k * log(1.0 + max(streak, 0.0))
 
 func _start_boss_monitoring() -> void:

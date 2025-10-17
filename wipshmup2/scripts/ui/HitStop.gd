@@ -1,12 +1,11 @@
 class_name HitStop
 extends Node
 
-# Hit-stop system for dramatic impact feedback
-# Freezes the game briefly on critical hits for better visual clarity
+# Hit-stop system
 
-@export var hit_stop_duration: float = 0.05  # 50ms freeze
-@export var boss_hit_stop_duration: float = 0.1  # 100ms for boss hits
-@export var player_death_stop_duration: float = 0.15  # 150ms for player death
+@export var hit_stop_duration: float = 0.05  # 50ms
+@export var boss_hit_stop_duration: float = 0.1  # 100ms boss
+@export var player_death_stop_duration: float = 0.15  # 150ms death
 
 var _is_hit_stopping: bool = false
 var _hit_stop_timer: float = 0.0
@@ -14,37 +13,37 @@ var _original_time_scale: float = 1.0
 var _hit_stop_end_ms: int = 0
 
 func _ready() -> void:
-	# Add to autoload or get reference from main scene
+	# Setup
 	set_process(true)
 
 func _process(_delta: float) -> void:
 	if _is_hit_stopping:
-		# Use wall-clock time to end hit-stop reliably even when time_scale == 0.0
+		# Wall-clock time
 		if Time.get_ticks_msec() >= _hit_stop_end_ms:
 			_end_hit_stop()
 
 func trigger_hit_stop(duration: float = -1.0, intensity: float = 1.0) -> void:
-	"""Trigger hit-stop effect with optional custom duration"""
+	# Trigger hit-stop
 	if _is_hit_stopping:
-		return  # Don't interrupt existing hit-stop
+		return  # Don't interrupt
 	
 	var stop_duration = duration if duration > 0.0 else hit_stop_duration
-	stop_duration *= intensity  # Scale by intensity
+	stop_duration *= intensity  # Scale
 	
 	_start_hit_stop(stop_duration)
 
 func trigger_boss_hit_stop() -> void:
-	"""Trigger longer hit-stop for boss hits"""
+	# Boss hit-stop
 	trigger_hit_stop(boss_hit_stop_duration, 1.0)
 
 func trigger_player_death_stop() -> void:
-	"""Trigger longest hit-stop for player death"""
+	# Player death stop
 	trigger_hit_stop(player_death_stop_duration, 1.0)
 
 func _start_hit_stop(duration: float) -> void:
-	"""Start the hit-stop effect"""
+	# Start hit-stop
 	_is_hit_stopping = true
-	# Cap to a reasonable maximum in case of misconfiguration
+	# Cap duration
 	var capped_duration: float = min(duration, 0.5)
 	_hit_stop_timer = capped_duration
 	_hit_stop_end_ms = Time.get_ticks_msec() + int(capped_duration * 1000.0)

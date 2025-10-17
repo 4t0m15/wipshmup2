@@ -1,9 +1,8 @@
 extends Node
 
-# EventBus - Centralized event system for the shmup game
-# Replaces scattered signal connections with a clean event-driven architecture
+# Centralized event system
 
-# Game Events
+# Game
 signal player_hit
 signal player_damaged(amount: int)
 signal game_over
@@ -11,21 +10,21 @@ signal game_started
 signal game_paused
 signal game_resumed
 
-# Player State Events
+# Player
 signal score_changed(new_score: int)
 signal lives_changed(new_lives: int)
 signal bombs_changed(new_bombs: int)
 signal player_invincibility_started
 signal player_invincibility_ended
 
-# Combat Events
+# Combat
 signal enemy_killed(points: int, position: Vector2, enemy_type: String)
 signal boss_defeated(boss_name: String, points: int)
 signal bullet_hit_player(bullet_position: Vector2)
 signal bullet_hit_enemy(enemy_position: Vector2, damage: int)
 signal bomb_used(position: Vector2)
 
-# Stage Events
+# Stage
 signal stage_started(stage_number: int)
 signal stage_completed(stage_number: int)
 signal enemy_spawned(enemy: Node, enemy_type: String)
@@ -33,12 +32,11 @@ signal boss_spawned(boss: Node, boss_name: String)
 signal wave_started(wave_number: int)
 signal wave_completed(wave_number: int)
 
-# Item Events
+# Items
 signal item_dropped(item_type: String, position: Vector2)
 signal item_collected(item_type: String, value: int) 
 
-# Cho Ren Sha 68K Events
-# These signals are used by HUD and other systems - not unused
+# Cho Ren Sha 68K
 signal shield_gained
 signal shield_lost
 signal shield_absorbed
@@ -115,6 +113,17 @@ func _ready() -> void:
 	life_extended.connect(_on_life_extended)
 	fire_rate_boost_activated.connect(_on_fire_rate_boost_activated)
 	fire_rate_boost_ended.connect(_on_fire_rate_boost_ended)
+	
+	# Connect visual effects signals
+	screen_shake_requested.connect(_on_screen_shake_requested)
+	hit_stop_requested.connect(_on_hit_stop_requested)
+	flash_requested.connect(_on_flash_requested)
+	explosion_requested.connect(_on_explosion_requested)
+	
+	# Connect audio signals
+	play_sound.connect(_on_play_sound)
+	play_music.connect(_on_play_music)
+	stop_music.connect(_on_stop_music)
 
 # Convenience methods for common event patterns
 func emit_player_damage(amount: int) -> void:
@@ -279,3 +288,122 @@ func _on_fire_rate_boost_activated(duration: float) -> void:
 
 func _on_fire_rate_boost_ended() -> void:
 	print("[EventBus] Fire rate boost ended")
+
+# Visual Effects Event Handlers
+func _on_screen_shake_requested(intensity: float, duration: float) -> void:
+	print("[EventBus] Screen shake requested: intensity=", intensity, " duration=", duration)
+
+func _on_hit_stop_requested(duration: float, scale: float) -> void:
+	print("[EventBus] Hit stop requested: duration=", duration, " scale=", scale)
+
+func _on_flash_requested(color: Color, duration: float) -> void:
+	print("[EventBus] Flash requested: color=", color, " duration=", duration)
+
+func _on_explosion_requested(position: Vector2, size: float) -> void:
+	print("[EventBus] Explosion requested: position=", position, " size=", size)
+
+# Audio Event Handlers
+func _on_play_sound(sound_name: String, volume: float) -> void:
+	print("[EventBus] Play sound: ", sound_name, " volume=", volume)
+
+func _on_play_music(music_name: String, fade_in: bool) -> void:
+	print("[EventBus] Play music: ", music_name, " fade_in=", fade_in)
+
+func _on_stop_music(fade_out: bool) -> void:
+	print("[EventBus] Stop music: fade_out=", fade_out)
+
+func _exit_tree() -> void:
+	"""Clean up signal connections to prevent memory leaks"""
+	# Disconnect all internal signal connections
+	if player_hit.is_connected(_on_player_hit):
+		player_hit.disconnect(_on_player_hit)
+	if game_over.is_connected(_on_game_over):
+		game_over.disconnect(_on_game_over)
+	if game_started.is_connected(_on_game_started):
+		game_started.disconnect(_on_game_started)
+	if game_paused.is_connected(_on_game_paused):
+		game_paused.disconnect(_on_game_paused)
+	if game_resumed.is_connected(_on_game_resumed):
+		game_resumed.disconnect(_on_game_resumed)
+	if lives_changed.is_connected(_on_lives_changed):
+		lives_changed.disconnect(_on_lives_changed)
+	if bombs_changed.is_connected(_on_bombs_changed):
+		bombs_changed.disconnect(_on_bombs_changed)
+	if player_invincibility_started.is_connected(_on_player_invincibility_started):
+		player_invincibility_started.disconnect(_on_player_invincibility_started)
+	if player_invincibility_ended.is_connected(_on_player_invincibility_ended):
+		player_invincibility_ended.disconnect(_on_player_invincibility_ended)
+	if bullet_hit_player.is_connected(_on_bullet_hit_player):
+		bullet_hit_player.disconnect(_on_bullet_hit_player)
+	if bullet_hit_enemy.is_connected(_on_bullet_hit_enemy):
+		bullet_hit_enemy.disconnect(_on_bullet_hit_enemy)
+	if bomb_used.is_connected(_on_bomb_used):
+		bomb_used.disconnect(_on_bomb_used)
+	if stage_started.is_connected(_on_stage_started):
+		stage_started.disconnect(_on_stage_started)
+	if stage_completed.is_connected(_on_stage_completed):
+		stage_completed.disconnect(_on_stage_completed)
+	if enemy_spawned.is_connected(_on_enemy_spawned):
+		enemy_spawned.disconnect(_on_enemy_spawned)
+	if boss_spawned.is_connected(_on_boss_spawned):
+		boss_spawned.disconnect(_on_boss_spawned)
+	if wave_started.is_connected(_on_wave_started):
+		wave_started.disconnect(_on_wave_started)
+	if wave_completed.is_connected(_on_wave_completed):
+		wave_completed.disconnect(_on_wave_completed)
+	if item_dropped.is_connected(_on_item_dropped):
+		item_dropped.disconnect(_on_item_dropped)
+	if item_collected.is_connected(_on_item_collected):
+		item_collected.disconnect(_on_item_collected)
+	if input_movement.is_connected(_on_input_movement):
+		input_movement.disconnect(_on_input_movement)
+	if input_shoot.is_connected(_on_input_shoot):
+		input_shoot.disconnect(_on_input_shoot)
+	if input_bomb.is_connected(_on_input_bomb):
+		input_bomb.disconnect(_on_input_bomb)
+	if input_pause.is_connected(_on_input_pause):
+		input_pause.disconnect(_on_input_pause)
+	if rank_changed.is_connected(_on_rank_changed):
+		rank_changed.disconnect(_on_rank_changed)
+	if streak_changed.is_connected(_on_streak_changed):
+		streak_changed.disconnect(_on_streak_changed)
+	if entity_spawned.is_connected(_on_entity_spawned):
+		entity_spawned.disconnect(_on_entity_spawned)
+	if entity_destroyed.is_connected(_on_entity_destroyed):
+		entity_destroyed.disconnect(_on_entity_destroyed)
+	
+	# Disconnect Cho Ren Sha 68K signals
+	if shield_gained.is_connected(_on_shield_gained):
+		shield_gained.disconnect(_on_shield_gained)
+	if shield_lost.is_connected(_on_shield_lost):
+		shield_lost.disconnect(_on_shield_lost)
+	if shield_absorbed.is_connected(_on_shield_absorbed):
+		shield_absorbed.disconnect(_on_shield_absorbed)
+	if weapon_power_changed.is_connected(_on_weapon_power_changed):
+		weapon_power_changed.disconnect(_on_weapon_power_changed)
+	if loop_incremented.is_connected(_on_loop_incremented):
+		loop_incremented.disconnect(_on_loop_incremented)
+	if life_extended.is_connected(_on_life_extended):
+		life_extended.disconnect(_on_life_extended)
+	if fire_rate_boost_activated.is_connected(_on_fire_rate_boost_activated):
+		fire_rate_boost_activated.disconnect(_on_fire_rate_boost_activated)
+	if fire_rate_boost_ended.is_connected(_on_fire_rate_boost_ended):
+		fire_rate_boost_ended.disconnect(_on_fire_rate_boost_ended)
+	
+	# Disconnect visual effects signals
+	if screen_shake_requested.is_connected(_on_screen_shake_requested):
+		screen_shake_requested.disconnect(_on_screen_shake_requested)
+	if hit_stop_requested.is_connected(_on_hit_stop_requested):
+		hit_stop_requested.disconnect(_on_hit_stop_requested)
+	if flash_requested.is_connected(_on_flash_requested):
+		flash_requested.disconnect(_on_flash_requested)
+	if explosion_requested.is_connected(_on_explosion_requested):
+		explosion_requested.disconnect(_on_explosion_requested)
+	
+	# Disconnect audio signals
+	if play_sound.is_connected(_on_play_sound):
+		play_sound.disconnect(_on_play_sound)
+	if play_music.is_connected(_on_play_music):
+		play_music.disconnect(_on_play_music)
+	if stop_music.is_connected(_on_stop_music):
+		stop_music.disconnect(_on_stop_music)

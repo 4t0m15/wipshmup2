@@ -1,33 +1,32 @@
 extends Resource
 class_name BossPhase
 
-# BossPhase - Data-driven boss phase definition
-# Defines behavior, patterns, and transitions for boss phases
+# Data-driven boss phase
 
 @export var phase_name: String = "Phase 1"
-@export var hp_threshold: int = 0  # HP at which this phase starts
+@export var hp_threshold: int = 0  # HP threshold
 @export var movement_behavior: String = "StraightDown"
 @export var attack_patterns: Array[String] = ["AimedShot"]
-@export var phase_duration: float = -1.0  # -1 for infinite
+@export var phase_duration: float = -1.0  # -1 = infinite
 
-# Movement parameters
+# Movement
 @export var movement_params: Dictionary = {}
 
-# Attack parameters
+# Attack
 @export var attack_params: Dictionary = {}
 
-# Visual changes
+# Visual
 @export var sprite_scale: float = 1.0
 @export var glow_color: Color = Color.WHITE
 @export var danger_level: int = 1
 
-# Special effects
+# Effects
 @export var screen_shake_intensity: float = 0.0
 @export var background_tint: Color = Color.WHITE
 @export var music_pitch: float = 1.0
 
 func _init() -> void:
-	# Set default parameters
+	# Defaults
 	if movement_params.is_empty():
 		movement_params = {
 			"speed": 30.0,
@@ -42,7 +41,7 @@ func _init() -> void:
 		}
 
 func get_movement_behavior_scene() -> GDScript:
-	"""Get the movement behavior scene for this phase"""
+	# Get behavior scene
 	match movement_behavior:
 		"StraightDown":
 			return load("res://scripts/components/behaviors/StraightDownBehavior.gd")
@@ -56,7 +55,7 @@ func get_movement_behavior_scene() -> GDScript:
 			return load("res://scripts/components/behaviors/StraightDownBehavior.gd")
 
 func get_attack_behavior_scene() -> GDScript:
-	"""Get the attack behavior scene for this phase"""
+	# Get attack scene
 	match attack_patterns[0] if attack_patterns.size() > 0 else "AimedShot":
 		"AimedShot":
 			return load("res://scripts/components/behaviors/AimedShotBehavior.gd")
@@ -68,30 +67,29 @@ func get_attack_behavior_scene() -> GDScript:
 			return load("res://scripts/components/behaviors/AimedShotBehavior.gd")
 
 func apply_visual_effects(boss: Node) -> void:
-	"""Apply visual effects for this phase"""
-	# Apply sprite changes
+	# Apply effects
+	# Sprite changes
 	if boss.has_node("Sprite2D"):
 		var sprite = boss.get_node("Sprite2D")
 		sprite.scale = Vector2(sprite_scale, sprite_scale)
 		if glow_color != Color.WHITE:
 			sprite.modulate = glow_color
 	
-	# Apply screen shake
+	# Screen shake
 	if screen_shake_intensity > 0.0:
 		EventBus.emit_visual_effect("screen_shake", {
 			"intensity": screen_shake_intensity,
 			"duration": 0.5
 		})
 	
-	# Apply background
+	# Background
 	if background_tint != Color.WHITE:
 		EventBus.emit_visual_effect("flash", {
 			"color": background_tint,
 			"duration": 0.3
 		})
 	
-	# Apply music pitch
+	# Music pitch
 	if music_pitch != 1.0:
-		# Note: Audio manager access should be handled by the boss instance, not the phase definition
-		# This is a data class, so we can't access the scene tree directly
+		# Audio handled by boss
 		pass

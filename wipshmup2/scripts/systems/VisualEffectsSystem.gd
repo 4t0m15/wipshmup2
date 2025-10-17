@@ -21,32 +21,36 @@ func _ready() -> void:
 func _setup_visual_systems() -> void:
 	# Setup screen shake
 	screen_shake = load("res://scripts/ui/ScreenShake.gd").new()
-	screen_shake.name = "ScreenShake"
-	add_child(screen_shake)
+	if screen_shake:
+		screen_shake.name = "ScreenShake"
+		add_child(screen_shake)
 	
 	# Setup hit-stop
 	hit_stop = load("res://scripts/ui/HitStop.gd").new()
-	hit_stop.name = "HitStop"
-	add_child(hit_stop)
+	if hit_stop:
+		hit_stop.name = "HitStop"
+		add_child(hit_stop)
 	
 	# Setup danger indicator
 	danger_indicator = load("res://scripts/ui/DangerIndicator.gd").new()
-	danger_indicator.name = "DangerIndicator"
-	add_child(danger_indicator)
+	if danger_indicator:
+		danger_indicator.name = "DangerIndicator"
+		add_child(danger_indicator)
 	
 	# Setup visual settings
 	visual_settings = load("res://scripts/ui/VisualSettings.gd").new()
-	visual_settings.name = "VisualSettings"
-	add_child(visual_settings)
+	if visual_settings:
+		visual_settings.name = "VisualSettings"
+		add_child(visual_settings)
 	
 	print("[VisualEffectsSystem] Visual effects systems initialized")
 
 func _on_screen_shake_requested(intensity: float, duration: float) -> void:
-	if screen_shake and screen_shake.has_method("shake"):
+	if screen_shake and is_instance_valid(screen_shake) and screen_shake.has_method("shake"):
 		screen_shake.shake(intensity, duration)
 
 func _on_hit_stop_requested(duration: float, scale: float) -> void:
-	if hit_stop and hit_stop.has_method("trigger_hit_stop"):
+	if hit_stop and is_instance_valid(hit_stop) and hit_stop.has_method("trigger_hit_stop"):
 		hit_stop.trigger_hit_stop(duration, scale)
 
 func _on_flash_requested(color: Color, duration: float) -> void:

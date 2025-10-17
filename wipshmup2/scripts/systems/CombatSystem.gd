@@ -30,6 +30,9 @@ func _on_bullet_hit_player(_bullet_position: Vector2) -> void:
 	# Apply damage to player
 	GameState.take_lives(1)
 	EventBus.player_damaged.emit(1)
+	# Inform rank system of life loss
+	if RankManager and RankManager.has_method("on_player_died"):
+		RankManager.on_player_died(GameState.lives)
 	
 	# Start invincibility
 	GameState.set_invincible(true)
@@ -101,6 +104,9 @@ func _on_player_hit() -> void:
 	# Apply damage
 	GameState.take_lives(1)
 	EventBus.player_damaged.emit(1)
+	# Inform rank system of life loss
+	if RankManager and RankManager.has_method("on_player_died"):
+		RankManager.on_player_died(GameState.lives)
 	
 	# Reset Cho Ren Sha mechanics on death (minimal changes)
 	GameState.reset_weapon_power()

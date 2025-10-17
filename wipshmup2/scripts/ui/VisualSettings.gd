@@ -1,10 +1,9 @@
 class_name VisualSettings
 extends Node
 
-# Visual clarity settings for accessibility and customization
-# Centralized system for managing visual effects intensity
+# Visual clarity settings
 
-# Settings categories
+# Categories
 enum SettingCategory {
 	BULLET_VISIBILITY,
 	BACKGROUND_CLARITY,
@@ -13,21 +12,21 @@ enum SettingCategory {
 	PERFORMANCE
 }
 
-# Individual settings
-var bullet_outline_intensity: float = 1.0  # 0.0 to 2.0
+# Settings
+var bullet_outline_intensity: float = 1.0  # 0-2
 var bullet_glow_enabled: bool = true
-var bullet_size_multiplier: float = 1.0  # 0.5 to 2.0
+var bullet_size_multiplier: float = 1.0  # 0.5-2
 
-var background_dim_intensity: float = 0.5  # 0.0 to 1.0
+var background_dim_intensity: float = 0.5  # 0-1
 var background_dynamic_dim: bool = true
-var shader_intensity: float = 1.0  # 0.0 to 1.0
+var shader_intensity: float = 1.0  # 0-1
 
-var screen_shake_intensity: float = 1.0  # 0.0 to 2.0
+var screen_shake_intensity: float = 1.0  # 0-2
 var hit_stop_enabled: bool = true
 var flash_effects_enabled: bool = true
 var particle_effects_enabled: bool = true
 
-var colorblind_mode: String = "none"  # none, protanopia, deuteranopia, tritanopia
+var colorblind_mode: String = "none"  # Colorblind modes
 var high_contrast_mode: bool = false
 var large_ui_mode: bool = false
 var photosensitivity_mode: bool = false
@@ -36,7 +35,7 @@ var max_particles: int = 50
 var dynamic_quality: bool = true
 var effect_culling_distance: float = 200.0
 
-# Color palettes for different modes
+# Color palettes
 var _color_palettes = {
 	"normal": {
 		"player": Color(0.2, 1.0, 0.8, 1.0),

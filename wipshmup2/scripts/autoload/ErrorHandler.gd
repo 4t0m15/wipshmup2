@@ -1,7 +1,6 @@
 extends Node
 
-# ErrorHandler - Global error handling and crash prevention
-# Provides centralized error logging and recovery mechanisms
+# Global error handling
 
 signal error_occurred(error_message: String, error_type: String)
 signal critical_error_occurred(error_message: String)
@@ -12,17 +11,17 @@ var crash_count: int = 0
 var max_crashes: int = 10
 
 func _ready() -> void:
-	# Initialize error handler
+	# Initialize
 	print("[ErrorHandler] Enhanced error handler initialized")
 	
-	# Connect to stability manager if available
+	# Connect to stability
 	var stability_manager = get_node_or_null("/root/StabilityManager")
 	if stability_manager and stability_manager.has_method("_on_error_occurred"):
 		error_occurred.connect(stability_manager._on_error_occurred)
 		critical_error_occurred.connect(stability_manager._on_critical_error)
 
 func _on_error(error_message: String, error_type: String, error_file: String, error_line: int) -> void:
-	"""Handle engine errors"""
+	# Handle errors
 	var error_data = {
 		"message": error_message,
 		"type": error_type,
@@ -34,18 +33,18 @@ func _on_error(error_message: String, error_type: String, error_file: String, er
 	# Add to log
 	error_log.append(error_data)
 	
-	# Limit log size with safety check
+	# Limit log size
 	if error_log.size() > max_log_size:
 		if error_log.size() > 0:
 			error_log.pop_front()
 	
-	# Log error
+	# Log
 	print("[ErrorHandler] ", error_type, ": ", error_message, " at ", error_file, ":", error_line)
 	
-	# Emit signals
+	# Emit
 	error_occurred.emit(error_message, error_type)
 	
-	# Check for critical errors
+	# Check critical
 	if _is_critical_error(error_type):
 		critical_error_occurred.emit(error_message)
 		crash_count += 1
@@ -60,15 +59,18 @@ func _is_critical_error(error_type: String) -> bool:
 	return error_type in critical_types
 
 func _handle_crash_limit_reached() -> void:
-	"""Handle when crash limit is reached"""
+	"""Handle when crash limit is reached - attempts recovery before graceful exit"""
 	print("[ErrorHandler] CRITICAL: Too many crashes detected, attempting recovery")
 	
-	# Try to recover by restarting the game6
-	if get_tree():
-		get_tree().reload_current_scene()
+	# Try to recover by restarting the game
+	var tree = get_tree()
+	if tree and is_instance_valid(tree):
+		tree.reload_current_scene()
 	else:
-		# Last resort - quit
-		get_tree().quit()
+		# Last resort - quit gracefully
+		print("[ErrorHandler] Unable to recover, exiting gracefully")
+		if tree and is_instance_valid(tree):
+			tree.quit()
 
 func log_error(message: String, context: String = "") -> void:
 	"""Log a custom error"""
@@ -85,7 +87,7 @@ func log_error(message: String, context: String = "") -> void:
 	error_occurred.emit(message, "CUSTOM_ERROR")
 
 func safe_call(object: Object, method: String, args: Array = []) -> Variant:
-	"""Safely call a method on an object"""
+	"""Safely call a method on an object with comprehensive error handling"""
 	if not object or not is_instance_valid(object):
 		log_error("Attempted to call method on invalid object: " + method)
 		return null
@@ -94,11 +96,18 @@ func safe_call(object: Object, method: String, args: Array = []) -> Variant:
 		log_error("Object does not have method: " + method)
 		return null
 	
-	# Use safe call pattern instead of try-catch
+	# Use safe call pattern with error handling
+	var result = null
 	if args.is_empty():
-		return object.call(method)
+		result = object.call(method)
 	else:
-		return object.callv(method, args)
+		result = object.callv(method, args)
+	
+	# Log if result indicates failure (null for expected return types)
+	if result == null and method != "void":
+		log_error("Method call returned null: " + method)
+	
+	return result
 
 func safe_get(object: Object, property: String, default_value = null) -> Variant:
 	"""Safely get a property from an object"""

@@ -1,5 +1,5 @@
 extends Node
-# Item drop system for power-ups, score items, and special pickups
+# Item drop system
 
 signal item_collected(item_type: String, value: int)
 
@@ -12,7 +12,7 @@ enum ItemType {
 	SHIELD
 }
 
-# Base drop rate weights (relative probabilities)
+# Drop rates
 var drop_rates: Dictionary = {
 	ItemType.POWER_UP: 0.15,
 	ItemType.SCORE_SMALL: 0.3,
@@ -24,7 +24,7 @@ var drop_rates: Dictionary = {
 
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
-# Configuration
+# Config
 @export var auto_emit_on_spawn: bool = true
 @export var simulate_pickup_delay: float = 0.0  # If > 0, emit after a delay to simulate collection timing
 @export var score_values := {
@@ -40,10 +40,10 @@ func _ready() -> void:
 	_rng.randomize()
 	add_to_group("item_drop_manager")
 
-# Public API -------------------------------------------------------
+# Public API
 
 func try_drop_item(position: Vector2, enemy_points: int = 100, enemy_type: String = "") -> void:
-	# Cho Ren Sha 68K: All enemies drop triangle items instead of individual items
+	# Cho Ren Sha 68K: triangle items
 	var drop_chance: float = _calculate_drop_chance(enemy_points)
 	print("[ItemDropManager] Trying to drop item at ", position, " with ", drop_chance * 100, "% chance")
 	var roll = _rng.randf()

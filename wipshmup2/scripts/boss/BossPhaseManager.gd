@@ -85,14 +85,14 @@ func _add_movement_behavior() -> void:
 	# Add directly - PhaseManager is already added with call_deferred, so boss is ready
 	boss.add_child(new_movement_behavior)
 	movement_behavior = new_movement_behavior
-	
+
 	# Apply movement parameters
 	for key in current_phase.movement_params:
 		if new_movement_behavior.has_method("set_" + key):
 			new_movement_behavior.call("set_" + key, current_phase.movement_params[key])
 		elif new_movement_behavior.get(key) != null:
 			new_movement_behavior.set(key, current_phase.movement_params[key])
-
+	
 func _add_attack_behavior() -> void:
 	"""Add attack behavior for current phase"""
 	if not current_phase:

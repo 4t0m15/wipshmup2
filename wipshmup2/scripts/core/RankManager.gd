@@ -12,6 +12,7 @@ extends Node
 
 var rank: float = 1.0
 var stage_number: int = 1
+var _previous_lives: int = -1
 
 # Max multiplier caps - AGGRESSIVE SCALING
 var multipliers = {
@@ -39,34 +40,52 @@ func _ready() -> void:
 		multipliers.pattern_density = float(caps.get("pattern_density_max_mult", multipliers.pattern_density))
 		multipliers.pattern_cadence = float(caps.get("pattern_cadence_max_mult", multipliers.pattern_cadence))
 	
-	rank = min_rank
+	# Initialize rank and hook stage resets
+	_set_rank(min_rank)
+	var eb: Node = get_node_or_null("/root/EventBus")
+	if eb and EventBus and not EventBus.stage_started.is_connected(_on_stage_started):
+		EventBus.stage_started.connect(_on_stage_started)
+	# Connect to input_shoot to raise rank on actual shots
+	if eb and EventBus and not EventBus.input_shoot.is_connected(_on_input_shoot):
+		EventBus.input_shoot.connect(_on_input_shoot)
+	# Connect to lives_changed to drop rank when a life is lost
+	if eb and EventBus and not EventBus.lives_changed.is_connected(_on_lives_changed):
+		EventBus.lives_changed.connect(_on_lives_changed)
+	# Initialize previous lives from GameState if available
+	var gs: Node = get_node_or_null("/root/GameState")
+	if gs:
+		_previous_lives = int(gs.get("lives")) if gs.get("lives") != null else -1
 
 func _process(delta: float) -> void:
-	rank = clamp(rank + time_rank_rate * delta, min_rank, max_rank)
+	_set_rank(rank + time_rank_rate * delta)
 
 func reset(new_stage: int) -> void:
 	stage_number = new_stage
 	# Start each stage at higher rank - was 0.05, now 0.25
-	rank = clamp(1.0 + (float(stage_number) - 1.0) * 0.25, min_rank, max_rank)
+	_set_rank(1.0 + (float(stage_number) - 1.0) * 0.25)
 
 func on_enemy_killed(points: int) -> void:
-	rank = clamp(rank + kill_rank_rate * float(points), min_rank, max_rank)
+	_set_rank(rank + kill_rank_rate * float(points))
 
 func on_shot_fired(multiplier: float = 1.0) -> void:
-	rank = clamp(rank + shot_rank_rate * max(0.0, multiplier), min_rank, max_rank)
+	_set_rank(rank + shot_rank_rate * max(0.0, multiplier))
 
 
 
 func on_bomb_used() -> void:
-	rank = clamp(rank + bomb_use_rank_add, min_rank, max_rank)
+	_set_rank(rank + bomb_use_rank_add)
 
 func on_player_died(current_lives: int = 0) -> void:
 	# Less forgiving - reduced life_factor scaling
 	var life_factor: float = clamp(1.0 - 0.02 * float(max(current_lives - 1, 0)), 0.9, 1.0)
-	rank = clamp(rank - death_rank_drop * life_factor, min_rank, max_rank)
+	_set_rank(rank - death_rank_drop * life_factor)
 
 func on_bullet_sealed() -> void:
-	rank = clamp(rank + bullet_seal_rank_rate, min_rank, max_rank)
+	_set_rank(rank + bullet_seal_rank_rate)
+
+func on_boss_defeated() -> void:
+	# Provide slight relief after boss defeat
+	_set_rank(rank - 0.3)
 
 func get_rank_percent() -> float:
 	return clamp((rank - min_rank) / (max_rank - min_rank), 0.0, 1.0) * 100.0
@@ -90,5 +109,31 @@ func get_pattern_density_multiplier() -> float:
 
 func get_pattern_cadence_multiplier() -> float:
 	return get_multiplier("pattern_cadence")
+
+# Internal helpers and signal relays
+func _set_rank(new_rank: float) -> void:
+	var clamped: float = clamp(new_rank, min_rank, max_rank)
+	if abs(clamped - rank) > 0.0001:
+		rank = clamped
+		var eb: Node = get_node_or_null("/root/EventBus")
+		if eb and EventBus:
+			EventBus.rank_changed.emit(rank)
+
+func _on_stage_started(stage_num: int) -> void:
+	reset(stage_num)
+
+func _on_input_shoot(pressed: bool) -> void:
+	if not pressed:
+		return
+	var gs: Node = get_node_or_null("/root/GameState")
+	var mult: float = 1.0
+	if gs and gs.has_method("get_fire_rate_multiplier"):
+		mult = float(gs.get_fire_rate_multiplier())
+	on_shot_fired(mult)
+
+func _on_lives_changed(new_lives: int) -> void:
+	if _previous_lives >= 0 and new_lives < _previous_lives:
+		on_player_died(new_lives)
+	_previous_lives = new_lives
 
 

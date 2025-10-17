@@ -39,6 +39,7 @@ DevelopmentTools="*res://scripts/autoload/DevelopmentTools.gd"
 ParallelProcessor="*res://scripts/autoload/ParallelProcessor.gd"
 TestingFramework="*res://scripts/autoload/TestingFramework.gd"
 DevelopmentWorkflow="*res://scripts/autoload/DevelopmentWorkflow.gd"
+MemoryManager="*res://scripts/autoload/MemoryManager.gd"
 
 [display]
 

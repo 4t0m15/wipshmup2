@@ -1,12 +1,11 @@
 extends Node
 
-# SpriteManager - Centralized sprite scaling and management system
-# This ensures all sprites are properly sized and visible
+# Centralized sprite scaling
 
 func _ready():
 	pass
 
-# Target sizes for different entity types
+# Target sizes
 const TARGET_SIZES = {
 	"player": 18.0,
 	"enemy_fighter": 20.0,
@@ -18,7 +17,7 @@ const TARGET_SIZES = {
 	"powerup": 16.0
 }
 
-# Sprite scaling presets for different entity types
+# Scale presets
 const SCALE_PRESETS = {
 	"player": Vector2(1.0, 1.0),  # Full size for better visibility
 	"enemy_fighter": Vector2(1.2, 1.2),
@@ -30,18 +29,18 @@ const SCALE_PRESETS = {
 	"powerup": Vector2(1.0, 1.0)
 }
 
-# Enhanced color modulation presets for better visual clarity
+# Color presets
 const COLOR_PRESETS = {
-	# Player: bright cyan for maximum visibility
+	# Player: bright cyan
 	"player": Color(0.2, 1.0, 0.8, 1.0),
-	# Enemies with threat-based color coding
+	# Enemies by threat
 	"enemy_fighter": Color(1.0, 0.3, 0.3, 1.0),  # Red - aggressive
 	"enemy_bomber": Color(1.0, 0.6, 0.2, 1.0),   # Orange - medium threat
 	"enemy_turret": Color(1.0, 0.8, 0.2, 1.0),   # Yellow - shooter
 	"enemy_escort": Color(1.0, 0.5, 0.8, 1.0),   # Pink - support
 	"enemy_kamikaze": Color(1.0, 0.2, 0.2, 1.0), # Dark red - high threat
 	"enemy_boss": Color(0.8, 0.4, 1.0, 1.0),     # Purple - boss
-	# Fallbacks / general roles
+	# Fallbacks
 	"default": Color.WHITE,
 	"fighter": Color(1.0, 0.3, 0.3, 1.0),
 	"bomber": Color(1.0, 0.6, 0.2, 1.0),

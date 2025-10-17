@@ -1,19 +1,19 @@
 class_name BossHealthBar
 extends Control
 
-# Visual settings - Enhanced for better clarity
-@export var bar_height: float = 6.0  # Increased from 4.3 for better visibility
-@export var bar_padding: float = 2.0  # Increased from 1.4
-@export var phase_gap: float = 1.0  # Increased from 0.7
+# Visual settings
+@export var bar_height: float = 6.0  # Better visibility
+@export var bar_padding: float = 2.0  # Increased
+@export var phase_gap: float = 1.0  # Increased
 
 # Colors
 @export var bg_color: Color = Color(0.1, 0.1, 0.15, 0.9)
 @export var border_color: Color = Color(0.9, 0.7, 1.0, 0.9)
 @export var phase_colors: Array[Color] = [
-	Color(1.0, 0.3, 0.3, 1.0),  # Phase 1 - Red
-	Color(1.0, 0.5, 0.1, 1.0),  # Phase 2 - Orange
-	Color(1.0, 0.8, 0.1, 1.0),  # Phase 3 - Yellow
-	Color(0.5, 1.0, 0.3, 1.0),  # Phase 4 - Green
+	Color(1.0, 0.3, 0.3, 1.0),  # Phase 1
+	Color(1.0, 0.5, 0.1, 1.0),  # Phase 2
+	Color(1.0, 0.8, 0.1, 1.0),  # Phase 3
+	Color(0.5, 1.0, 0.3, 1.0),  # Phase 4
 ]
 
 var _boss: Node = null
@@ -27,7 +27,7 @@ var _boss_name: String = ""
 
 func _ready() -> void:
 	visible = false
-	custom_minimum_size = Vector2(160, 20)  # Increased size for better readability
+	custom_minimum_size = Vector2(160, 20)  # Better readability
 
 func _process(_delta: float) -> void:
 	if _boss and is_instance_valid(_boss):

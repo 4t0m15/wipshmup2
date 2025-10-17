@@ -29,9 +29,11 @@ func _ready() -> void:
 		print("[Player] Hurtbox configured: layer=", hurtbox.collision_layer, " mask=", hurtbox.collision_mask)
 	else:
 		print("[Player] WARNING: No Hurtbox node found!")
+		# Create hurtbox if missing
+		_create_hurtbox()
 	
 	# Setup visual clarity enhancements
-	_setup_visual_effects()
+	call_deferred("_setup_visual_effects")
 
 func _physics_process(delta: float) -> void:
 	if not _alive: 
@@ -44,21 +46,21 @@ func _physics_process(delta: float) -> void:
 			_invincible = false
 			_invincibility_timer = 0.0
 			print("[Player] Invincibility ended")
-			# Make player fully visible again
-			modulate = Color.WHITE
-			# Hide hitbox indicator
-			if _hitbox_indicator:
-				_hitbox_indicator.visible = false
-		else:
-			# Enhanced blink effect during invincibility
-			var blink_rate = 12.0  # Faster blinking
-			var alpha = 0.2 + 0.8 * abs(sin(_invincibility_timer * blink_rate * PI))
-			modulate = Color(1.0, 0.8, 0.8, alpha)  # Slight red tint during invincibility
-			
-			# Show hitbox indicator during invincibility
-			if _hitbox_indicator:
-				_hitbox_indicator.visible = true
-				_hitbox_indicator.modulate = Color(1.0, 0.3, 0.3, alpha)
+		# Make player fully visible again
+		modulate = Color.WHITE
+		# Hide hitbox indicator
+		if _hitbox_indicator and is_instance_valid(_hitbox_indicator):
+			_hitbox_indicator.visible = false
+	else:
+		# Enhanced blink effect during invincibility
+		var blink_rate = 12.0  # Faster blinking
+		var alpha = 0.2 + 0.8 * abs(sin(_invincibility_timer * blink_rate * PI))
+		modulate = Color(1.0, 0.8, 0.8, alpha)  # Slight red tint during invincibility
+		
+		# Show hitbox indicator during invincibility
+		if _hitbox_indicator and is_instance_valid(_hitbox_indicator):
+			_hitbox_indicator.visible = true
+			_hitbox_indicator.modulate = Color(1.0, 0.3, 0.3, alpha)
 	
 	# Simple movement - this will be overridden by Main.gd
 	pass
@@ -152,8 +154,26 @@ func set_focused(focused: bool) -> void:
 		if focused:
 			_hitbox_indicator.modulate = Color(0.2, 1.0, 0.2, 0.8)
 
+func _create_hurtbox() -> void:
+	# Create hurtbox if missing
+	var hurtbox = Area2D.new()
+	hurtbox.name = "Hurtbox"
+	var collision_shape = CollisionShape2D.new()
+	collision_shape.shape = CircleShape2D.new()
+	(collision_shape.shape as CircleShape2D).radius = 6.0
+	hurtbox.add_child(collision_shape)
+	add_child(hurtbox)
+	
+	hurtbox.add_to_group("player_hurtbox")
+	hurtbox.monitoring = true
+	hurtbox.monitorable = true
+	hurtbox.collision_layer = 1   # Player layer
+	hurtbox.collision_mask = 2    # Enemy bullet layer
+	hurtbox.position = Vector2.ZERO
+	print("[Player] Created missing hurtbox")
+
 func _update_visual_effects(_delta: float) -> void:
-	"""Update visual effects for better clarity"""
+	# Update visual effects
 	# Update glow pulsing
 	if _glow_sprite:
 		var pulse = 0.8 + 0.2 * sin(Time.get_ticks_msec() * 0.008)

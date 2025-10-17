@@ -15,6 +15,9 @@ var task_queue: Array[Dictionary] = []
 var active_tasks: Dictionary = {}
 var completed_tasks: Dictionary = {}
 
+# Thread safety
+var _task_mutex: Mutex = Mutex.new()
+
 # Task types and their processors
 var task_processors: Dictionary = {}
 var task_priorities: Dictionary = {}
@@ -64,10 +67,13 @@ func _process(_delta: float) -> void:
 
 func _process_task_queue() -> void:
 	"""Process queued tasks"""
+	_task_mutex.lock()
 	# Sort tasks by priority
 	task_queue.sort_custom(_compare_task_priority)
+	_task_mutex.unlock()
 	
 	# Start new tasks if workers are available
+	_task_mutex.lock()
 	for i in range(task_queue.size() - 1, -1, -1):
 		var task = task_queue[i]
 		var worker = _get_available_worker()
@@ -75,6 +81,7 @@ func _process_task_queue() -> void:
 		if worker:
 			_start_task(task, worker)
 			task_queue.remove_at(i)
+	_task_mutex.unlock()
 
 func _compare_task_priority(a: Dictionary, b: Dictionary) -> bool:
 	"""Compare task priorities for sorting"""
@@ -337,7 +344,9 @@ func queue_task(task_type: String, data: Dictionary, priority: int = 0) -> Strin
 		"queued_time": Time.get_ticks_msec()
 	}
 	
+	_task_mutex.lock()
 	task_queue.append(task)
+	_task_mutex.unlock()
 	
 	print("[ParallelProcessor] Queued task: ", task_id, " (", task_type, ")")
 	return task_id
@@ -363,11 +372,14 @@ func get_task_result(task_id: String) -> Variant:
 
 func cancel_task(task_id: String) -> bool:
 	"""Cancel a queued or active task"""
+	_task_mutex.lock()
 	# Remove from queue
 	for i in range(task_queue.size() - 1, -1, -1):
 		if task_queue[i].id == task_id:
 			task_queue.remove_at(i)
+			_task_mutex.unlock()
 			return true
+	_task_mutex.unlock()
 	
 	# Cancel active task
 	if task_id in active_tasks:

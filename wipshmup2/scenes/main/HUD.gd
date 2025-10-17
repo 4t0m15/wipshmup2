@@ -48,6 +48,13 @@ func _ready() -> void:
 	# Apply high-quality font settings
 	_apply_high_quality_font_settings()
 	
+	# Connect core game state signals
+	EventBus.lives_changed.connect(_on_lives_changed)
+	EventBus.bombs_changed.connect(_on_bombs_changed)
+	EventBus.score_changed.connect(_on_score_changed)
+	EventBus.streak_changed.connect(_on_streak_changed)
+	EventBus.chain_broken.connect(_on_chain_broken)
+	
 	# Connect Cho Ren Sha 68K signals - 
 	#i have to give this a new name bc im sick of typing it out and maybe i should just type out the kanji -- atleast i think it kanji or maybe its katakana i have no idea, and also who gives a shit?
 	EventBus.shield_gained.connect(_on_shield_gained)
@@ -56,8 +63,8 @@ func _ready() -> void:
 	EventBus.loop_incremented.connect(_on_loop_incremented)
 	EventBus.life_extended.connect(_on_life_extended)
 	 
-	# Initialize Cho Ren Sha displays with current values
-	_update_cho_ren_sha_displays()
+	# Initialize all displays with current GameState values
+	_update_all_displays()
 
 func _create_frametime_graph() -> void:
 	var GraphScript = load("res://scripts/ui/FrameTimeGraph.gd")
@@ -94,39 +101,46 @@ func _create_frametime_graph() -> void:
 		_frametime_graph.configure_layout_top_right(matched_width, 14, top_y, 4)
 
 func _process(delta: float) -> void:
-	_rainbow_time += delta * 3.0  # Speed up the rainbow effect
+	# Optimized rainbow effect - only update when needed
+	_rainbow_time += delta * 3.0
+	var rainbow_color = _get_rainbow_color(_rainbow_time)
+	
+	# Update shiba label with cached color
 	if is_instance_valid(_shiba_label):
-		_shiba_label.add_theme_color_override("font_color", _get_rainbow_color(_rainbow_time))
+		_shiba_label.add_theme_color_override("font_color", rainbow_color)
 	
-	# Apply rainbow effect to streak label when active
+	# Update streak label with cached color when active
 	if _rainbow_streak_active and is_instance_valid(_streak_label):
-		_streak_label.add_theme_color_override("font_color", _get_rainbow_color(_rainbow_time))
+		_streak_label.add_theme_color_override("font_color", rainbow_color)
 	
-	# Update streak timer
+	# Update streak timer with optimized color calculation
 	if _streak_active and _streak_timer > 0.0:
 		_streak_timer -= delta
 		var progress = max(0.0, _streak_timer / _streak_timeout)
 		_streak_timer_bar.value = progress
 		
-		# Change color based on remaining time
+		# Optimized color calculation - cache colors
+		var timer_color: Color
 		if progress > 0.5:
-			_streak_timer_bar.modulate = Color(0.4, 1.0, 0.4, 1.0)  # Green
+			timer_color = Color(0.4, 1.0, 0.4, 1.0)  # Green
 		elif progress > 0.25:
-			_streak_timer_bar.modulate = Color(1.0, 1.0, 0.4, 1.0)  # Yellow
+			timer_color = Color(1.0, 1.0, 0.4, 1.0)  # Yellow
 		else:
-			_streak_timer_bar.modulate = Color(1.0, 0.4, 0.4, 1.0)  # Red
+			timer_color = Color(1.0, 0.4, 0.4, 1.0)  # Red
+		
+		_streak_timer_bar.modulate = timer_color
 		
 		if _streak_timer <= 0.0:
 			_streak_active = false
 			_streak_timer_bar.visible = false
 	
-	# FPS calculation with leading zeros (car dashboard style)
+	# Optimized FPS calculation - reduce string operations
 	_accum_time_s += delta
 	_frame_count += 1
 	if _accum_time_s >= 1.0:
 		var fps: int = int(round(float(_frame_count) / _accum_time_s))
-		# Format with leading zeros (3 digits: 099, 007, etc.)
-		_fps_label.text = "FPS: %03d" % fps
+		# Use string interpolation for better performance
+		_fps_label.text = "FPS: " + str(fps).pad_zeros(3)
 		_accum_time_s = 0.0
 		_frame_count = 0
 
@@ -231,6 +245,9 @@ func _show_score_milestone(score: int) -> void:
 	var milestone_text = "MILESTONE: %d" % score
 	show_popup(milestone_text, Color(1.0, 1.0, 0.3, 1.0))
 
+# Cache popup style to avoid recreating it
+var _popup_style: StyleBoxFlat = null
+
 func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 	if not is_instance_valid(_popup_container) or not is_inside_tree():
 		return
@@ -239,30 +256,27 @@ func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 	if text.is_empty():
 		return
 	
+	# Create cached style if not exists
+	if not _popup_style:
+		_popup_style = StyleBoxFlat.new()
+		_popup_style.bg_color = Color(0.08, 0.04, 0.12, 0.95)
+		_popup_style.border_color = Color(0.9, 0.7, 1.0, 0.9)
+		_popup_style.border_width_left = 1
+		_popup_style.border_width_top = 1
+		_popup_style.border_width_right = 1
+		_popup_style.border_width_bottom = 1
+		_popup_style.corner_radius_top_left = 6
+		_popup_style.corner_radius_top_right = 6
+		_popup_style.corner_radius_bottom_left = 6
+		_popup_style.corner_radius_bottom_right = 6
+	
 	var panel := PanelContainer.new()
 	if not panel or not is_instance_valid(panel):
 		push_error("[HUD] Failed to create popup panel")
 		return
 	
 	panel.name = "Popup"
-	# Style
-	var style := StyleBoxFlat.new()
-	if not style or not is_instance_valid(style):
-		push_error("[HUD] Failed to create popup style")
-		panel.queue_free()
-		return
-	
-	style.bg_color = Color(0.08, 0.04, 0.12, 0.95)
-	style.border_color = Color(0.9, 0.7, 1.0, 0.9)
-	style.border_width_left = 1
-	style.border_width_top = 1
-	style.border_width_right = 1
-	style.border_width_bottom = 1
-	style.corner_radius_top_left = 6
-	style.corner_radius_top_right = 6
-	style.corner_radius_bottom_left = 6
-	style.corner_radius_bottom_right = 6
-	panel.add_theme_stylebox_override("panel", style)
+	panel.add_theme_stylebox_override("panel", _popup_style)
 
 	var label := Label.new()
 	if not label or not is_instance_valid(label):
@@ -282,10 +296,13 @@ func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 	_popup_container.add_child(panel)
 
 	# Limit number of visible popups safely
-	while _popup_container.get_child_count() > 4:
+	var max_popups = 4
+	while _popup_container.get_child_count() > max_popups:
 		var old := _popup_container.get_child(0)
 		if old and is_instance_valid(old):
 			old.queue_free()
+			# Wait one frame to ensure cleanup
+			await get_tree().process_frame
 		else:
 			break  # Prevent infinite loop
 
@@ -432,6 +449,36 @@ func _on_life_extended(reason: String) -> void:
 	if reason == "score_threshold":
 		show_popup("EXTEND! +1 LIFE", Color(1.0, 0.9, 0.3, 1.0))
 
+# Core Game State Signal Handlers
+func _on_lives_changed(new_lives: int) -> void:
+	set_lives(new_lives)
+
+func _on_bombs_changed(new_bombs: int) -> void:
+	set_bombs(new_bombs)
+
+func _on_score_changed(new_score: int) -> void:
+	set_score(new_score)
+
+func _on_streak_changed(current_chain: int, max_chain: int) -> void:
+	set_chain(current_chain, max_chain)
+
+func _on_chain_broken() -> void:
+	# Reset streak display when chain is broken
+	set_chain(0, GameState.max_chain)
+
+func _update_all_displays() -> void:
+	"""Initialize all displays with current GameState values"""
+	# Core game state
+	set_lives(GameState.lives)
+	set_bombs(GameState.bombs)
+	set_score(GameState.score)
+	set_chain(GameState.chain_count, GameState.max_chain)
+	
+	# Cho Ren Sha displays
+	set_shield(GameState.has_shield)
+	set_weapon_power(GameState.weapon_power)
+	set_loop(GameState.current_loop)
+
 func _update_cho_ren_sha_displays() -> void:
 	"""Initialize Cho Ren Sha displays with current GameState values"""
 	set_shield(GameState.has_shield)
@@ -440,22 +487,42 @@ func _update_cho_ren_sha_displays() -> void:
 
 func _apply_high_quality_font_settings() -> void:
 	"""Apply high-quality font settings to improve readability at small sizes"""
-	# Get all labels in the HUD
-	var labels = []
-	_collect_labels_recursive(self, labels)
+	# Cache commonly used labels to avoid recursive traversal
+	var common_labels = [
+		_score_label, _lives_label, _fps_label, _bombs_label, 
+		_streak_label, _shield_label, _power_label, _loop_label,
+		_msg_label, _hint_label, _shiba_label
+	]
 	
-	for label in labels:
-		if label is Label:
+	for label in common_labels:
+		if is_instance_valid(label) and label is Label:
 			# Enable font oversampling for better quality at small sizes
 			label.add_theme_constant_override("outline_size", 1)
 			# Use high-quality font rendering - removed null font override
 			# Ensure crisp rendering
 			label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	
+	# Only do recursive search for dynamically created labels (boss health, etc.)
+	var dynamic_labels = []
+	_collect_labels_recursive(self, dynamic_labels, common_labels)
+	
+	for label in dynamic_labels:
+		if is_instance_valid(label) and label is Label:
+			label.add_theme_constant_override("outline_size", 1)
+			label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 
-func _collect_labels_recursive(node: Node, labels: Array) -> void:
-	"""Recursively collect all Label nodes"""
-	if node is Label:
+func _collect_labels_recursive(node: Node, labels: Array, exclude_labels: Array = []) -> void:
+	"""Recursively collect all Label nodes, excluding already processed ones"""
+	if node is Label and not node in exclude_labels:
 		labels.append(node)
 	
 	for child in node.get_children():
-		_collect_labels_recursive(child, labels)
+		_collect_labels_recursive(child, labels, exclude_labels)
+
+func cleanup_popups() -> void:
+	"""Clean up all popups to free memory"""
+	if is_instance_valid(_popup_container):
+		for child in _popup_container.get_children():
+			if child and is_instance_valid(child):
+				child.queue_free()
+		_popup_container.get_children().clear()
