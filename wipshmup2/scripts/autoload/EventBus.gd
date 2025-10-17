@@ -51,6 +51,9 @@ signal screen_shake_requested(intensity: float, duration: float)
 signal hit_stop_requested(duration: float, scale: float)
 signal flash_requested(color: Color, duration: float)
 signal explosion_requested(position: Vector2, size: float)
+signal stage_transition_requested(stage_number: int, duration: float)
+signal background_change_requested(background_type: String, tint: Color, ambient_lighting: float)
+signal particle_effect_requested(effect_name: String, duration: float)
 
 # Audio Events
 signal play_sound(sound_name: String, volume: float)
@@ -119,6 +122,9 @@ func _ready() -> void:
 	hit_stop_requested.connect(_on_hit_stop_requested)
 	flash_requested.connect(_on_flash_requested)
 	explosion_requested.connect(_on_explosion_requested)
+	stage_transition_requested.connect(_on_stage_transition_requested)
+	background_change_requested.connect(_on_background_change_requested)
+	particle_effect_requested.connect(_on_particle_effect_requested)
 	
 	# Connect audio signals
 	play_sound.connect(_on_play_sound)
@@ -145,10 +151,20 @@ func emit_visual_effect(effect_type: String, params: Dictionary) -> void:
 			screen_shake_requested.emit(params.get("intensity", 1.0), params.get("duration", 0.1))
 		"hit_stop":
 			hit_stop_requested.emit(params.get("duration", 0.05), params.get("scale", 1.0))
-		"flash":
+		"flash", "screen_flash":
 			flash_requested.emit(params.get("color", Color.WHITE), params.get("duration", 0.1))
 		"explosion":
 			explosion_requested.emit(params.get("position", Vector2.ZERO), params.get("size", 1.0))
+		"stage_transition":
+			stage_transition_requested.emit(params.get("stage_number", 1), params.get("duration", 1.0))
+		"background_change":
+			background_change_requested.emit(
+				params.get("background_type", "space"),
+				params.get("tint", Color.WHITE),
+				params.get("ambient_lighting", 1.0)
+			)
+		"particle_effect":
+			particle_effect_requested.emit(params.get("effect_name", ""), params.get("duration", -1.0))
 
 func emit_audio(sound_type: String, params: Dictionary = {}) -> void:
 	match sound_type:
@@ -301,6 +317,15 @@ func _on_flash_requested(color: Color, duration: float) -> void:
 
 func _on_explosion_requested(position: Vector2, size: float) -> void:
 	print("[EventBus] Explosion requested: position=", position, " size=", size)
+
+func _on_stage_transition_requested(stage_number: int, duration: float) -> void:
+	print("[EventBus] Stage transition requested: stage=", stage_number, " duration=", duration)
+
+func _on_background_change_requested(background_type: String, tint: Color, ambient_lighting: float) -> void:
+	print("[EventBus] Background change requested: type=", background_type, " tint=", tint, " ambient=", ambient_lighting)
+
+func _on_particle_effect_requested(effect_name: String, duration: float) -> void:
+	print("[EventBus] Particle effect requested: ", effect_name, " duration=", duration)
 
 # Audio Event Handlers
 func _on_play_sound(sound_name: String, volume: float) -> void:

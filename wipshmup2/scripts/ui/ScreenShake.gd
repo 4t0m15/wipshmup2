@@ -4,11 +4,19 @@ class_name ScreenShake
 
 # Screen shake system 
 
+@export var hit_stop_duration: float = 0.05
+@export var boss_hit_stop_duration: float = 0.1
+@export var player_death_stop_duration: float = 0.15
+
 var _target: Node2D
 var _original_position: Vector2
 var _is_shaking: bool = false
 var _shake_time_left: float = 0.0
 var _shake_intensity: float = 0.0
+
+var _is_hit_stopping: bool = false
+var _hit_stop_end_ms: int = 0
+var _original_time_scale: float = 1.0
 
 func _ready() -> void:
 	set_process(true)
@@ -33,6 +41,10 @@ func shake(intensity: float, duration: float) -> void:
 	_is_shaking = true
 
 func _process(delta: float) -> void:
+	# Handle hit-stop end using wall-clock time (unaffected by Engine.time_scale)
+	if _is_hit_stopping and Time.get_ticks_msec() >= _hit_stop_end_ms:
+		_end_hit_stop()
+
 	# Process a single, throttled shake; returns to origin when done
 	if not _is_shaking:
 		return
@@ -56,6 +68,32 @@ func _process(delta: float) -> void:
 		randf_range(-amount, amount)
 	)
 	_target.position = _original_position + random_offset
+
+func trigger_hit_stop(duration: float = -1.0, intensity: float = 1.0) -> void:
+	# Trigger a brief global slow-down effect (near-freeze)
+	if _is_hit_stopping:
+		return
+	var stop_duration := duration if duration > 0.0 else hit_stop_duration
+	stop_duration *= max(0.0, intensity)
+	_start_hit_stop(stop_duration)
+
+func trigger_boss_hit_stop() -> void:
+	trigger_hit_stop(boss_hit_stop_duration, 1.0)
+
+func trigger_player_death_stop() -> void:
+	trigger_hit_stop(player_death_stop_duration, 1.0)
+
+func _start_hit_stop(duration: float) -> void:
+	_is_hit_stopping = true
+	var capped_duration: float = min(duration, 0.5)
+	_hit_stop_end_ms = Time.get_ticks_msec() + int(capped_duration * 1000.0)
+	_original_time_scale = Engine.time_scale
+	# Use a near-zero time scale instead of a hard freeze to avoid stalling scaled timers
+	Engine.time_scale = 0.0001
+
+func _end_hit_stop() -> void:
+	_is_hit_stopping = false
+	Engine.time_scale = _original_time_scale
 
 func stop() -> void:
 	# Force stop and restore position

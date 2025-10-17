@@ -21,9 +21,10 @@ var _collection_timer: Timer
 var game_over := false
 # Use GameState for all game state - remove local duplicates
 
-# Rank pressure system
+# Rank pressure
 var rank_manager: Node
 var base_background_color: Color = Color.WHITE
+var rank_pressure_system: Node
 
 # Streak system now handled by GameState
 
@@ -54,13 +55,22 @@ func _ready() -> void:
 	_setup_game_mode()
 
 	# Screen shake hooked to the game viewport root so all children move together
-	screen_shake = load("res://scripts/ui/ScreenShake.gd").new()
-	add_child(screen_shake)
-	var target_2d: Node2D = game_viewport if game_viewport is Node2D else self
-	screen_shake.set_target(target_2d)
+	screen_shake = get_node_or_null("ScreenShake")
+	if not screen_shake:
+		screen_shake = load("res://scripts/ui/ScreenShake.gd").new()
+		add_child(screen_shake)
+		var target_2d: Node2D = game_viewport if game_viewport is Node2D else self
+		screen_shake.set_target(target_2d)
 	
 	# Setup visual clarity systems
 	call_deferred("_setup_visual_clarity_systems")
+
+	# Instantiate centralized VisualEffectsSystem (reuses nodes if they exist)
+	var vfx_system = get_node_or_null("VisualEffectsSystem")
+	if not vfx_system:
+		vfx_system = load("res://scripts/systems/VisualEffectsSystem.gd").new()
+		vfx_system.name = "VisualEffectsSystem"
+		add_child(vfx_system)
 
 	hud = $HUD
 	item_popup = $ItemPopup
@@ -217,16 +227,12 @@ func _spawn_player() -> void:
 			player.connect("hit", Callable(self, "_on_player_hit"))
 			print("[Main] Connected to player 'hit' signal")
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	# Handle game over restart in _process (UI-related) - with tree safety check
 	if game_over and Input.is_action_just_pressed("ui_accept"):
 		if is_inside_tree():
 			get_tree().reload_current_scene()
 		return
-	
-	# Apply rank pressure system
-	if not game_over:
-		_apply_rank_pressure(delta)
 
 func _physics_process(delta: float) -> void:
 	# Skip physics if game is over
@@ -267,17 +273,15 @@ func _on_enemy_killed(points: int, enemy_position: Vector2, enemy_type: String =
 		item_drop_manager.try_drop_item(enemy_position, points, enemy_type)
 
 	# Screen shake: low base intensity, scaled logarithmically by streak
-	if is_instance_valid(screen_shake):
-		var shake_mult := _get_shake_scale_from_streak()
-		screen_shake.shake(0.5 * shake_mult, 0.05)
+	var shake_mult := _get_shake_scale_from_streak()
+	EventBus.emit_visual_effect("screen_shake", {"intensity": 0.5 * shake_mult, "duration": 0.05})
 
 func _on_boss_defeated() -> void:
 	"""Handle boss defeated event"""
 	var boss_score = 10000
 	GameState.add_score(boss_score)
-	if is_instance_valid(screen_shake):
-		var shake_mult := _get_shake_scale_from_streak()
-		screen_shake.shake(1.5 * shake_mult, 0.22)
+	var shake_mult := _get_shake_scale_from_streak()
+	EventBus.emit_visual_effect("screen_shake", {"intensity": 1.5 * shake_mult, "duration": 0.22})
 
 func _on_item_collected(item_type: String, value: int) -> void:
 	"""Handle item collection"""
@@ -363,30 +367,12 @@ func _use_bomb() -> void:
 				bullet.queue_free()
 
 	# Screen shake for impact
-	if is_instance_valid(screen_shake):
-		var shake_mult := _get_shake_scale_from_streak()
-		screen_shake.shake(1.5 * shake_mult, 0.25)
+	var shake_mult := _get_shake_scale_from_streak()
+	EventBus.emit_visual_effect("screen_shake", {"intensity": 1.5 * shake_mult, "duration": 0.25})
 
 func _create_bomb_flash() -> void:
-	"""Create a white flash effect for bomb usage"""
-	var flash = ColorRect.new()
-	flash.name = "BombFlash"
-	flash.color = Color(1.0, 1.0, 1.0, 0.8)
-	flash.size = Vector2(320, 180)
-	flash.position = Vector2.ZERO
-	flash.z_index = 100  # Above everything
-	
-	# Add to HUD or main scene
-	if is_instance_valid(hud):
-		hud.add_child(flash)
-	else:
-		add_child(flash)
-	
-	# Fade out and remove
-	var tween = create_tween()
-	tween.tween_property(flash, "modulate:a", 0.0, 0.3)\
-		.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-	tween.tween_callback(flash.queue_free)
+	"""Request a white flash effect for bomb usage via EventBus"""
+	EventBus.emit_visual_effect("flash", {"color": Color(1.0, 1.0, 1.0, 0.8), "duration": 0.3})
 
 func _on_player_damaged(amount: int) -> void:
 	print("[Main] _on_player_damaged called: amount=", amount, " current_lives=", GameState.lives, " game_over=", game_over)
@@ -400,9 +386,8 @@ func _on_player_damaged(amount: int) -> void:
 	print("[Main] Lives after damage: ", GameState.lives)
 	
 	# Damage causes a subtle shake; still scaled by current streak for feedback
-	if is_instance_valid(screen_shake):
-		var shake_mult := _get_shake_scale_from_streak()
-		screen_shake.shake(0.9 * shake_mult, 0.10)
+	var shake_mult := _get_shake_scale_from_streak()
+	EventBus.emit_visual_effect("screen_shake", {"intensity": 0.9 * shake_mult, "duration": 0.10})
 
 	# Breaking the streak on damage feels fair; reset chain
 	GameState.break_streak()
@@ -473,10 +458,8 @@ func _on_enemy_bullet_hit_player() -> void:
 			print("[Main] Calling player.take_damage(1)")
 			player.take_damage(1)
 			
-			# Trigger hit-stop for better feedback
-			var hit_stop = get_node_or_null("/root/HitStop")
-			if hit_stop:
-				hit_stop.trigger_hit_stop(0.05, 1.0)
+			# Trigger hit-stop for better feedback via EventBus
+			EventBus.emit_visual_effect("hit_stop", {"duration": 0.05, "scale": 1.0})
 		else:
 			print("[Main] ERROR: Player missing take_damage method!")
 	else:
@@ -488,27 +471,12 @@ func _on_enemy_hit_player() -> void:
 		if player.has_method("take_damage"):
 			player.take_damage(1)
 			
-			# Trigger hit-stop for enemy collision
-			var hit_stop = get_node_or_null("/root/HitStop")
-			if hit_stop:
-				hit_stop.trigger_hit_stop(0.08, 1.2)
+			# Trigger hit-stop for enemy collision via EventBus
+			EventBus.emit_visual_effect("hit_stop", {"duration": 0.08, "scale": 1.2})
 
 func _setup_visual_clarity_systems() -> void:
 	"""Setup visual clarity enhancement systems"""
-	# Add danger indicator system
-	var danger_indicator = load("res://scripts/ui/DangerIndicator.gd").new()
-	danger_indicator.name = "DangerIndicator"
-	add_child(danger_indicator)
-	
-	# Add hit-stop system
-	var hit_stop = load("res://scripts/ui/HitStop.gd").new()
-	hit_stop.name = "HitStop"
-	add_child(hit_stop)
-	
-	# Add visual settings system
-	var visual_settings = load("res://scripts/ui/VisualSettings.gd").new()
-	visual_settings.name = "VisualSettings"
-	add_child(visual_settings)
+	# Handled by VisualEffectsSystem (reuses or creates DangerIndicator + VisualSettings)
 	
 	# Add COMPREHENSIVE bullet readability background dimming
 	var bg_dim = preload("res://scripts/bullet_readability/BackgroundDimManager.gd").new()
@@ -563,19 +531,11 @@ func _on_boss_health_depleted(_boss: Node) -> void:
 
 func _setup_rank_pressure_system() -> void:
 	"""Initialize the rank pressure system"""
-	# Get RankManager reference
-	rank_manager = get_node_or_null("/root/RankManager")
-	
-	# Get BGM player and register it with AudioManager
-	bgm_player = get_node_or_null("BGM")
-	if bgm_player:
-		var audio_manager = get_node_or_null("/root/AudioManager")
-		if audio_manager and audio_manager.has_method("set_music_player"):
-			audio_manager.set_music_player(bgm_player)
-	
-	# Store base background color
-	if is_instance_valid(space_background):
-		base_background_color = space_background.modulate
+	# Instantiate RankPressureSystem if missing
+	if not rank_pressure_system:
+		rank_pressure_system = load("res://scripts/systems/RankPressureSystem.gd").new()
+		rank_pressure_system.name = "RankPressureSystem"
+		add_child(rank_pressure_system)
 
 func _start_perf_watchdog() -> void:
 	"""Start a periodic watchdog that prunes runaway objects"""
@@ -616,32 +576,4 @@ func _perf_watchdog_tick() -> void:
 				if pb and is_instance_valid(pb):
 					pb.queue_free()
 
-func _apply_rank_pressure(delta: float) -> void:
-	"""Apply visual and audio pressure based on rank"""
-	if not rank_manager or not rank_manager.has_method("get_multiplier"):
-		return
-	
-	# Calculate danger level (0.0 to 1.0)
-	var min_rank: float = rank_manager.min_rank
-	var max_rank: float = rank_manager.max_rank
-	var current_rank: float = rank_manager.rank
-	var danger_level: float = clamp((current_rank - min_rank) / (max_rank - min_rank), 0.0, 1.0)
-	
-	# Visual pressure - background color modulation
-	if is_instance_valid(space_background) and danger_level > 0.7:
-		var pressure_color = Color(1.2, 0.9, 0.9)  # Reddish tint
-		space_background.modulate = base_background_color.lerp(pressure_color, (danger_level - 0.7) / 0.3)
-	elif is_instance_valid(space_background):
-		# Smoothly return to base color when danger is low
-		space_background.modulate = space_background.modulate.lerp(base_background_color, delta * 2.0)
-	
-	# Visual pressure - subtle continuous shake at high rank
-	if is_instance_valid(screen_shake) and danger_level > 0.7:
-		var shake_intensity = 2.0 * ((danger_level - 0.7) / 0.3)
-		screen_shake.shake(shake_intensity, 0.1)
-	
-	# Audio pressure - music pitch increases with danger
-	var audio_manager = get_node_or_null("/root/AudioManager")
-	if audio_manager and audio_manager.has_method("set_music_pitch"):
-		var target_pitch = lerp(1.0, 1.15, danger_level)
-		audio_manager.set_music_pitch(target_pitch)
+### _apply_rank_pressure removed; logic now handled by RankPressureSystem

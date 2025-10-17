@@ -105,7 +105,6 @@ func _add_attack_behavior() -> void:
 	# Add directly - PhaseManager is already added with call_deferred, so boss is ready
 	boss.add_child(attack_behavior)
 	
-	# Apply attack parameters
 	for key in current_phase.attack_params:
 		if attack_behavior.has_method("set_" + key):
 			attack_behavior.call("set_" + key, current_phase.attack_params[key])

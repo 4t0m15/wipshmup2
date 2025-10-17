@@ -14,32 +14,39 @@ func _ready() -> void:
 	EventBus.hit_stop_requested.connect(_on_hit_stop_requested)
 	EventBus.flash_requested.connect(_on_flash_requested)
 	EventBus.explosion_requested.connect(_on_explosion_requested)
+	# Extended effects
+	if EventBus.has_signal("stage_transition_requested"):
+		EventBus.stage_transition_requested.connect(_on_stage_transition_requested)
+	if EventBus.has_signal("background_change_requested"):
+		EventBus.background_change_requested.connect(_on_background_change_requested)
+	if EventBus.has_signal("particle_effect_requested"):
+		EventBus.particle_effect_requested.connect(_on_particle_effect_requested)
 	
 	# Setup visual systems
 	_setup_visual_systems()
 
 func _setup_visual_systems() -> void:
-	# Setup screen shake
-	screen_shake = load("res://scripts/ui/ScreenShake.gd").new()
-	if screen_shake:
+	# Reuse ScreenShake if Main already created it; otherwise create one
+	screen_shake = get_tree().current_scene.get_node_or_null("ScreenShake")
+	if not screen_shake:
+		screen_shake = load("res://scripts/ui/ScreenShake.gd").new()
 		screen_shake.name = "ScreenShake"
 		add_child(screen_shake)
 	
-	# Setup hit-stop
-	hit_stop = load("res://scripts/ui/HitStop.gd").new()
-	if hit_stop:
-		hit_stop.name = "HitStop"
-		add_child(hit_stop)
+	# Hit-stop consolidated into ScreenShake node
+	hit_stop = screen_shake
 	
-	# Setup danger indicator
-	danger_indicator = load("res://scripts/ui/DangerIndicator.gd").new()
-	if danger_indicator:
+	# Reuse or setup danger indicator
+	danger_indicator = get_tree().current_scene.get_node_or_null("DangerIndicator")
+	if not danger_indicator:
+		danger_indicator = load("res://scripts/ui/DangerIndicator.gd").new()
 		danger_indicator.name = "DangerIndicator"
 		add_child(danger_indicator)
 	
-	# Setup visual settings
-	visual_settings = load("res://scripts/ui/VisualSettings.gd").new()
-	if visual_settings:
+	# Reuse or setup visual settings
+	visual_settings = get_tree().current_scene.get_node_or_null("VisualSettings")
+	if not visual_settings:
+		visual_settings = load("res://scripts/ui/VisualSettings.gd").new()
 		visual_settings.name = "VisualSettings"
 		add_child(visual_settings)
 	
@@ -50,14 +57,46 @@ func _on_screen_shake_requested(intensity: float, duration: float) -> void:
 		screen_shake.shake(intensity, duration)
 
 func _on_hit_stop_requested(duration: float, scale: float) -> void:
-	if hit_stop and is_instance_valid(hit_stop) and hit_stop.has_method("trigger_hit_stop"):
-		hit_stop.trigger_hit_stop(duration, scale)
+	if screen_shake and is_instance_valid(screen_shake) and screen_shake.has_method("trigger_hit_stop"):
+		screen_shake.trigger_hit_stop(duration, scale)
 
 func _on_flash_requested(color: Color, duration: float) -> void:
 	_create_flash_effect(color, duration)
 
 func _on_explosion_requested(position: Vector2, size: float) -> void:
 	_create_explosion_effect(position, size)
+
+func _on_stage_transition_requested(stage_number: int, duration: float) -> void:
+	# Simple stage transition popup at center
+	var hud = get_tree().current_scene.get_node_or_null("HUD")
+	var label := Label.new()
+	label.text = "STAGE " + str(stage_number)
+	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.7, 1.0))
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	label.add_theme_constant_override("outline_size", 2)
+	label.modulate.a = 0.0
+	if hud:
+		hud.add_child(label)
+		label.position = Vector2(120, 80)
+	else:
+		get_tree().current_scene.add_child(label)
+		label.position = Vector2(120, 80)
+	var tw = create_tween()
+	tw.tween_property(label, "modulate:a", 1.0, min(0.5, duration * 0.25))
+	if duration > 0.0:
+		tw.tween_interval(max(0.0, duration - 0.8))
+	var tw_out = create_tween()
+	tw_out.tween_property(label, "modulate:a", 0.0, min(0.3, max(0.2, duration * 0.25)))
+	tw_out.tween_callback(label.queue_free)
+
+func _on_background_change_requested(_background_type: String, tint: Color, _ambient_lighting: float) -> void:
+	# Lightweight full-screen tint flash to convey change
+	_create_flash_effect(tint, 0.2)
+
+func _on_particle_effect_requested(_effect_name: String, _duration: float) -> void:
+	# Stub: could map to particle scenes; keep safe for now
+	pass
 
 func _create_flash_effect(color: Color, duration: float) -> void:
 	"""Create a screen flash effect"""

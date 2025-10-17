@@ -252,8 +252,8 @@ func _complete_stage() -> void:
 
 func _show_stage_transition() -> void:
 	"""Show transition between stages"""
-	# Create transition effect
-	EventBus.emit_visual_effect("screen_flash", {
+	# Create transition effect (alias supported by EventBus: screen_flash -> flash)
+	EventBus.emit_visual_effect("flash", {
 		"color": Color.WHITE,
 		"duration": 0.5
 	})

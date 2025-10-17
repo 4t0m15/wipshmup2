@@ -751,7 +751,8 @@ func _update_crt_aspect() -> void:
 
 func _set_viewport_container_size(size: Vector2) -> void:
 	if is_instance_valid(_viewport_container):
-		_viewport_container.size = size
+		# Avoid overriding anchor-driven size; use custom minimum instead
+		_viewport_container.custom_minimum_size = size
 
 func _set_subviewport_size(size: Vector2) -> void:
 	if is_instance_valid(_subviewport):
@@ -759,7 +760,8 @@ func _set_subviewport_size(size: Vector2) -> void:
 
 func _set_crt_rect_size(size: Vector2) -> void:
 	if is_instance_valid(_crt_rect):
-		_crt_rect.size = size
+		# Avoid overriding anchor-driven size; use custom minimum instead
+		_crt_rect.custom_minimum_size = size
 
 func _start_environment_cycle() -> void:
 	# Periodically adjust background while idle. Supports both BackgroundManager and SpaceBackground.

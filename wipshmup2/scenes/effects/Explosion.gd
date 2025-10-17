@@ -24,17 +24,13 @@ func _setup_explosion_effects() -> void:
 		"boss":
 			modulate = Color(1.0, 0.2, 0.2, 1.0)  # Red
 			scale = Vector2(1.5, 1.5)
-			# Add screen shake for boss explosions
-			var screen_shake = get_node_or_null("/root/Main/ScreenShake")
-			if screen_shake:
-				screen_shake.shake(2.0, 0.3)
+			# Request screen shake for boss explosions
+			EventBus.emit_visual_effect("screen_shake", {"intensity": 2.0, "duration": 0.3})
 		"player_death":
 			modulate = Color(1.0, 1.0, 1.0, 1.0)  # White
 			scale = Vector2(2.0, 2.0)
 			# Strong screen shake for player death
-			var screen_shake = get_node_or_null("/root/Main/ScreenShake")
-			if screen_shake:
-				screen_shake.shake(3.0, 0.5)
+			EventBus.emit_visual_effect("screen_shake", {"intensity": 3.0, "duration": 0.5})
 	
 	# Create damage number if damage value provided
 	if damage_value > 0:

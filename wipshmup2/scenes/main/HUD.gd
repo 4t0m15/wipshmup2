@@ -331,11 +331,13 @@ func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 
 func _set_boss_container_size(container: Control, size: Vector2) -> void:
 	if is_instance_valid(container):
-		container.size = size
+		# Avoid overriding anchors; set custom minimum size instead
+		container.custom_minimum_size = size
 
 func _set_label_size(label: Label, size: Vector2) -> void:
 	if is_instance_valid(label):
-		label.size = size
+		# Avoid overriding anchors; set custom minimum size instead
+		label.custom_minimum_size = size
 
 func _create_boss_health_bar() -> void:
 	"""Create the boss health bar UI element"""
@@ -350,7 +352,7 @@ func _create_boss_health_bar() -> void:
 	container.name = "BossHealthContainer"
 	container.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	container.position = Vector2(0, 30)  # Below the top bar
-	container.size = Vector2(320, 16)  # Set size before adding to scene
+	container.custom_minimum_size = Vector2(320, 16)  # Use custom min size
 	add_child(container)
 	
 	# Create the boss health bar
@@ -362,7 +364,7 @@ func _create_boss_health_bar() -> void:
 	name_label.name = "NameLabel"
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.position = Vector2(0, 0)
-	name_label.size = Vector2(144, 12)  # Set size before adding to scene
+	name_label.custom_minimum_size = Vector2(144, 12)
 	name_label.add_theme_font_size_override("font_size", 7)
 	name_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6, 1.0))
 	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
@@ -372,18 +374,17 @@ func _create_boss_health_bar() -> void:
 	var health_container = Control.new()
 	health_container.name = "HealthContainer"
 	health_container.position = Vector2(0, 7)
-	health_container.size = Vector2(144, 7)  # Set size before adding to scene
+	health_container.custom_minimum_size = Vector2(144, 7)
 	_boss_health_bar.add_child(health_container)
 	
 	# Position the boss health in the center
 	_boss_health_bar.position = Vector2(88, 0)
-	_boss_health_bar.size = Vector2(144, 14)  # Set size before adding to scene
+	_boss_health_bar.custom_minimum_size = Vector2(144, 14)
 	_boss_health_bar.visible = false
 	
 	container.add_child(_boss_health_bar)
 
 func show_boss_health(boss: Node) -> void:
-	"""Show the boss health bar for a given boss"""
 	if is_instance_valid(_boss_health_bar) and _boss_health_bar.has_method("show_boss_health"):
 		_boss_health_bar.show_boss_health(boss)
 

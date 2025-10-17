@@ -80,6 +80,17 @@ static func setup_sprite(sprite: Sprite2D, entity_type: String, target_height: f
 	# Add subtle glow effect for better visibility
 	_add_glow_effect(sprite, entity_type)
 
+static func apply_scale_and_color(sprite: Sprite2D, scale_value: float, tint: Color) -> void:
+	"""Apply uniform scale and optional tint to a sprite with safety guards"""
+	if not sprite:
+		return
+	# Apply scale (uniform)
+	if scale_value > 0.0:
+		sprite.scale = Vector2(scale_value, scale_value)
+	# Apply tint only if not default white to avoid redundant modulates
+	if tint != Color.WHITE:
+		sprite.modulate = tint
+
 static func _add_glow_effect(sprite: Sprite2D, _entity_type: String) -> void:
 	"""Add subtle glow effect for better visibility"""
 	# This would be implemented with a glow shader or duplicate sprite
