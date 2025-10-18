@@ -23,20 +23,9 @@ func _on_bullet_hit_enemy(enemy_position: Vector2, damage: int) -> void:
 			break
 
 func _on_bullet_hit_player(_bullet_position: Vector2) -> void:
-	# Check if player is invincible
-	if GameState.is_invincible():
-		return
-	
-	# Apply damage to player
-	GameState.take_lives(1)
-	EventBus.player_damaged.emit(1)
-	# Inform rank system of life loss
-	if RankManager and RankManager.has_method("on_player_died"):
-		RankManager.on_player_died(GameState.lives)
-	
-	# Start invincibility
-	GameState.set_invincible(true)
-	_start_invincibility_timer()
+	# Damage handling is centralized via Player.take_damage/Main.gd.
+	# This handler is intentionally a no-op to avoid double life decrements.
+	pass
 
 func _on_enemy_killed(points: int, position: Vector2, _enemy_type: String) -> void:
 	# Update score
@@ -101,27 +90,9 @@ func _on_bomb_used(_position: Vector2) -> void:
 		RankManager.on_bomb_used()
 
 func _on_player_hit() -> void:
-	# Check if player is invincible
-	if GameState.is_invincible():
-		return
-	
-	# Apply damage
-	GameState.take_lives(1)
-	EventBus.player_damaged.emit(1)
-	# Inform rank system of life loss
-	if RankManager and RankManager.has_method("on_player_died"):
-		RankManager.on_player_died(GameState.lives)
-	
-	# Reset Cho Ren Sha mechanics on death (minimal changes)
-	GameState.reset_weapon_power()
-	GameState.set_shield(false)
-	
-	# Start invincibility
-	GameState.set_invincible(true)
-	_start_invincibility_timer()
-	
-	# Break streak on hit
-	GameState.break_streak()
+	# Damage handling is centralized via Player.take_damage/Main.gd.
+	# This handler is intentionally a no-op to avoid double life decrements.
+	pass
 
 func _start_invincibility_timer() -> void:
 	# Start invincibility period

@@ -39,28 +39,25 @@ func _physics_process(delta: float) -> void:
 	if not _alive: 
 		return
 	
-	# Handle invincibility timer
+	# Handle invincibility timer and visuals
 	if _invincible:
+		# Enhanced blink effect during invincibility
 		_invincibility_timer -= delta
 		if _invincibility_timer <= 0.0:
 			_invincible = false
 			_invincibility_timer = 0.0
 			print("[Player] Invincibility ended")
-		# Make player fully visible again
-		modulate = Color.WHITE
-		# Hide hitbox indicator
-		if _hitbox_indicator and is_instance_valid(_hitbox_indicator):
-			_hitbox_indicator.visible = false
-	else:
-		# Enhanced blink effect during invincibility
-		var blink_rate = 12.0  # Faster blinking
+		var blink_rate = 12.0
 		var alpha = 0.2 + 0.8 * abs(sin(_invincibility_timer * blink_rate * PI))
-		modulate = Color(1.0, 0.8, 0.8, alpha)  # Slight red tint during invincibility
-		
-		# Show hitbox indicator during invincibility
+		modulate = Color(1.0, 0.8, 0.8, alpha)
 		if _hitbox_indicator and is_instance_valid(_hitbox_indicator):
 			_hitbox_indicator.visible = true
 			_hitbox_indicator.modulate = Color(1.0, 0.3, 0.3, alpha)
+	else:
+		# Not invincible: ensure fully visible and hide indicator
+		modulate = Color.WHITE
+		if _hitbox_indicator and is_instance_valid(_hitbox_indicator):
+			_hitbox_indicator.visible = false
 	
     # Baseline movement (overridden by Main.gd)
 	pass
@@ -81,11 +78,22 @@ func take_damage(amount: int = 1) -> void:
 	
 	print("[Player] Taking damage: amount=", amount, " position=", position)
 	
-	# Start invincibility period
+	# Apply life change via GameState first
+	GameState.take_lives(amount)
+	EventBus.player_damaged.emit(amount)
+	GameState.break_streak()
+	
+	# If no lives remain, trigger death (emits hit and frees player)
+	if GameState.lives <= 0:
+		die()
+		return
+	
+	# Start invincibility period if still alive
 	_invincible = true
 	_invincibility_timer = INVINCIBILITY_DURATION
 	print("[Player] Invincibility activated for ", INVINCIBILITY_DURATION, " seconds")
-	
+
+	# Notify listeners of damage (non-fatal)
 	damaged.emit(amount)
 
 func die() -> void:

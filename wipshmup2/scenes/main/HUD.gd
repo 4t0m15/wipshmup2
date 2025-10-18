@@ -309,6 +309,8 @@ func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 	# Create fade-in tween safely (tween full Color instead of subproperty)
 	var fade_in := create_tween()
 	if fade_in and is_instance_valid(fade_in):
+		if not is_instance_valid(panel):
+			return
 		var target_in: Color = panel.modulate
 		target_in.a = 1.0
 		var tweener_in = fade_in.tween_property(panel, "modulate", target_in, 0.15)
@@ -325,6 +327,8 @@ func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 	# Create fade-out tween safely (tween full Color instead of subproperty)
 	var fade_out := create_tween()
 	if fade_out and is_instance_valid(fade_out):
+		if not is_instance_valid(panel):
+			return
 		var target_out: Color = panel.modulate
 		target_out.a = 0.0
 		var tweener_out = fade_out.tween_property(panel, "modulate", target_out, 0.25)
@@ -380,12 +384,12 @@ func _create_boss_health_bar() -> void:
 	var health_container = Control.new()
 	health_container.name = "HealthContainer"
 	health_container.position = Vector2(0, 7)
-	health_container.custom_minimum_size = Vector2(144, 7)
+	health_container.custom_minimum_size = Vector2(312, 7)  # match viewport width minus small margins
 	_boss_health_bar.add_child(health_container)
 	
-	# Position the boss health in the center
-	_boss_health_bar.position = Vector2(88, 0)
-	_boss_health_bar.custom_minimum_size = Vector2(144, 14)
+	# Position the boss health to span nearly full width
+	_boss_health_bar.position = Vector2(4, 0)
+	_boss_health_bar.custom_minimum_size = Vector2(312, 14)
 	_boss_health_bar.visible = false
 	
 	container.add_child(_boss_health_bar)

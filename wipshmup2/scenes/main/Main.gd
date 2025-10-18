@@ -400,15 +400,16 @@ func _on_player_damaged(amount: int) -> void:
 
 func _on_player_hit() -> void:
 	print("[Main] _on_player_hit called, game_over=", game_over)
-	
+	# Only trigger game over if no lives remain
 	if game_over:
 		print("[Main] Game already over, ignoring hit")
 		return
-	
+	if GameState.lives > 0:
+		print("[Main] Player hit but still has lives=", GameState.lives)
+		return
 	print("[Main] Setting game_over=true")
 	game_over = true
 	GameState.trigger_game_over()
-	
 	if hud and hud.has_method("show_game_over"):
 		print("[Main] Showing game over screen")
 		hud.show_game_over(true)

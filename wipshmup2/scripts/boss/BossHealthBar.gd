@@ -27,7 +27,8 @@ var _boss_name: String = ""
 
 func _ready() -> void:
 	visible = false
-	custom_minimum_size = Vector2(160, 20)  # Better readability
+	# Stretch to full container width; height kept for readability
+	custom_minimum_size = Vector2(320, 20)
 
 func _process(_delta: float) -> void:
 	if _boss and is_instance_valid(_boss):
