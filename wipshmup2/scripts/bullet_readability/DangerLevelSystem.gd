@@ -5,7 +5,7 @@ class_name DangerLevelSystem
 ## Provides precise color coding and visual properties for bullet readability
 
 enum DangerLevel {
-	LOW = 1,      # Basic patterns, predictable
+    LOW = 1,      # Introductory patterns; highly predictable
 	MEDIUM = 2,   # Aimed shots, moderate speed
 	HIGH = 3      # Fast, homing, or dense patterns
 }

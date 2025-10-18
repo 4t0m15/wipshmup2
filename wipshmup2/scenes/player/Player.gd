@@ -62,7 +62,7 @@ func _physics_process(delta: float) -> void:
 			_hitbox_indicator.visible = true
 			_hitbox_indicator.modulate = Color(1.0, 0.3, 0.3, alpha)
 	
-	# Simple movement - this will be overridden by Main.gd
+    # Baseline movement (overridden by Main.gd)
 	pass
 
 func take_damage(amount: int = 1) -> void:

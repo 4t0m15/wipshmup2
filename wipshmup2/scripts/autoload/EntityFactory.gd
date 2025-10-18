@@ -258,6 +258,7 @@ func _get_bullet_container() -> Node:
 			bullets_container = Node.new()
 			bullets_container.name = "Bullets"
 			game_viewport.add_child(bullets_container)
+			push_warning("[EntityFactory] Created missing 'Bullets' container under game_viewport")
 			return bullets_container
 	
 	# Fallback: try to get current scene
@@ -271,8 +272,10 @@ func _get_bullet_container() -> Node:
 			bullets_container = Node.new()
 			bullets_container.name = "Bullets"
 			current_scene.add_child(bullets_container)
+			push_warning("[EntityFactory] Created missing 'Bullets' container under current scene")
 			return bullets_container
 	
+	push_error("[EntityFactory] Failed to obtain a valid bullets container")
 	return null
 
 func _get_pooled_bullet(pool: Array, scene: PackedScene) -> Node:

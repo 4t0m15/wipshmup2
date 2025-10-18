@@ -816,7 +816,7 @@ func _register_default_templates() -> void:
 					{"enemy_type": "dive_bomber", "position": Vector2(80, -50), "delay": 0.6},
 					{"enemy_type": "dive_bomber", "position": Vector2(160, -50), "delay": 0.65},
 					{"enemy_type": "dive_bomber", "position": Vector2(240, -50), "delay": 0.7},
-					# Basic fighter swarm
+                    # Standard fighter swarm
 					{"enemy_type": "basic_fighter", "position": Vector2(40, -50), "delay": 0.8},
 					{"enemy_type": "basic_fighter", "position": Vector2(80, -50), "delay": 0.85},
 					{"enemy_type": "basic_fighter", "position": Vector2(120, -50), "delay": 0.9},

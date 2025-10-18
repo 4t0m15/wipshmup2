@@ -67,7 +67,7 @@ func _on_explosion_requested(position: Vector2, size: float) -> void:
 	_create_explosion_effect(position, size)
 
 func _on_stage_transition_requested(stage_number: int, duration: float) -> void:
-	# Simple stage transition popup at center
+    # Minimal stage transition popup centered on screen
 	var hud = get_tree().current_scene.get_node_or_null("HUD")
 	var label := Label.new()
 	label.text = "STAGE " + str(stage_number)

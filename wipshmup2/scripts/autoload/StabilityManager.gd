@@ -223,7 +223,7 @@ func _parallel_bullet_collision_check(task_data: Dictionary) -> Array:
 	var enemies = task_data.get("enemies", [])
 	var collisions = []
 	
-	# Simple collision checking (can be optimized further)
+    # Lightweight collision checking (optimize if profiling warrants)
 	for bullet in bullets:
 		if not bullet or not is_instance_valid(bullet):
 			continue

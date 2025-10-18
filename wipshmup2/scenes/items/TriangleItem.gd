@@ -48,12 +48,11 @@ func _setup_visual_triangle() -> void:
 	triangle.color = Color(1.0, 0.8, 0.0, 0.8)  # Orange triangle
 	add_child(triangle)
 	
-	# Create three item sprites
+		# Create three item sprites
 	for i in range(3):
 		var item_sprite = Sprite2D.new()
 		item_sprite.position = _item_positions[i]
-		
-		# Simple colored circles for items
+			# Render colored circles to represent item categories
 		var texture = _create_circle_texture(8, _get_item_color(i))
 		item_sprite.texture = texture
 		item_sprite.name = "Item_" + str(i)

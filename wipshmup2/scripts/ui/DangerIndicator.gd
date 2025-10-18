@@ -111,12 +111,12 @@ func _create_arrow_texture() -> ImageTexture:
 	var image = Image.create(8, 8, false, Image.FORMAT_RGBA8)
 	image.fill(Color.TRANSPARENT)
 	
-	# Draw simple arrow shape
+    # Rasterize 8x8 arrow glyph
 	for i in range(8):
 		for j in range(8):
 			var x = i
 			var y = j
-			# Simple arrow pattern
+            # Arrow pattern mask
 			if (x == 4 and y >= 2) or (y == 4 and x >= 2) or (x + y == 6 and x >= 2 and y >= 2):
 				image.set_pixel(x, y, Color.WHITE)
 	

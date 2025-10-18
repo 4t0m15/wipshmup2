@@ -142,7 +142,7 @@ func calculate_member_position(member: Node2D) -> Vector2:
 	if member_index == -1:
 		return global_position
 	
-	# Simple V-formation calculation
+# Compute V-formation offsets for wingmen
 	var offset = Vector2.ZERO
 	match formation_pattern:
 		0:  # V_FORMATION

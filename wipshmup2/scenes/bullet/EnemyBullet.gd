@@ -93,7 +93,7 @@ func _setup_visual_effects() -> void:
 	# Setup visual clarity enhancements
 	# Auto-classify danger level if not set
 	if danger_level == 1:
-		# Simple danger classification based on speed
+        # Classify danger level using speed thresholds
 		if speed > 200.0:
 			danger_level = 3  # High danger
 		elif speed > 120.0:
@@ -172,7 +172,7 @@ func _update_visual_effects(delta: float) -> void:
 		var player = get_tree().get_first_node_in_group("player")
 		if player and is_instance_valid(player):
 			var distance_to_player = global_position.distance_to(player.global_position)
-			# Simple proximity boost - closer bullets are brighter
+            # Apply proximity-based brightness boost
 			var proximity_multiplier = max(0.5, 1.0 - (distance_to_player / 200.0))
 			$Sprite2D.modulate.a = proximity_multiplier
 	

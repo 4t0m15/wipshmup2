@@ -192,7 +192,7 @@ func _process_bullet_collision(task_data: Dictionary) -> Array:
 	var enemies = task_data.get("enemies", [])
 	var collisions = []
 	
-	# Simple collision detection
+    # Minimal collision detection for coarse pruning
 	for bullet in bullets:
 		if not bullet or not is_instance_valid(bullet):
 			continue
@@ -284,7 +284,7 @@ func _process_pathfinding(task_data: Dictionary) -> Array:
 	var end_pos = task_data.get("end_position", Vector2.ZERO)
 	var _obstacles = task_data.get("obstacles", [])
 	
-	# Simple pathfinding (A* could be implemented here)
+    # Basic pathfinding placeholder (replace with A* when needed)
 	var path = [start_pos, end_pos]
 	
 	return path
@@ -324,7 +324,7 @@ func _process_rendering(task_data: Dictionary) -> Array:
 		if not obj or not is_instance_valid(obj):
 			continue
 		
-		# Simple culling based on distance
+        # Coarse culling based on distance
 		var distance = obj.global_position.distance_to(camera_pos)
 		if distance > 500.0:  # Cull objects far from camera
 			culled_objects.append(obj)

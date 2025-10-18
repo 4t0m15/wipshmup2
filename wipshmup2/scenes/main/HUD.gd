@@ -306,11 +306,14 @@ func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 		else:
 			break  # Prevent infinite loop
 
-	# Create tween safely
+	# Create fade-in tween safely (tween full Color instead of subproperty)
 	var fade_in := create_tween()
 	if fade_in and is_instance_valid(fade_in):
-		fade_in.tween_property(panel, "modulate:a", 1.0, 0.15)\
-			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		var target_in: Color = panel.modulate
+		target_in.a = 1.0
+		var tweener_in = fade_in.tween_property(panel, "modulate", target_in, 0.15)
+		if tweener_in:
+			tweener_in.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	
 	# Wait safely
 	if is_inside_tree():
@@ -319,11 +322,14 @@ func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 	if not is_instance_valid(panel):
 		return
 
-	# Create fade out tween safely
+	# Create fade-out tween safely (tween full Color instead of subproperty)
 	var fade_out := create_tween()
 	if fade_out and is_instance_valid(fade_out):
-		fade_out.tween_property(panel, "modulate:a", 0.0, 0.25)\
-			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		var target_out: Color = panel.modulate
+		target_out.a = 0.0
+		var tweener_out = fade_out.tween_property(panel, "modulate", target_out, 0.25)
+		if tweener_out:
+			tweener_out.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 		await fade_out.finished
 	
 	if is_instance_valid(panel):

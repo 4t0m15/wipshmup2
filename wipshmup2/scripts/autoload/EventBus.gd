@@ -1,5 +1,7 @@
 extends Node
 
+var DEBUG_LOGGING: bool = OS.is_debug_build()
+
 # Centralized event system
 
 # Game
@@ -76,60 +78,62 @@ signal entity_spawned(entity: Node, entity_type: String)
 signal entity_destroyed(entity: Node, entity_type: String)
 
 func _ready() -> void:
-	print("[EventBus] Event system initialized")
+	if DEBUG_LOGGING:
+		print("[EventBus] Event system initialized")
 	# Connect to some basic events to demonstrate signal usage
-	player_hit.connect(_on_player_hit)
-	game_over.connect(_on_game_over)
-	game_started.connect(_on_game_started)
-	game_paused.connect(_on_game_paused)
-	game_resumed.connect(_on_game_resumed)
-	lives_changed.connect(_on_lives_changed)
-	bombs_changed.connect(_on_bombs_changed)
-	player_invincibility_started.connect(_on_player_invincibility_started)
-	player_invincibility_ended.connect(_on_player_invincibility_ended)
-	bullet_hit_player.connect(_on_bullet_hit_player)
-	bullet_hit_enemy.connect(_on_bullet_hit_enemy)
-	bomb_used.connect(_on_bomb_used)
-	stage_started.connect(_on_stage_started)
-	stage_completed.connect(_on_stage_completed)
-	enemy_spawned.connect(_on_enemy_spawned)
-	boss_spawned.connect(_on_boss_spawned)
-	wave_started.connect(_on_wave_started)
-	wave_completed.connect(_on_wave_completed)
-	item_dropped.connect(_on_item_dropped)
-	item_collected.connect(_on_item_collected)
-	input_movement.connect(_on_input_movement)
-	input_shoot.connect(_on_input_shoot)
-	input_bomb.connect(_on_input_bomb)
-	input_pause.connect(_on_input_pause)
-	rank_changed.connect(_on_rank_changed)
-	streak_changed.connect(_on_streak_changed)
-	entity_spawned.connect(_on_entity_spawned)
-	entity_destroyed.connect(_on_entity_destroyed)
-	
-	# Connect Cho Ren Sha 68K signals for basic logging
-	shield_gained.connect(_on_shield_gained)
-	shield_lost.connect(_on_shield_lost)
-	shield_absorbed.connect(_on_shield_absorbed)
-	weapon_power_changed.connect(_on_weapon_power_changed)
-	loop_incremented.connect(_on_loop_incremented)
-	life_extended.connect(_on_life_extended)
-	fire_rate_boost_activated.connect(_on_fire_rate_boost_activated)
-	fire_rate_boost_ended.connect(_on_fire_rate_boost_ended)
-	
-	# Connect visual effects signals
-	screen_shake_requested.connect(_on_screen_shake_requested)
-	hit_stop_requested.connect(_on_hit_stop_requested)
-	flash_requested.connect(_on_flash_requested)
-	explosion_requested.connect(_on_explosion_requested)
-	stage_transition_requested.connect(_on_stage_transition_requested)
-	background_change_requested.connect(_on_background_change_requested)
-	particle_effect_requested.connect(_on_particle_effect_requested)
-	
-	# Connect audio signals
-	play_sound.connect(_on_play_sound)
-	play_music.connect(_on_play_music)
-	stop_music.connect(_on_stop_music)
+	if DEBUG_LOGGING:
+		player_hit.connect(_on_player_hit)
+		game_over.connect(_on_game_over)
+		game_started.connect(_on_game_started)
+		game_paused.connect(_on_game_paused)
+		game_resumed.connect(_on_game_resumed)
+		lives_changed.connect(_on_lives_changed)
+		bombs_changed.connect(_on_bombs_changed)
+		player_invincibility_started.connect(_on_player_invincibility_started)
+		player_invincibility_ended.connect(_on_player_invincibility_ended)
+		bullet_hit_player.connect(_on_bullet_hit_player)
+		bullet_hit_enemy.connect(_on_bullet_hit_enemy)
+		bomb_used.connect(_on_bomb_used)
+		stage_started.connect(_on_stage_started)
+		stage_completed.connect(_on_stage_completed)
+		enemy_spawned.connect(_on_enemy_spawned)
+		boss_spawned.connect(_on_boss_spawned)
+		wave_started.connect(_on_wave_started)
+		wave_completed.connect(_on_wave_completed)
+		item_dropped.connect(_on_item_dropped)
+		item_collected.connect(_on_item_collected)
+		input_movement.connect(_on_input_movement)
+		input_shoot.connect(_on_input_shoot)
+		input_bomb.connect(_on_input_bomb)
+		input_pause.connect(_on_input_pause)
+		rank_changed.connect(_on_rank_changed)
+		streak_changed.connect(_on_streak_changed)
+		entity_spawned.connect(_on_entity_spawned)
+		entity_destroyed.connect(_on_entity_destroyed)
+		
+		# Connect Cho Ren Sha 68K signals for basic logging
+		shield_gained.connect(_on_shield_gained)
+		shield_lost.connect(_on_shield_lost)
+		shield_absorbed.connect(_on_shield_absorbed)
+		weapon_power_changed.connect(_on_weapon_power_changed)
+		loop_incremented.connect(_on_loop_incremented)
+		life_extended.connect(_on_life_extended)
+		fire_rate_boost_activated.connect(_on_fire_rate_boost_activated)
+		fire_rate_boost_ended.connect(_on_fire_rate_boost_ended)
+		
+		# Connect visual effects signals
+		screen_shake_requested.connect(_on_screen_shake_requested)
+		hit_stop_requested.connect(_on_hit_stop_requested)
+		flash_requested.connect(_on_flash_requested)
+		explosion_requested.connect(_on_explosion_requested)
+		stage_transition_requested.connect(_on_stage_transition_requested)
+		background_change_requested.connect(_on_background_change_requested)
+		particle_effect_requested.connect(_on_particle_effect_requested)
+		
+		# Connect audio signals
+		play_sound.connect(_on_play_sound)
+		play_music.connect(_on_play_music)
+		stop_music.connect(_on_stop_music)
 
 # Convenience methods for common event patterns
 func emit_player_damage(amount: int) -> void:
@@ -193,64 +197,84 @@ func stop_music_with_defaults(fade_out: bool = true) -> void:
 
 # Event handlers to demonstrate signal usage
 func _on_player_hit() -> void:
-	print("[EventBus] Player hit event received")
+	if DEBUG_LOGGING:
+		print("[EventBus] Player hit event received")
 
 func _on_game_over() -> void:
-	print("[EventBus] Game over event received")
+	if DEBUG_LOGGING:
+		print("[EventBus] Game over event received")
 
 func _on_game_started() -> void:
-	print("[EventBus] Game started event received")
+	if DEBUG_LOGGING:
+		print("[EventBus] Game started event received")
 
 func _on_game_paused() -> void:
-	print("[EventBus] Game paused event received")
+	if DEBUG_LOGGING:
+		print("[EventBus] Game paused event received")
 
 func _on_game_resumed() -> void:
-	print("[EventBus] Game resumed event received")
+	if DEBUG_LOGGING:
+		print("[EventBus] Game resumed event received")
 
 func _on_lives_changed(new_lives: int) -> void:
-	print("[EventBus] Lives changed to: ", new_lives)
+	if DEBUG_LOGGING:
+		print("[EventBus] Lives changed to: ", new_lives)
 
 func _on_bombs_changed(new_bombs: int) -> void:
-	print("[EventBus] Bombs changed to: ", new_bombs)
+	if DEBUG_LOGGING:
+		print("[EventBus] Bombs changed to: ", new_bombs)
 
 func _on_player_invincibility_started() -> void:
-	print("[EventBus] Player invincibility started")
+	if DEBUG_LOGGING:
+		print("[EventBus] Player invincibility started")
 
 func _on_player_invincibility_ended() -> void:
-	print("[EventBus] Player invincibility ended")
+	if DEBUG_LOGGING:
+		print("[EventBus] Player invincibility ended")
 
 func _on_bullet_hit_player(bullet_position: Vector2) -> void:
-	print("[EventBus] Bullet hit player at: ", bullet_position)
+	if DEBUG_LOGGING:
+		print("[EventBus] Bullet hit player at: ", bullet_position)
 
 func _on_bullet_hit_enemy(enemy_position: Vector2, damage: int) -> void:
-	print("[EventBus] Bullet hit enemy at: ", enemy_position, " for ", damage, " damage")
+	if DEBUG_LOGGING:
+		print("[EventBus] Bullet hit enemy at: ", enemy_position, " for ", damage, " damage")
 
 func _on_bomb_used(position: Vector2) -> void:
-	print("[EventBus] Bomb used at: ", position)
+	if DEBUG_LOGGING:
+		print("[EventBus] Bomb used at: ", position)
 
 func _on_stage_started(stage_number: int) -> void:
-	print("[EventBus] Stage started: ", stage_number)
+	if DEBUG_LOGGING:
+		print("[EventBus] Stage started: ", stage_number)
 
 func _on_stage_completed(stage_number: int) -> void:
-	print("[EventBus] Stage completed: ", stage_number)
+	if DEBUG_LOGGING:
+		print("[EventBus] Stage completed: ", stage_number)
 
 func _on_enemy_spawned(_enemy: Node, enemy_type: String) -> void:
-	print("[EventBus] Enemy spawned: ", enemy_type)
+	if DEBUG_LOGGING:
+		print("[EventBus] Enemy spawned: ", enemy_type)
 
 func _on_boss_spawned(_boss: Node, boss_name: String) -> void:
-	print("[EventBus] Boss spawned: ", boss_name)
+	if DEBUG_LOGGING:
+		print("[EventBus] Boss spawned: ", boss_name)
 
 func _on_wave_started(wave_number: int) -> void:
-	print("[EventBus] Wave started: ", wave_number)
+	if DEBUG_LOGGING:
+		print("[EventBus] Wave started: ", wave_number)
 
 func _on_wave_completed(wave_number: int) -> void:
-	print("[EventBus] Wave completed: ", wave_number)
+	if DEBUG_LOGGING:
+		print("[EventBus] Wave completed: ", wave_number)
 
 func _on_item_dropped(item_type: String, position: Vector2) -> void:
-	print("[EventBus] Item dropped: ", item_type, " at ", position)
+	if DEBUG_LOGGING:
+		print("[EventBus] Item dropped: ", item_type, " at ", position)
 
 func _on_item_collected(item_type: String, value: int) -> void:
-	print("[EventBus] Item collected: ", item_type, " value: ", value)
+	if DEBUG_LOGGING:
+		print("[EventBus] Item collected: ", item_type, " value: ", value)
 
 func _on_input_movement(_direction: Vector2) -> void:
 	# Input events are typically handled by input systems
@@ -269,73 +293,95 @@ func _on_input_pause(_pressed: bool) -> void:
 	pass
 
 func _on_rank_changed(new_rank: float) -> void:
-	print("[EventBus] Rank changed to: ", new_rank)
+	if DEBUG_LOGGING:
+		print("[EventBus] Rank changed to: ", new_rank)
 
 func _on_streak_changed(current: int, max_streak: int) -> void:
-	print("[EventBus] Streak changed: ", current, "/", max_streak)
+	if DEBUG_LOGGING:
+		print("[EventBus] Streak changed: ", current, "/", max_streak)
 
 func _on_entity_spawned(_entity: Node, entity_type: String) -> void:
-	print("[EventBus] Entity spawned: ", entity_type)
+	if DEBUG_LOGGING:
+		print("[EventBus] Entity spawned: ", entity_type)
 
 func _on_entity_destroyed(_entity: Node, entity_type: String) -> void:
-	print("[EventBus] Entity destroyed: ", entity_type)
+	if DEBUG_LOGGING:
+		print("[EventBus] Entity destroyed: ", entity_type)
 
 # Cho Ren Sha 68K Event Handlers
 func _on_shield_gained() -> void:
-	print("[EventBus] Shield gained")
+	if DEBUG_LOGGING:
+		print("[EventBus] Shield gained")
 
 func _on_shield_lost() -> void:
-	print("[EventBus] Shield lost")
+	if DEBUG_LOGGING:
+		print("[EventBus] Shield lost")
 
 func _on_shield_absorbed() -> void:
-	print("[EventBus] Shield absorbed")
+	if DEBUG_LOGGING:
+		print("[EventBus] Shield absorbed")
 
 func _on_weapon_power_changed(new_power: int) -> void:
-	print("[EventBus] Weapon power changed to: ", new_power)
+	if DEBUG_LOGGING:
+		print("[EventBus] Weapon power changed to: ", new_power)
 
 func _on_loop_incremented(new_loop: int) -> void:
-	print("[EventBus] Loop incremented to: ", new_loop)
+	if DEBUG_LOGGING:
+		print("[EventBus] Loop incremented to: ", new_loop)
 
 func _on_life_extended(reason: String) -> void:
-	print("[EventBus] Life extended: ", reason)
+	if DEBUG_LOGGING:
+		print("[EventBus] Life extended: ", reason)
 
 func _on_fire_rate_boost_activated(duration: float) -> void:
-	print("[EventBus] Fire rate boost activated for ", duration, " seconds")
+	if DEBUG_LOGGING:
+		print("[EventBus] Fire rate boost activated for ", duration, " seconds")
 
 func _on_fire_rate_boost_ended() -> void:
-	print("[EventBus] Fire rate boost ended")
+	if DEBUG_LOGGING:
+		print("[EventBus] Fire rate boost ended")
 
 # Visual Effects Event Handlers
 func _on_screen_shake_requested(intensity: float, duration: float) -> void:
-	print("[EventBus] Screen shake requested: intensity=", intensity, " duration=", duration)
+	if DEBUG_LOGGING:
+		print("[EventBus] Screen shake requested: intensity=", intensity, " duration=", duration)
 
 func _on_hit_stop_requested(duration: float, scale: float) -> void:
-	print("[EventBus] Hit stop requested: duration=", duration, " scale=", scale)
+	if DEBUG_LOGGING:
+		print("[EventBus] Hit stop requested: duration=", duration, " scale=", scale)
 
 func _on_flash_requested(color: Color, duration: float) -> void:
-	print("[EventBus] Flash requested: color=", color, " duration=", duration)
+	if DEBUG_LOGGING:
+		print("[EventBus] Flash requested: color=", color, " duration=", duration)
 
 func _on_explosion_requested(position: Vector2, size: float) -> void:
-	print("[EventBus] Explosion requested: position=", position, " size=", size)
+	if DEBUG_LOGGING:
+		print("[EventBus] Explosion requested: position=", position, " size=", size)
 
 func _on_stage_transition_requested(stage_number: int, duration: float) -> void:
-	print("[EventBus] Stage transition requested: stage=", stage_number, " duration=", duration)
+	if DEBUG_LOGGING:
+		print("[EventBus] Stage transition requested: stage=", stage_number, " duration=", duration)
 
 func _on_background_change_requested(background_type: String, tint: Color, ambient_lighting: float) -> void:
-	print("[EventBus] Background change requested: type=", background_type, " tint=", tint, " ambient=", ambient_lighting)
+	if DEBUG_LOGGING:
+		print("[EventBus] Background change requested: type=", background_type, " tint=", tint, " ambient=", ambient_lighting)
 
 func _on_particle_effect_requested(effect_name: String, duration: float) -> void:
-	print("[EventBus] Particle effect requested: ", effect_name, " duration=", duration)
+	if DEBUG_LOGGING:
+		print("[EventBus] Particle effect requested: ", effect_name, " duration=", duration)
 
 # Audio Event Handlers
 func _on_play_sound(sound_name: String, volume: float) -> void:
-	print("[EventBus] Play sound: ", sound_name, " volume=", volume)
+	if DEBUG_LOGGING:
+		print("[EventBus] Play sound: ", sound_name, " volume=", volume)
 
 func _on_play_music(music_name: String, fade_in: bool) -> void:
-	print("[EventBus] Play music: ", music_name, " fade_in=", fade_in)
+	if DEBUG_LOGGING:
+		print("[EventBus] Play music: ", music_name, " fade_in=", fade_in)
 
 func _on_stop_music(fade_out: bool) -> void:
-	print("[EventBus] Stop music: fade_out=", fade_out)
+	if DEBUG_LOGGING:
+		print("[EventBus] Stop music: fade_out=", fade_out)
 
 func _exit_tree() -> void:
 	"""Clean up signal connections to prevent memory leaks"""
