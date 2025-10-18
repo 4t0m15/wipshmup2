@@ -23,10 +23,10 @@ DifficultyConfig="*res://scripts/core/DifficultyConfig.gd"
 RankManager="*res://scripts/core/RankManager.gd"
 ItemDropManager="*res://scripts/core/ItemDropManager.gd"
 SpriteManager="*res://scripts/core/SpriteManager.gd"
-EventBus="*res://scripts/autoload/EventBus.gd"
-GameState="*res://scripts/autoload/GameState.gd"
-EntityFactory="*res://scripts/autoload/EntityFactory.gd"
-EnemyTemplateManager="*res://scripts/autoload/EnemyTemplateManager.gd"
+EventBus="*res://scripts/autoload/EventBus.cs"
+GameState="*res://scripts/autoload/GameState.cs"
+EntityFactory="*res://scripts/autoload/EntityFactory.cs"
+EnemyTemplateManager="*res://scripts/autoload/EnemyTemplateManager.cs"
 BossTemplateManager="*res://scripts/autoload/BossTemplateManager.gd"
 StageTemplateManager="*res://scripts/autoload/StageTemplateManager.gd"
 GameModeManager="*res://scripts/autoload/GameModeManager.gd"
@@ -50,6 +50,10 @@ window/size/window_height_override=1080
 window/stretch/mode="viewport"
 window/stretch/scale_mode="integer"
 window/vsync/vsync_mode=0
+
+[dotnet]
+
+project/assembly_name="wipshmup2"
 
 [editor_plugins]
 
