@@ -15,7 +15,7 @@ controls: arrow keys to move x to deploy bomb and space to shoot
 │                                    GODOT ENGINE                                        │
 │                                                                                        │
 │  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
-│  │                              MAIN SCENE (Main.gd)                               │   │
+│  │                              MAIN SCENE (Main.cs)                               │   │
 │  │                            Game Loop & Coordination                             │   │
 │  │                                                                                 │   │
 │  │  ┌────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐       │   │
@@ -23,8 +23,8 @@ controls: arrow keys to move x to deploy bomb and space to shoot
 │  │  │   (320x180)        │  │   (CanvasLayer)     │  │     Pipeline        │       │   │
 │  │  │                    │  │                     │  │                     │       │   │
 │  │  │  ┌──────────────┐  │  │  ┌───────────────┐  │  │  ┌───────────────┐  │       │   │
-│  │  │  │   PLAYER     │  │  │  │  Score/Lives  │  │  │  │   Dither      │  │       │   │
-│  │  │  │ (Player.gd)  │  │  │  │  FPS Counter  │  │  │  │   Shader      │  │       │   │
+    │  │  │  │   PLAYER     │  │  │  │  Score/Lives  │  │  │  │   Dither      │  │       │   │
+    │  │  │  │ (Player.cs)  │  │  │  │  FPS Counter  │  │  │  │   Shader      │  │       │   │
 │  │  │  │              │  │  │  │  Game Over    │  │  │  │               │  │       │   │
 │  │  │  │ ┌─────────┐  │  │  │  │  Popups       │  │  │  │       ▼       │  │       │   │
 │  │  │  │ │Movement │  │  │  │  └───────────────┘  │  │  │   CRT Shader  │  │       │   │
@@ -67,7 +67,7 @@ controls: arrow keys to move x to deploy bomb and space to shoot
 │                                                                                       │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                        │
 │  │  AudioManager   │  │  RankManager    │  │ DifficultyConfig│                        │
-│  │   (Audio.gd)    │  │  (Rank.gd)      │  │   (Config.gd)   │                        │
+│  │   (Audio.cs)    │  │  (Rank.cs)      │  │   (Config.cs)   │                        │
 │  │                 │  │                 │  │                 │                        │
 │  │ ┌─────────────┐ │  │ ┌─────────────┐ │  │ ┌─────────────┐ │                        │
 │  │ │Procedural   │ │  │ │Dynamic      │ │  │ │Configurable │ │                        │
@@ -89,7 +89,7 @@ controls: arrow keys to move x to deploy bomb and space to shoot
 │                                                                                       │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐   │
 │  │ StageController │  │BulletPatterns   │  │FormationManager │  │   BossBase      │   │
-│  │ (StageCtrl.gd)  │  │(Patterns.gd)    │  │(Formation.gd)   │  │  (Boss.gd)      │   │
+│  │ (StageCtrl.cs)  │  │(Patterns.cs)    │  │(Formation.cs)   │  │  (Boss.cs)      │   │
 │  │                 │  │                 │  │                 │  │                 │   │
 │  │ ┌─────────────┐ │  │ ┌─────────────┐ │  │ ┌─────────────┐ │  │ ┌─────────────┐ │   │
 │  │ │Stage        │ │  │ │Static       │ │  │ │Enemy        │ │  │ │Multi-Phase  │ │   │
@@ -411,45 +411,45 @@ controls: arrow keys to move x to deploy bomb and space to shoot
 ```
 scripts/
 ├─ autoload/              # Centralized Singletons
-│  ├─ EventBus.gd        # Event system
-│  ├─ GameState.gd       # Game state management
-│  ├─ EntityFactory.gd   # Entity spawning
-│  ├─ EnemyTemplateManager.gd    # Enemy templates
-│  ├─ BossTemplateManager.gd     # Boss templates
-│  ├─ StageTemplateManager.gd   # Stage templates
-│  ├─ GameModeManager.gd        # Game mode management
-│  └─ ConfigManager.gd          # Configuration management
+│  ├─ EventBus.cs        # Event system
+│  ├─ GameState.cs       # Game state management
+│  ├─ EntityFactory.cs   # Entity spawning
+│  ├─ EnemyTemplateManager.cs    # Enemy templates
+│  ├─ BossTemplateManager.cs     # Boss templates
+│  ├─ StageTemplateManager.cs   # Stage templates
+│  ├─ GameModeManager.cs        # Game mode management
+│  └─ ConfigManager.cs          # Configuration management
 ├─ systems/               # Game Systems
-│  ├─ CombatSystem.gd    # Combat logic
-│  ├─ VisualEffectsSystem.gd    # Visual effects
-│  └─ RankPressureSystem.gd     # Rank pressure
+│  ├─ CombatSystem.cs    # Combat logic
+│  ├─ VisualEffectsSystem.cs    # Visual effects
+│  └─ RankPressureSystem.cs     # Rank pressure
 ├─ controllers/           # Input Handlers
-│  └─ PlayerController.gd       # Player input
+│  └─ PlayerController.cs       # Player input
 ├─ components/           # Reusable Behaviors
 │  └─ behaviors/
-│     ├─ MovementBehavior.gd    # Base movement
-│     ├─ AttackBehavior.gd      # Base attack
-│     ├─ StraightDownBehavior.gd
-│     ├─ SineWaveBehavior.gd
-│     ├─ ZigzagBehavior.gd
-│     ├─ DiveBehavior.gd
-│     ├─ AimedShotBehavior.gd
-│     ├─ FanBehavior.gd
-│     └─ RingBehavior.gd
+│     ├─ MovementBehavior.cs    # Base movement
+│     ├─ AttackBehavior.cs      # Base attack
+│     ├─ StraightDownBehavior.cs
+│     ├─ SineWaveBehavior.cs
+│     ├─ ZigzagBehavior.cs
+│     ├─ DiveBehavior.cs
+│     ├─ AimedShotBehavior.cs
+│     ├─ FanBehavior.cs
+│     └─ RingBehavior.cs
 ├─ stages/               # Stage Definitions
-│  ├─ StageDefinition.gd # Stage data
-│  ├─ WaveDefinition.gd  # Wave data
-│  └─ BossEncounter.gd   # Boss encounter data
+│  ├─ StageDefinition.cs # Stage data
+│  ├─ WaveDefinition.cs  # Wave data
+│  └─ BossEncounter.cs   # Boss encounter data
 ├─ data/                 # Templates and Definitions
-│  ├─ EnemyTemplate.gd   # Enemy template
-│  ├─ BossTemplate.gd    # Boss template
-│  └─ BossPhase.gd       # Boss phase data
+│  ├─ EnemyTemplate.cs   # Enemy template
+│  ├─ BossTemplate.cs    # Boss template
+│  └─ BossPhase.cs       # Boss phase data
 └─ [Game Modes]          # Game Mode Classes
-   ├─ GameMode.gd        # Base game mode
-   ├─ CampaignMode.gd    # Campaign mode
-   ├─ EndlessMode.gd     # Endless mode
-   ├─ BossRushMode.gd    # Boss rush mode
-   └─ PracticeMode.gd    # Practice mode
+   ├─ GameMode.cs        # Base game mode
+   ├─ CampaignMode.cs    # Campaign mode
+   ├─ EndlessMode.cs     # Endless mode
+   ├─ BossRushMode.cs    # Boss rush mode
+   └─ PracticeMode.cs    # Practice mode
 ```
 
 *Thanks for reading! :)*
