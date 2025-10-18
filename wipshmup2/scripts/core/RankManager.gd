@@ -135,5 +135,3 @@ func _on_lives_changed(new_lives: int) -> void:
 	if _previous_lives >= 0 and new_lives < _previous_lives:
 		on_player_died(new_lives)
 	_previous_lives = new_lives
-
-
