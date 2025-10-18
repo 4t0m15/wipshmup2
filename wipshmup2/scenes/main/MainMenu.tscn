@@ -27,71 +27,85 @@ script = ExtResource("1_menu_script")
 [node name="Canvas" type="CanvasLayer" parent="."]
 layer = 2
 
-[node name="Title" type="Label" parent="Canvas"]
-offset_left = 0.0
-offset_top = 12.0
-offset_right = 320.0
-offset_bottom = 40.0
-horizontal_alignment = 1
+[node name="Root" type="Control" parent="Canvas"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="VBox" type="VBoxContainer" parent="Canvas/Root"]
+alignment = 0
+theme_override_constants/separation = 8
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -120.0
+offset_top = -96.0
+offset_right = 160.0
+offset_bottom = 24.0
+offset_left = -80.0
+
+[node name="Title" type="Label" parent="Canvas/Root/VBox"]
+horizontal_alignment = 0
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 24
 theme_override_colors/font_color = Color(1, 0.7, 0.9, 1)
 theme_override_colors/font_outline_color = Color(0.8, 0.2, 0.6, 0.9)
 theme_override_constants/outline_size = 4
 text = "wipshmup2"
 
-[node name="FlavorText" type="Label" parent="Canvas"]
-offset_left = 200.0
-offset_top = 30.0
-offset_right = 300.0
-offset_bottom = 50.0
-rotation = -0.349066
-pivot_offset = Vector2(50, 10)
+[node name="FlavorText" type="Label" parent="Canvas/Root/VBox"]
+rotation = 0.0
+horizontal_alignment = 0
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 10
 theme_override_colors/font_color = Color(1, 1, 0.3, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 0.8)
 theme_override_constants/outline_size = 2
 text = "Bullet Hell!"
-horizontal_alignment = 1
 
-[node name="MenuPanel" type="PanelContainer" parent="Canvas"]
-offset_left = 20.0
-offset_top = 76.0
-offset_right = 300.0
-offset_bottom = 170.0
+[node name="MenuPanel" type="PanelContainer" parent="Canvas/Root/VBox"]
+custom_minimum_size = Vector2(220, 0)
+size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("1_panel")
 
-[node name="MenuList" type="VBoxContainer" parent="Canvas/MenuPanel"]
+[node name="MenuList" type="VBoxContainer" parent="Canvas/Root/VBox/MenuPanel"]
 layout_mode = 2
 theme_override_constants/separation = 6
-alignment = 1
+alignment = 0
 
-[node name="Freeplay" type="Button" parent="Canvas/MenuPanel/MenuList"]
+[node name="Freeplay" type="Button" parent="Canvas/Root/VBox/MenuPanel/MenuList"]
 text = "Freeplay"
 focus_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.9, 1, 0.7, 1)
 theme_override_colors/font_outline_color = Color(0.2, 0.5, 0.1, 0.8)
 theme_override_constants/outline_size = 1
 
-[node name="Campaign" type="Button" parent="Canvas/MenuPanel/MenuList"]
+[node name="Campaign" type="Button" parent="Canvas/Root/VBox/MenuPanel/MenuList"]
 text = "Campaign"
 focus_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.7, 0.9, 1, 1)
 theme_override_colors/font_outline_color = Color(0.1, 0.3, 0.5, 0.8)
 theme_override_constants/outline_size = 1
 
-[node name="BossRush" type="Button" parent="Canvas/MenuPanel/MenuList"]
+[node name="BossRush" type="Button" parent="Canvas/Root/VBox/MenuPanel/MenuList"]
 text = "Boss Rush"
 focus_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(1, 0.5, 0.5, 1)
 theme_override_colors/font_outline_color = Color(0.5, 0.1, 0.1, 0.8)
 theme_override_constants/outline_size = 1
 
-[node name="Quit" type="Button" parent="Canvas/MenuPanel/MenuList"]
+[node name="Quit" type="Button" parent="Canvas/Root/VBox/MenuPanel/MenuList"]
 text = "Quit :("
 focus_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(1, 0.8, 0.4, 1)
 theme_override_colors/font_outline_color = Color(0.5, 0.3, 0.1, 0.8)

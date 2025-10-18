@@ -118,6 +118,8 @@ func _setup_game_mode() -> void:
 	var current_mode = GameModeManager.get_current_mode()
 	if not current_mode:
 		print("[Main] No active game mode, starting default stage controller")
+		# Ensure sane starting state when launching without a GameMode (Freeplay)
+		GameState.reset_game()
 		_setup_stage_controller()
 		return
 	

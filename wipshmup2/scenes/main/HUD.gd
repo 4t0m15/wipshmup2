@@ -305,10 +305,10 @@ func show_popup(text: String, color: Color = Color(1.0, 0.9, 0.6, 1.0)) -> void:
 			await get_tree().process_frame
 		else:
 			break  # Prevent infinite loop
-
+  
 	# Create fade-in tween safely (tween full Color instead of subproperty)
 	var fade_in := create_tween()
-	if fade_in and is_instance_valid(fade_in):
+	if fade_in and is_instance_valid(fade_in): 
 		if not is_instance_valid(panel):
 			return
 		var target_in: Color = panel.modulate

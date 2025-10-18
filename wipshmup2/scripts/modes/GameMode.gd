@@ -31,8 +31,9 @@ func start_mode() -> void:
 	
 	# Initialize game state
 	GameState.reset_game()
-	GameState.lives = starting_lives
-	GameState.bombs = starting_bombs
+	# Use setters so change signals fire for HUD synchronization
+	GameState.set_lives(starting_lives)
+	GameState.set_bombs(starting_bombs)
 	
 	# Apply mode-specific setup
 	_setup_mode()

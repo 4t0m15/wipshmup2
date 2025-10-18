@@ -4,9 +4,9 @@ extends Node2D
 
 @onready var _buttons: Array[Button] = _collect_buttons()
 
-@onready var _title: Label = $Canvas/Title
-@onready var _flavor_text: Label = $Canvas/FlavorText
-@onready var _menu_panel: PanelContainer = $Canvas/MenuPanel
+@onready var _title: Label = $Canvas/Root/VBox/Title
+@onready var _flavor_text: Label = $Canvas/Root/VBox/FlavorText
+@onready var _menu_panel: PanelContainer = $Canvas/Root/VBox/MenuPanel
 @onready var _quit_image_layer: CanvasLayer = $QuitImageLayer
 
 # Background/viewport pipeline
@@ -23,9 +23,17 @@ var _crt_material: ShaderMaterial
 var _crt_enabled: bool = false
 var _crt_mask_type: int = 1
 
+# Target on-screen scale for UI relative to native 320x180 after window upscaling
+# 1.0 keeps current large look; 0.5 halves perceived size (default)
+const MENU_SCREEN_SCALE: float = 0.3
+const MENU_OPTIONS_SCALE: float = 0.10  # Relative to overall UI scale
+const MENU_UI_MIN_ABS_SCALE: float = 1.0  # Clamp: title/flavor min absolute scale
+const MENU_OPTIONS_MIN_ABS_SCALE: float = 0.75  # Clamp: options min absolute scale
+const SCALE_BUTTON_FONTS: bool = false  # Leave fonts unchanged; rely on node scale
+
 var _current_index: int = 0
 var _last_move_time: float = 0.0
-var _move_cooldown: float = 0.12
+var _move_cooldown: float = 0.08
 
 # Stat tracking
 var _rare_message_count: int = 0
@@ -36,12 +44,10 @@ var _menu_start_time: float = 0.0
 # Minecraft-style flavor texts
 const FLAVOR_TEXTS: Array[String] = [
 	"Bullet Hell!",
-	"Also try Touhou!",
+	"Also try the Touhou series!",
 	"Dodge everything!",
 	"Now with more bullets!",
-	"Adaptive difficulty!",
-	"Rank goes up!",
-	"Retro vibes!",
+	"Adaptive difficulty in !",
 	"CRT shader included!",
 	"Made with Godot!",
 	"Boss rush mode!",
@@ -298,14 +304,19 @@ func _ready() -> void:
 
 	# Looping subtle scale tween for menu panel
 	if is_instance_valid(_menu_panel):
+		var base_panel_scale := _menu_panel.scale
 		var tp := create_tween().set_loops()
-		tp.tween_property(_menu_panel, "scale", Vector2(1.02, 1.02), 1.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		tp.tween_property(_menu_panel, "scale", Vector2.ONE, 1.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tp.tween_property(_menu_panel, "scale", base_panel_scale * 1.02, 1.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tp.tween_property(_menu_panel, "scale", base_panel_scale, 1.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func _setup_flavor_text() -> void:
 	"""Set random flavor text and add wobble animation"""
 	if not is_instance_valid(_flavor_text):
 		return
+
+	# Ensure no rotation (layout/readability)
+	_flavor_text.rotation = 0.0
+	_flavor_text.pivot_offset = Vector2.ZERO
 	
 	# Initial fade in
 	_flavor_text.modulate.a = 0.0
@@ -315,15 +326,13 @@ func _setup_flavor_text() -> void:
 	# Pick random flavor text
 	_change_flavor_text()
 	
-	# Add wobble animation (like Minecraft)
-	var wobble_tween := create_tween().set_loops()
-	wobble_tween.tween_property(_flavor_text, "rotation", -0.279253, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)  # -16 degrees
-	wobble_tween.tween_property(_flavor_text, "rotation", -0.418879, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)  # -24 degrees
+	# No rotation wobble; keep subtle scale pulse below for life
 	
-	# Add scale pulse
+	# Add scale pulse (relative to current scale)
+	var base_flavor_scale := _flavor_text.scale
 	var pulse_tween := create_tween().set_loops()
-	pulse_tween.tween_property(_flavor_text, "scale", Vector2(1.05, 1.05), 1.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	pulse_tween.tween_property(_flavor_text, "scale", Vector2.ONE, 1.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	pulse_tween.tween_property(_flavor_text, "scale", base_flavor_scale * 1.05, 1.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	pulse_tween.tween_property(_flavor_text, "scale", base_flavor_scale, 1.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	
 	# Change flavor text every 5 seconds
 	var flavor_timer := Timer.new()
@@ -653,7 +662,8 @@ func _setup_viewport_and_crt() -> void:
 	_viewport_container.name = "View"
 	# Fill the whole viewport; SubViewport will be stretched by the container
 	_viewport_container.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_viewport_container.stretch = false  # Disable stretch to allow manual size control
+	# Enable stretching so the SubViewport scales with window size while preserving aspect via CRT rect
+	_viewport_container.stretch = true
 	# Use the actual viewport size for proper scaling
 	var vp := get_viewport()
 	if vp:
@@ -664,11 +674,8 @@ func _setup_viewport_and_crt() -> void:
 
 	_subviewport = SubViewport.new()
 	_subviewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	# Use the actual viewport size for proper scaling
-	if vp:
-		call_deferred("_set_subviewport_size", vp.get_visible_rect().size)
-	else:
-		call_deferred("_set_subviewport_size", Vector2(320, 180))
+	# Render at native 320x180 to preserve pixel art, let container scale it
+	call_deferred("_set_subviewport_size", Vector2(320, 180))
 	_viewport_container.add_child(_subviewport)
 
 	_viewport_world = Node2D.new()
@@ -689,11 +696,8 @@ func _setup_viewport_and_crt() -> void:
 	_crt_rect.name = "CRT"
 	_crt_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_crt_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	# Use the actual viewport size for proper scaling
-	if vp:
-		call_deferred("_set_crt_rect_size", vp.get_visible_rect().size)
-	else:
-		call_deferred("_set_crt_rect_size", Vector2(320, 180))
+	# CRT rect overlays full window; ensure it stretches to fill
+	call_deferred("_set_crt_rect_size", get_viewport().get_visible_rect().size)
 	add_child(_crt_rect)
 
 	var crt_shader: Shader = load("res://shaders/crt.gdshader")
@@ -706,6 +710,12 @@ func _setup_viewport_and_crt() -> void:
 	_apply_crt_defaults()
 	_set_crt_enabled(_crt_enabled)
 	_update_crt_aspect()
+	# Initial UI layout within the logical 320x180 space (no extra scaling)
+	_layout_menu_ui()
+	# Also react to actual window (root viewport) size changes
+	var root_vp := get_tree().root
+	if root_vp and not root_vp.size_changed.is_connected(_on_window_size_changed):
+		root_vp.size_changed.connect(_on_window_size_changed)
 
 func _update_crt_texture() -> void:
 	if _crt_material and _subviewport:
@@ -733,10 +743,44 @@ func _set_crt_enabled(enabled: bool) -> void:
 		_crt_rect.visible = enabled
 
 func _on_viewport_size_changed() -> void:
-	# Ensure the container continues to cover the viewport and CRT aspect matches
+	# Ensure container covers viewport and keep CRT aspect; UI stays at logical 320x180
 	if is_instance_valid(_viewport_container):
 		_viewport_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_layout_menu_ui()
 	_update_crt_aspect()
+
+func _on_window_size_changed() -> void:
+	# Root viewport (actual window) changed
+	_layout_menu_ui()
+	_update_crt_aspect()
+
+func _layout_menu_ui() -> void:
+	"""Center the menu panel in the logical 320x180 space without extra scaling."""
+	if not is_instance_valid(_menu_panel):
+		return
+	var logical_size := Vector2(320, 180)
+	var container_scale := 1.0
+	var root_vp := get_tree().root
+	if root_vp:
+		var rect := root_vp.get_visible_rect()
+		var sx := rect.size.x / logical_size.x
+		var sy := rect.size.y / logical_size.y
+		container_scale = min(sx, sy)
+
+	# Compensate for SubViewportContainer scaling so UI appears smaller on big windows
+	var compensated_scale := MENU_SCREEN_SCALE / container_scale
+
+	# Apply to key UI nodes (title/flavor use global UI scale; options use additional options scale)
+	# Compute scales with absolute minimum clamps for readability
+	var ui_scale: float = max(compensated_scale, MENU_UI_MIN_ABS_SCALE)
+	var options_scale: float = max(compensated_scale * MENU_OPTIONS_SCALE, MENU_OPTIONS_MIN_ABS_SCALE)
+	_apply_option_visual_scale(options_scale)
+	if is_instance_valid(_title):
+		_title.scale = Vector2.ONE * ui_scale
+	if is_instance_valid(_flavor_text):
+		_flavor_text.scale = Vector2.ONE * ui_scale
+
+	# Centering handled by containers; no manual positioning
 
 func _update_crt_aspect() -> void:
 	if not _crt_material:
@@ -751,7 +795,6 @@ func _update_crt_aspect() -> void:
 
 func _set_viewport_container_size(size: Vector2) -> void:
 	if is_instance_valid(_viewport_container):
-		# Avoid overriding anchor-driven size; use custom minimum instead
 		_viewport_container.custom_minimum_size = size
 
 func _set_subviewport_size(size: Vector2) -> void:
@@ -760,7 +803,6 @@ func _set_subviewport_size(size: Vector2) -> void:
 
 func _set_crt_rect_size(size: Vector2) -> void:
 	if is_instance_valid(_crt_rect):
-		# Avoid overriding anchor-driven size; use custom minimum instead
 		_crt_rect.custom_minimum_size = size
 
 func _start_environment_cycle() -> void:
@@ -793,9 +835,26 @@ func _start_environment_cycle() -> void:
 	)
 
 func _get_menu_list() -> Node:
+	if has_node("Canvas/Root/VBox/MenuPanel/MenuList"):
+		return $Canvas/Root/VBox/MenuPanel/MenuList
 	if has_node("Canvas/MenuPanel/MenuList"):
 		return $Canvas/MenuPanel/MenuList
-	return get_node_or_null("Canvas/MenuPanel/HBox")
+	return get_node_or_null("Canvas/Root/VBox/MenuPanel/HBox")
+
+func _apply_option_visual_scale(scale_value: float) -> void:
+	# Scale the container that directly affects option visuals
+	if is_instance_valid(_menu_panel):
+		_menu_panel.scale = Vector2.ONE * scale_value
+	# Optionally scale button font sizes (disabled by default)
+	if SCALE_BUTTON_FONTS:
+		var list := _get_menu_list()
+		if list:
+			for child in list.get_children():
+				var btn := child as Button
+				if btn != null:
+					var new_size := int(round(14.0 * scale_value))
+					new_size = clampi(new_size, 8, 28)
+					btn.add_theme_font_size_override("font_size", new_size)
 
 func _collect_buttons() -> Array[Button]:
 	var list := _get_menu_list()
