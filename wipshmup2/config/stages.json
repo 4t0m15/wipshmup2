@@ -1,8 +1,164 @@
 {
   "stages": {
     "1": {
-      "name": "Stage 1",
-      "waves": []
+      "name": "Stage 1 - Opening",
+      "background": "space_1",
+      "music": "stage_1",
+      "waves": [
+        {
+          "enemy_type": "basic_fighter",
+          "count": 5,
+          "spawn_delay": 1.0,
+          "formation": "line"
+        },
+        {
+          "enemy_type": "red_carrier",
+          "count": 2,
+          "spawn_delay": 2.0,
+          "formation": "v_formation"
+        }
+      ],
+      "boss": "type0"
+    },
+    "2": {
+      "name": "Stage 2 - Formation",
+      "background": "space_2",
+      "music": "stage_2",
+      "waves": [
+        {
+          "enemy_type": "sine_fighter",
+          "count": 8,
+          "spawn_delay": 0.8,
+          "formation": "wave"
+        },
+        {
+          "enemy_type": "zigzag_bomber",
+          "count": 4,
+          "spawn_delay": 1.5,
+          "formation": "diamond"
+        }
+      ],
+      "boss": "gliath"
+    },
+    "3": {
+      "name": "Stage 3 - Assault",
+      "background": "space_3",
+      "music": "stage_3",
+      "waves": [
+        {
+          "enemy_type": "dive_fighter",
+          "count": 6,
+          "spawn_delay": 0.6,
+          "formation": "dive_pattern"
+        },
+        {
+          "enemy_type": "chaser_drone",
+          "count": 10,
+          "spawn_delay": 1.0,
+          "formation": "scattered"
+        }
+      ],
+      "boss": "cross_sinker"
+    },
+    "4": {
+      "name": "Stage 4 - Heavy Assault",
+      "background": "space_4",
+      "music": "stage_4",
+      "waves": [
+        {
+          "enemy_type": "heavy_bomber",
+          "count": 3,
+          "spawn_delay": 2.0,
+          "formation": "line"
+        },
+        {
+          "enemy_type": "kamikaze",
+          "count": 8,
+          "spawn_delay": 0.5,
+          "formation": "kamikaze_wave"
+        }
+      ],
+      "boss": "iron_casket"
+    },
+    "5": {
+      "name": "Stage 5 - Formation Attack",
+      "background": "space_5",
+      "music": "stage_5",
+      "waves": [
+        {
+          "enemy_type": "formation_leader",
+          "count": 2,
+          "spawn_delay": 3.0,
+          "formation": "formation_escort"
+        },
+        {
+          "enemy_type": "patrol_gunship",
+          "count": 4,
+          "spawn_delay": 1.5,
+          "formation": "patrol_pattern"
+        }
+      ],
+      "boss": "graf_zeppelin"
+    },
+    "6": {
+      "name": "Stage 6 - Fortress Assault",
+      "background": "space_6",
+      "music": "stage_6",
+      "waves": [
+        {
+          "enemy_type": "heavy_bomber",
+          "count": 5,
+          "spawn_delay": 1.5,
+          "formation": "v_formation"
+        },
+        {
+          "enemy_type": "red_carrier",
+          "count": 3,
+          "spawn_delay": 2.0,
+          "formation": "triangle"
+        }
+      ],
+      "boss": "fortress"
+    },
+    "7": {
+      "name": "Stage 7 - Blockade",
+      "background": "space_7",
+      "music": "stage_7",
+      "waves": [
+        {
+          "enemy_type": "zigzag_bomber",
+          "count": 6,
+          "spawn_delay": 1.0,
+          "formation": "zigzag_wave"
+        },
+        {
+          "enemy_type": "kamikaze",
+          "count": 12,
+          "spawn_delay": 0.4,
+          "formation": "kamikaze_swarm"
+        }
+      ],
+      "boss": "blockade"
+    },
+    "8": {
+      "name": "Stage 8 - Final Assault",
+      "background": "space_8",
+      "music": "stage_8",
+      "waves": [
+        {
+          "enemy_type": "formation_leader",
+          "count": 3,
+          "spawn_delay": 2.5,
+          "formation": "formation_swarm"
+        },
+        {
+          "enemy_type": "patrol_gunship",
+          "count": 6,
+          "spawn_delay": 1.0,
+          "formation": "patrol_swarm"
+        }
+      ],
+      "boss": "fgr"
     }
   }
 }

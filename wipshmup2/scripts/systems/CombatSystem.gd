@@ -55,6 +55,10 @@ func _on_enemy_killed(points: int, position: Vector2, _enemy_type: String) -> vo
 	if ItemDropManager:
 		ItemDropManager.try_drop_item(position, points)
 	
+	# Cho Ren Sha 68K: Revenge bullets in loop 2+
+	if GameState.current_loop >= 2:
+		_spawn_revenge_bullets(position)
+	
 	# Update rank
 	if RankManager and RankManager.has_method("on_enemy_killed"):
 		RankManager.on_enemy_killed(points)
@@ -164,3 +168,20 @@ func _damage_nearby_enemies(center: Vector2, radius: float, damage: int) -> void
 				if enemy.has_method("take_damage"):
 					enemy.take_damage(damage, "shield_explosion")
 				print("[CombatSystem] Shield explosion damaged enemy at distance: ", distance)
+
+func _spawn_revenge_bullets(position: Vector2) -> void:
+	"""Spawn revenge bullets when enemies are killed in loop 2+"""
+	if not EntityFactory:
+		return
+	
+	# Spawn 3-5 revenge bullets in random directions
+	var bullet_count = randi_range(3, 5)
+	for i in range(bullet_count):
+		var angle = randf() * 2.0 * PI  # Random direction
+		var speed = randf_range(80.0, 120.0)  # Random speed
+		var direction = Vector2(cos(angle), sin(angle))
+		
+		# Spawn enemy bullet
+		EntityFactory.spawn_enemy_bullet(position, direction * speed)
+	
+	print("[CombatSystem] Spawned ", bullet_count, " revenge bullets at ", position)

@@ -61,10 +61,12 @@ func _handle_bomb() -> void:
 			_use_bomb()
 
 func _handle_debug_input() -> void:
-	# Debug: Press F key to spawn triangle item
-	if Input.is_key_pressed(KEY_F):
-		print("[PlayerController] DEBUG: Spawning triangle item")
-		ItemDropManager.force_spawn_triangle_at_player()
+	# Debug input handling (only in debug builds)
+	if OS.is_debug_build():
+		# Debug: Press F key to spawn triangle item
+		if Input.is_key_pressed(KEY_F):
+			print("[PlayerController] DEBUG: Spawning triangle item")
+			ItemDropManager.force_spawn_triangle_at_player()
 
 func _fire_bullet() -> void:
 	if not player or not is_instance_valid(player):

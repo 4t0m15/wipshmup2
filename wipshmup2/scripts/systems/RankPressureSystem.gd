@@ -77,7 +77,7 @@ func _apply_continuous_shake(danger_level: float) -> void:
 
 func _apply_audio_pressure(danger_level: float) -> void:
 	"""Apply audio pressure through music pitch"""
-	var audio_manager = get_tree().get_node_or_null("/root/AudioManager")
+	var audio_manager = get_node_or_null("/root/AudioManager")
 	if audio_manager and audio_manager.has_method("set_music_pitch"):
 		var target_pitch = lerp(1.0, 1.15, danger_level)
 		audio_manager.set_music_pitch(target_pitch)
@@ -98,7 +98,7 @@ func _on_game_started() -> void:
 		space_background.modulate = base_background_color
 	
 	# Reset audio pitch
-	var audio_manager = get_tree().get_node_or_null("/root/AudioManager")
+	var audio_manager = get_node_or_null("/root/AudioManager")
 	if audio_manager and audio_manager.has_method("set_music_pitch"):
 		audio_manager.set_music_pitch(1.0)
 

@@ -245,6 +245,16 @@ func consume_shield() -> bool:
 		return true
 	return false
 
+func activate_shield() -> void:
+	"""Activate shield protection"""
+	set_shield(true)
+	print("[GameState] Shield activated")
+
+func increase_weapon_power(amount: int = 1) -> void:
+	"""Increase weapon power level"""
+	add_weapon_power(amount)
+	print("[GameState] Weapon power increased to: ", weapon_power)
+
 # Weapon Power
 func add_weapon_power(amount: int = 1) -> void:
 	weapon_power = min(weapon_power + amount, 8)

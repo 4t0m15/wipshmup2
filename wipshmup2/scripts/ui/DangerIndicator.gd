@@ -73,7 +73,7 @@ func _check_off_screen_bullets() -> void:
 				_create_danger_arrow(bullet_pos, Color(1.0, 0.8, 0.2, 0.6), "bullet")
 				bullet_count += 1
 
-func _create_danger_arrow(position: Vector2, color: Color, type: String) -> void:
+func _create_danger_arrow(arrow_position: Vector2, color: Color, type: String) -> void:
 	"""Create a danger arrow pointing to off-screen threat"""
 	var arrow = Node2D.new()
 	arrow.name = "DangerArrow_" + type
@@ -81,7 +81,7 @@ func _create_danger_arrow(position: Vector2, color: Color, type: String) -> void
 	
 	# Calculate arrow position on screen edge
 	var screen_center = _screen_rect.get_center()
-	var direction_to_threat = (position - screen_center).normalized()
+	var direction_to_threat = (arrow_position - screen_center).normalized()
 	var arrow_pos = screen_center + direction_to_threat * arrow_distance
 	
 	# Clamp to screen edges

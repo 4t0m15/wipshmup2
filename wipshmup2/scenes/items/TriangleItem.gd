@@ -22,7 +22,7 @@ var _item_positions: Array[Vector2] = [
 	Vector2(17, 10)     # Shield (bottom right)
 ]
 
-var _item_types: Array[String] = ["HEART", "FIRE_RATE", "BOMB"]
+var _item_types: Array[String] = ["POWER_UP", "BOMB", "SHIELD"]
 var _item_values: Array[int] = [1, 1, 1]  # Values for each item
 
 func _ready() -> void:
@@ -165,18 +165,18 @@ func _collect_all_items() -> void:
 
 func _apply_item_effect(item_type: String) -> void:
 	match item_type:
-		"HEART":
-			# Red item: +1 Heart (life)
-			GameState.add_lives(1)
-			print("[TriangleItem] Heart collected: +1 Life")
-		"FIRE_RATE":
-			# Blue item: Faster fire rate
-			GameState.activate_fire_rate_boost(10.0)
-			print("[TriangleItem] Fire rate boost collected")
+		"POWER_UP":
+			# Power-up: Increase weapon level
+			GameState.increase_weapon_power(1)
+			print("[TriangleItem] Power-up collected: +1 Weapon Level")
 		"BOMB":
-			# Green item: +1 Bomb
+			# Bomb: +1 Bomb
 			GameState.add_bombs(1)
 			print("[TriangleItem] Bomb collected: +1 Bomb")
+		"SHIELD":
+			# Shield: Grant shield protection
+			GameState.activate_shield()
+			print("[TriangleItem] Shield collected: Protection activated")
 
 # Called when player touches any part of the triangle
 func _on_area_entered(area: Area2D) -> void:

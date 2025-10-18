@@ -3,7 +3,65 @@
     "type0": {
       "name": "Type-0",
       "health": 1000,
-      "points": 10000
+      "points": 10000,
+      "phases": 3,
+      "stage": 1
+    },
+    "gliath": {
+      "name": "Gliath",
+      "health": 1500,
+      "points": 15000,
+      "phases": 4,
+      "stage": 2
+    },
+    "cross_sinker": {
+      "name": "Cross Sinker",
+      "health": 2000,
+      "points": 20000,
+      "phases": 5,
+      "stage": 3
+    },
+    "iron_casket": {
+      "name": "Iron Casket",
+      "health": 2500,
+      "points": 25000,
+      "phases": 4,
+      "stage": 4
+    },
+    "graf_zeppelin": {
+      "name": "Graf Zeppelin",
+      "health": 3000,
+      "points": 30000,
+      "phases": 6,
+      "stage": 5
+    },
+    "fortress": {
+      "name": "Fortress",
+      "health": 4000,
+      "points": 40000,
+      "phases": 7,
+      "stage": 6
+    },
+    "blockade": {
+      "name": "Blockade",
+      "health": 3500,
+      "points": 35000,
+      "phases": 5,
+      "stage": 7
+    },
+    "fgr": {
+      "name": "FGR",
+      "health": 5000,
+      "points": 50000,
+      "phases": 8,
+      "stage": 8
+    },
+    "bb": {
+      "name": "BB",
+      "health": 6000,
+      "points": 60000,
+      "phases": 9,
+      "stage": 9
     }
   }
 }

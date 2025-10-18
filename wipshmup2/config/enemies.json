@@ -4,13 +4,71 @@
       "health": 10,
       "speed": 50,
       "points": 100,
-      "drops_triangle_item": false
+      "drops_triangle_item": false,
+      "behavior": "straight_down"
     },
     "red_carrier": {
       "health": 15,
       "speed": 30,
       "points": 200,
-      "drops_triangle_item": true
+      "drops_triangle_item": true,
+      "behavior": "straight_down"
+    },
+    "sine_fighter": {
+      "health": 12,
+      "speed": 40,
+      "points": 150,
+      "drops_triangle_item": false,
+      "behavior": "sine_wave"
+    },
+    "zigzag_bomber": {
+      "health": 20,
+      "speed": 35,
+      "points": 250,
+      "drops_triangle_item": false,
+      "behavior": "zigzag"
+    },
+    "dive_fighter": {
+      "health": 8,
+      "speed": 60,
+      "points": 120,
+      "drops_triangle_item": false,
+      "behavior": "dive"
+    },
+    "chaser_drone": {
+      "health": 6,
+      "speed": 45,
+      "points": 80,
+      "drops_triangle_item": false,
+      "behavior": "chase_player"
+    },
+    "heavy_bomber": {
+      "health": 30,
+      "speed": 25,
+      "points": 400,
+      "drops_triangle_item": false,
+      "behavior": "straight_down"
+    },
+    "kamikaze": {
+      "health": 5,
+      "speed": 70,
+      "points": 100,
+      "drops_triangle_item": false,
+      "behavior": "kamikaze"
+    },
+    "formation_leader": {
+      "health": 18,
+      "speed": 40,
+      "points": 300,
+      "drops_triangle_item": false,
+      "behavior": "formation_leader"
+    },
+    "patrol_gunship": {
+      "health": 25,
+      "speed": 30,
+      "points": 350,
+      "drops_triangle_item": false,
+      "behavior": "patrol"
     }
   }
 }
