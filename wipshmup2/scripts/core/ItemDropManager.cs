@@ -19,12 +19,12 @@ public partial class ItemDropManager : Node
 	// Drop rates
 	private Dictionary _dropRates = new Dictionary
 	{
-		{ ItemType.POWER_UP, 0.15f },
-		{ ItemType.SCORE_SMALL, 0.3f },
-		{ ItemType.SCORE_LARGE, 0.05f },
-		{ ItemType.LIFE_EXTEND, 0.01f },
-		{ ItemType.BOMB, 0.08f },
-		{ ItemType.SHIELD, 0.02f }
+		{ (Variant)ItemType.POWER_UP, 0.15f },
+		{ (Variant)ItemType.SCORE_SMALL, 0.3f },
+		{ (Variant)ItemType.SCORE_LARGE, 0.05f },
+		{ (Variant)ItemType.LIFE_EXTEND, 0.01f },
+		{ (Variant)ItemType.BOMB, 0.08f },
+		{ (Variant)ItemType.SHIELD, 0.02f }
 	};
 
 	private RandomNumberGenerator _rng = new RandomNumberGenerator();
@@ -36,12 +36,12 @@ public partial class ItemDropManager : Node
 	[Export]
 	public Dictionary ScoreValues { get; set; } = new Dictionary
 	{
-		{ ItemType.SCORE_SMALL, 100 },
-		{ ItemType.SCORE_LARGE, 500 },
-		{ ItemType.POWER_UP, 0 },
-		{ ItemType.LIFE_EXTEND, 0 },
-		{ ItemType.BOMB, 0 },
-		{ ItemType.SHIELD, 0 }
+		{ (Variant)ItemType.SCORE_SMALL, 100 },
+		{ (Variant)ItemType.SCORE_LARGE, 500 },
+		{ (Variant)ItemType.POWER_UP, 0 },
+		{ (Variant)ItemType.LIFE_EXTEND, 0 },
+		{ (Variant)ItemType.BOMB, 0 },
+		{ (Variant)ItemType.SHIELD, 0 }
 	};
 
 	public override void _Ready()
@@ -88,12 +88,12 @@ public partial class ItemDropManager : Node
 
 	public float GetDropRate(ItemType itemType)
 	{
-		return (float)_dropRates.Get(itemType, 0.0f);
+		return (float)_dropRates.Get((Variant)itemType, 0.0f);
 	}
 
 	public void SetDropRate(ItemType itemType, float rate)
 	{
-		_dropRates[itemType] = Mathf.Clamp(rate, 0.0f, 1.0f);
+		_dropRates[(Variant)itemType] = Mathf.Clamp(rate, 0.0f, 1.0f);
 	}
 
 	// Legacy / compatibility placeholders
@@ -162,7 +162,7 @@ public partial class ItemDropManager : Node
 
 	private void EmitCollected(ItemType itemType)
 	{
-		int value = (int)ScoreValues.Get(itemType, 0);
+		int value = (int)ScoreValues.Get((Variant)itemType, 0);
 		EmitSignal(SignalName.ItemCollected, itemType.ToString(), value);
 	}
 
@@ -258,4 +258,5 @@ public partial class ItemDropManager : Node
 		}
 	}
 }
+
 

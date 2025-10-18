@@ -19,10 +19,14 @@ public partial class BulletPatterns : Node
 	private static float GetDensityMultiplier()
 	{
 		float rankMult = 1.0f;
-		var rankManager = Engine.GetMainLoop().Root.GetNodeOrNull("/root/RankManager");
-		if (rankManager != null && rankManager.HasMethod("get_pattern_density_multiplier"))
+		var mainLoop = Engine.GetMainLoop();
+		if (mainLoop is SceneTree tree)
 		{
-			rankMult = (float)rankManager.Call("get_pattern_density_multiplier");
+			var rankManager = tree.GetNodeOrNull("/root/RankManager");
+			if (rankManager != null && rankManager.HasMethod("get_pattern_density_multiplier"))
+			{
+				rankMult = (float)rankManager.Call("get_pattern_density_multiplier");
+			}
 		}
 		return BASE_DENSITY_MULT * rankMult * GetDynamicThrottle();
 	}
@@ -30,10 +34,14 @@ public partial class BulletPatterns : Node
 	private static float GetCadenceMultiplier()
 	{
 		float c = 1.0f;
-		var rankManager = Engine.GetMainLoop().Root.GetNodeOrNull("/root/RankManager");
-		if (rankManager != null && rankManager.HasMethod("get_pattern_cadence_multiplier"))
+		var mainLoop = Engine.GetMainLoop();
+		if (mainLoop is SceneTree tree)
 		{
-			c = Mathf.Max(0.001f, (float)rankManager.Call("get_pattern_cadence_multiplier"));
+			var rankManager = tree.GetNodeOrNull("/root/RankManager");
+			if (rankManager != null && rankManager.HasMethod("get_pattern_cadence_multiplier"))
+			{
+				c = Mathf.Max(0.001f, (float)rankManager.Call("get_pattern_cadence_multiplier"));
+			}
 		}
 		return c * BASE_CADENCE_MULT * GetDynamicThrottle();
 	}
@@ -57,17 +65,22 @@ public partial class BulletPatterns : Node
 	{
 		// Use EntityFactory for bullet spawning with difficulty scaling and dynamic throttle
 		float dyn = GetDynamicThrottle();
-		var entityFactory = Engine.GetMainLoop().Root.GetNodeOrNull("/root/EntityFactory") as EntityFactory;
-		if (entityFactory != null)
+		var mainLoop = Engine.GetMainLoop();
+		if (mainLoop is SceneTree tree)
 		{
-			entityFactory.SpawnEnemyBullet(position, direction.Normalized(), speed * BASE_SPEED_MULT * _difficultyMultiplier * dyn);
-		}
+			var entityFactory = tree.GetNodeOrNull("/root/EntityFactory") as EntityFactory;
+			if (entityFactory != null)
+			{
+				entityFactory.SpawnEnemyBullet(position, direction.Normalized(), speed * BASE_SPEED_MULT * _difficultyMultiplier * dyn);
+			}
 
-		// Play enemy shot sound through EventBus
-		var eventBus = Engine.GetMainLoop().Root.GetNodeOrNull("/root/EventBus") as EventBus;
-		if (eventBus != null)
-		{
-			eventBus.EmitSignal(EventBus.SignalName.AudioRequested, "enemy_shot");
+			// TODO: Add audio system integration
+			// Play enemy shot sound through EventBus
+			// var eventBus = tree.GetNodeOrNull("/root/EventBus") as EventBus;
+			// if (eventBus != null)
+			// {
+			//     eventBus.EmitSignal(EventBus.SignalName.AudioRequested, "enemy_shot");
+			// }
 		}
 	}
 
@@ -275,4 +288,5 @@ public partial class BulletPatterns : Node
 		}
 	}
 }
+
 

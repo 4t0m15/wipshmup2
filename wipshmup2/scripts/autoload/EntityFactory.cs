@@ -98,7 +98,7 @@ public partial class EntityFactory : Node
 					}
 					bullet.SetMeta("pooled", true);
 					bullet.SetMeta("pool_kind", "player");
-					bullet.SetMeta("pool_created_time", (long)Time.GetTicksMsec());
+					bullet.SetMeta("pool_created_time", (long)(ulong)Time.GetTicksMsec());
 					_bulletPool.Add(bullet);
 				}
 			}
@@ -117,7 +117,7 @@ public partial class EntityFactory : Node
 					}
 					enemyBullet.SetMeta("pooled", true);
 					enemyBullet.SetMeta("pool_kind", "enemy");
-					enemyBullet.SetMeta("pool_created_time", (long)Time.GetTicksMsec());
+					enemyBullet.SetMeta("pool_created_time", (long)(ulong)Time.GetTicksMsec());
 					_enemyBulletPool.Add(enemyBullet);
 				}
 			}
