@@ -4,7 +4,7 @@ extends Node2D
 const PLAYER_SCENE: PackedScene = preload("res://scenes/player/Player.tscn")
 const STAGE_CONTROLLER_SCRIPT: Script = preload("res://scripts/stages/StageController.gd")
 const SPACE_BACKGROUND_SCRIPT: Script = preload("res://scripts/backgrounds/SpaceBackground.gd")
-const ITEM_DROP_MANAGER_SCRIPT: Script = preload("res://scripts/core/ItemDropManager.gd")
+const ITEM_DROP_MANAGER_SCRIPT: Script = preload("res://scripts/core/ItemDropManager.cs")
 
 var player: Node
 var hud: Node

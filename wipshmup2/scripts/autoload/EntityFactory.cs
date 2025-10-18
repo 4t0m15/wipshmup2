@@ -236,7 +236,10 @@ public partial class EntityFactory : Node
 			bullet.Set("direction", direction);
 			bullet.Set("speed", speed);
 		}
-		bullet.Visible = true;
+		if (bullet is CanvasItem canvasItem)
+		{
+			canvasItem.Visible = true;
+		}
 
 		var container = GetBulletContainer();
 		if (container != null && GodotObject.IsInstanceValid(container))
@@ -248,7 +251,10 @@ public partial class EntityFactory : Node
 			GD.PushError("EntityFactory: No valid container found for player bullet");
 			if ((bool)bullet.GetMeta("pooled", false))
 			{
-				bullet.Visible = false;
+				if (bullet is CanvasItem canvasItem2)
+				{
+					canvasItem2.Visible = false;
+				}
 			}
 			else
 			{
@@ -326,7 +332,10 @@ public partial class EntityFactory : Node
 			bullet.Set("speed", speed);
 			bullet.Set("damage", damage);
 		}
-		bullet.Visible = true;
+		if (bullet is CanvasItem canvasItem)
+		{
+			canvasItem.Visible = true;
+		}
 
 		var container = GetBulletContainer();
 		if (container != null && GodotObject.IsInstanceValid(container))
@@ -338,7 +347,10 @@ public partial class EntityFactory : Node
 			GD.PushError("EntityFactory: No valid container found for enemy bullet");
 			if ((bool)bullet.GetMeta("pooled", false))
 			{
-				bullet.Visible = false;
+				if (bullet is CanvasItem canvasItem2)
+				{
+					canvasItem2.Visible = false;
+				}
 			}
 			else
 			{
@@ -625,7 +637,10 @@ public partial class EntityFactory : Node
 
 		if ((bool)entity.GetMeta("pooled", false))
 		{
-			entity.Visible = false;
+			if (entity is CanvasItem canvasItem)
+			{
+				canvasItem.Visible = false;
+			}
 			// Safely detach from parent so pooled objects are eligible for reuse
 			var parent = entity.GetParent();
 			if (parent != null && GodotObject.IsInstanceValid(parent))
@@ -661,7 +676,7 @@ public partial class EntityFactory : Node
 	private void CleanupPools()
 	{
 		// Clean up invalid entries in pools to prevent memory leaks
-		long currentTime = Time.GetTicksMsec();
+		long currentTime = (long)Time.GetTicksMsec();
 		long maxAge = 30000;  // 30 seconds
 
 		// Clean player bullet pool

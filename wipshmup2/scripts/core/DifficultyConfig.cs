@@ -4,7 +4,7 @@ using Godot.Collections;
 // Loads and serves difficulty tuning from a properties file.
 // File format: Godot ConfigFile (ini-like), sections per difficulty.
 // Example path: res://config/difficulty.cfg
-public partial class DifficultyConfigService : Node
+public partial class DifficultyConfig : Node
 {
 	[Export] public string ConfigPath { get; set; } = "res://config/difficulty.cfg";
 

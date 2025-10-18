@@ -89,7 +89,7 @@ func _setup_boss_sprite(boss: Node) -> void:
 	# Setup sprite
 	if boss.has_node("Sprite2D"):
 		var sprite = boss.get_node("Sprite2D")
-		load("res://scripts/core/SpriteManager.gd").apply_scale_and_color(sprite, sprite_scale, glow_color)
+		load("res://scripts/core/SpriteManager.cs").apply_scale_and_color(sprite, sprite_scale, glow_color)
 
 func _setup_boss_collision(boss: Node) -> void:
 	# Setup collision

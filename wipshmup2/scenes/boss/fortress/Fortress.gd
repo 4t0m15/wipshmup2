@@ -1,6 +1,6 @@
 extends BossBase
 
-const BP := preload("res://scripts/core/BulletPatterns.gd")
+const BP := preload("res://scripts/core/BulletPatterns.cs")
 
 @export var move_y: float = 52.0
 

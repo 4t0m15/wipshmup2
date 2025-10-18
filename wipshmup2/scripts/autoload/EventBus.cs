@@ -78,6 +78,19 @@ public partial class EventBus : Node
 	[Signal] public delegate void EntitySpawnedEventHandler(Node entity, string entityType);
 	[Signal] public delegate void EntityDestroyedEventHandler(Node entity, string entityType);
 
+	// GDScript-compatible signal aliases (snake_case)
+	[Signal] public delegate void bullet_hit_enemyEventHandler(Vector2 enemyPosition, int damage);
+	[Signal] public delegate void bullet_hit_playerEventHandler(Vector2 bulletPosition);
+	[Signal] public delegate void enemy_killedEventHandler(int points, Vector2 position, string enemyType);
+	[Signal] public delegate void boss_defeatedEventHandler(string bossName, int points);
+	[Signal] public delegate void bomb_usedEventHandler(Vector2 position);
+	[Signal] public delegate void player_hitEventHandler();
+	[Signal] public delegate void shield_absorbedEventHandler();
+	[Signal] public delegate void entity_spawnedEventHandler(Node entity, string entityType);
+	[Signal] public delegate void entity_destroyedEventHandler(Node entity, string entityType);
+	[Signal] public delegate void game_overEventHandler();
+	[Signal] public delegate void stage_completedEventHandler(int stageNumber);
+
 	public override void _Ready()
 	{
 		_debugLogging = OS.IsDebugBuild();
@@ -159,6 +172,7 @@ public partial class EventBus : Node
 	public void EmitEnemyKill(int points, Vector2 position, string enemyType = "enemy")
 	{
 		EmitSignal(SignalName.EnemyKilled, points, position, enemyType);
+		EmitSignal("enemy_killed", points, position, enemyType); // GDScript alias
 		var gameState = GetNodeOrNull<GameState>("/root/GameState");
 		if (gameState != null)
 		{
@@ -169,11 +183,73 @@ public partial class EventBus : Node
 	public void EmitBossDefeat(string bossName, int points)
 	{
 		EmitSignal(SignalName.BossDefeated, bossName, points);
+		EmitSignal("boss_defeated", bossName, points); // GDScript alias
 		var gameState = GetNodeOrNull<GameState>("/root/GameState");
 		if (gameState != null)
 		{
 			EmitSignal(SignalName.ScoreChanged, gameState.Score + points);
 		}
+	}
+
+	// GDScript-compatible signal emission methods
+	public void EmitBulletHitEnemy(Vector2 enemyPosition, int damage)
+	{
+		EmitSignal(SignalName.BulletHitEnemy, enemyPosition, damage);
+		EmitSignal("bullet_hit_enemy", enemyPosition, damage);
+	}
+
+	public void EmitBulletHitPlayer(Vector2 bulletPosition)
+	{
+		EmitSignal(SignalName.BulletHitPlayer, bulletPosition);
+		EmitSignal("bullet_hit_player", bulletPosition);
+	}
+
+	public void EmitEnemyKilled(int points, Vector2 position, string enemyType = "enemy")
+	{
+		EmitSignal(SignalName.EnemyKilled, points, position, enemyType);
+		EmitSignal("enemy_killed", points, position, enemyType);
+	}
+
+	public void EmitBombUsed(Vector2 position)
+	{
+		EmitSignal(SignalName.BombUsed, position);
+		EmitSignal("bomb_used", position);
+	}
+
+	public void EmitPlayerHit()
+	{
+		EmitSignal(SignalName.PlayerHit);
+		EmitSignal("player_hit");
+	}
+
+	public void EmitShieldAbsorbed()
+	{
+		EmitSignal(SignalName.ShieldAbsorbed);
+		EmitSignal("shield_absorbed");
+	}
+
+	public void EmitEntitySpawned(Node entity, string entityType)
+	{
+		EmitSignal(SignalName.EntitySpawned, entity, entityType);
+		EmitSignal("entity_spawned", entity, entityType);
+	}
+
+	public void EmitEntityDestroyed(Node entity, string entityType)
+	{
+		EmitSignal(SignalName.EntityDestroyed, entity, entityType);
+		EmitSignal("entity_destroyed", entity, entityType);
+	}
+
+	public void EmitGameOver()
+	{
+		EmitSignal(SignalName.GameOver);
+		EmitSignal("game_over");
+	}
+
+	public void EmitStageCompleted(int stageNumber)
+	{
+		EmitSignal(SignalName.StageCompleted, stageNumber);
+		EmitSignal("stage_completed", stageNumber);
 	}
 
 	public void EmitVisualEffect(string effectType, Godot.Collections.Dictionary parameters)

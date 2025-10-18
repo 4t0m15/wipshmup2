@@ -71,7 +71,7 @@ func apply_visual_effects(boss: Node) -> void:
 	# Sprite changes
 	if boss.has_node("Sprite2D"):
 		var sprite = boss.get_node("Sprite2D")
-		load("res://scripts/core/SpriteManager.gd").apply_scale_and_color(sprite, sprite_scale, glow_color)
+		load("res://scripts/core/SpriteManager.cs").apply_scale_and_color(sprite, sprite_scale, glow_color)
 	
 	# Screen shake
 	if screen_shake_intensity > 0.0:

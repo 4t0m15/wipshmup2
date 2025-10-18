@@ -250,6 +250,12 @@ public partial class GameState : Node
 		_fireRateMultiplier = 1.0f;
 	}
 
+	// GDScript-compatible method name
+	public void reset_game()
+	{
+		ResetGame();
+	}
+
 	// Streak
 	public void UpdateStreak()
 	{
@@ -494,5 +500,16 @@ public partial class GameState : Node
 		// Get multiplier
 		return _fireRateBoostActive ? _fireRateMultiplier : 1.0f;
 	}
+
+	// GDScript-compatible method names
+	public void add_score(int amount) => AddScore(amount);
+	public void update_streak() => UpdateStreak();
+	public void take_lives(int amount) => TakeLives(amount);
+	public void add_lives(int amount) => AddLives(amount);
+	public void add_bombs(int amount) => AddBombs(amount);
+	public bool use_bomb() => UseBomb();
+	public void set_invincible(bool invincible) => SetInvincible(invincible);
+	public void break_streak() => BreakStreak();
+	public void trigger_game_over() => TriggerGameOver();
 }
 

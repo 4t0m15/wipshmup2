@@ -18,7 +18,7 @@ public partial class RankManager : Node
 	private int _previousLives = -1;
 
 	// Max multiplier caps - AGGRESSIVE SCALING
-	private Dictionary _multipliers = new Dictionary
+	private Dictionary<string, float> _multipliers = new Dictionary<string, float>
 	{
 		{ "enemy_speed", 2.5f },      // Increased from 1.4 - enemies get MUCH faster
 		{ "enemy_hp", 3.5f },         // Increased from 2.0 - enemies become tanks
@@ -33,20 +33,20 @@ public partial class RankManager : Node
 		if (dc != null && dc.HasMethod("get_rank_params"))
 		{
 			var rp = dc.Call("get_rank_params").As<Dictionary>();
-			MinRank = (float)rp.Get("min_rank", MinRank);
-			MaxRank = (float)rp.Get("max_rank", MaxRank);
-			TimeRankRate = (float)rp.Get("time_rank_rate", TimeRankRate);
-			KillRankRate = (float)rp.Get("kill_rank_rate", KillRankRate);
+			MinRank = rp.ContainsKey("min_rank") ? rp["min_rank"].AsSingle() : MinRank;
+			MaxRank = rp.ContainsKey("max_rank") ? rp["max_rank"].AsSingle() : MaxRank;
+			TimeRankRate = rp.ContainsKey("time_rank_rate") ? rp["time_rank_rate"].AsSingle() : TimeRankRate;
+			KillRankRate = rp.ContainsKey("kill_rank_rate") ? rp["kill_rank_rate"].AsSingle() : KillRankRate;
 		}
 
 		if (dc != null && dc.HasMethod("get_multiplier_caps"))
 		{
 			var caps = dc.Call("get_multiplier_caps").As<Dictionary>();
-			_multipliers["enemy_speed"] = (float)caps.Get("enemy_speed_max_mult", _multipliers["enemy_speed"]);
-			_multipliers["enemy_hp"] = (float)caps.Get("enemy_hp_max_mult", _multipliers["enemy_hp"]);
-			_multipliers["bullet_speed"] = (float)caps.Get("bullet_speed_max_mult", _multipliers["bullet_speed"]);
-			_multipliers["pattern_density"] = (float)caps.Get("pattern_density_max_mult", _multipliers["pattern_density"]);
-			_multipliers["pattern_cadence"] = (float)caps.Get("pattern_cadence_max_mult", _multipliers["pattern_cadence"]);
+			_multipliers["enemy_speed"] = caps.ContainsKey("enemy_speed_max_mult") ? caps["enemy_speed_max_mult"].AsSingle() : _multipliers["enemy_speed"];
+			_multipliers["enemy_hp"] = caps.ContainsKey("enemy_hp_max_mult") ? caps["enemy_hp_max_mult"].AsSingle() : _multipliers["enemy_hp"];
+			_multipliers["bullet_speed"] = caps.ContainsKey("bullet_speed_max_mult") ? caps["bullet_speed_max_mult"].AsSingle() : _multipliers["bullet_speed"];
+			_multipliers["pattern_density"] = caps.ContainsKey("pattern_density_max_mult") ? caps["pattern_density_max_mult"].AsSingle() : _multipliers["pattern_density"];
+			_multipliers["pattern_cadence"] = caps.ContainsKey("pattern_cadence_max_mult") ? caps["pattern_cadence_max_mult"].AsSingle() : _multipliers["pattern_cadence"];
 		}
 
 		// Initialize rank and hook stage resets
@@ -124,7 +124,7 @@ public partial class RankManager : Node
 
 	public float GetMultiplier(string type)
 	{
-		float maxMult = (float)_multipliers.Get(type, 1.0f);
+		float maxMult = _multipliers.ContainsKey(type) ? _multipliers[type] : 1.0f;
 		float normalized = Mathf.Clamp((Rank - MinRank) / (MaxRank - MinRank), 0.0f, 1.0f);
 		return Mathf.Lerp(1.0f, maxMult, normalized);
 	}

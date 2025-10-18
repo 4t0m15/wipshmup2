@@ -8,21 +8,27 @@ public partial class BulletPatterns : Node
 	private const int SOFT_ENEMY_BULLET_CAP = 300;  // Increased from 140
 
 	// Difficulty scaling
-	private static float _difficultyMultiplier = 1.0f;
+	private float _difficultyMultiplier = 1.0f;
 
-	public static void SetDifficultyMultiplier(float value)
+	public void SetDifficultyMultiplier(float value)
 	{
 		_difficultyMultiplier = Mathf.Max(0.1f, value);  // Ensure it's not too low
 		GD.Print($"[BulletPatterns] Difficulty multiplier set to: {_difficultyMultiplier}");
 	}
 
-	private static float GetDensityMultiplier()
+	// GDScript-compatible method name
+	public void set_difficulty_multiplier(float value)
+	{
+		SetDifficultyMultiplier(value);
+	}
+
+	private float GetDensityMultiplier()
 	{
 		float rankMult = 1.0f;
 		var mainLoop = Engine.GetMainLoop();
 		if (mainLoop is SceneTree tree)
 		{
-			var rankManager = tree.GetNodeOrNull("/root/RankManager");
+			var rankManager = tree.Root.GetNodeOrNull<Node>("/root/RankManager");
 			if (rankManager != null && rankManager.HasMethod("get_pattern_density_multiplier"))
 			{
 				rankMult = (float)rankManager.Call("get_pattern_density_multiplier");
@@ -31,13 +37,13 @@ public partial class BulletPatterns : Node
 		return BASE_DENSITY_MULT * rankMult * GetDynamicThrottle();
 	}
 
-	private static float GetCadenceMultiplier()
+	private float GetCadenceMultiplier()
 	{
 		float c = 1.0f;
 		var mainLoop = Engine.GetMainLoop();
 		if (mainLoop is SceneTree tree)
 		{
-			var rankManager = tree.GetNodeOrNull("/root/RankManager");
+			var rankManager = tree.Root.GetNodeOrNull<Node>("/root/RankManager");
 			if (rankManager != null && rankManager.HasMethod("get_pattern_cadence_multiplier"))
 			{
 				c = Mathf.Max(0.001f, (float)rankManager.Call("get_pattern_cadence_multiplier"));
@@ -46,7 +52,7 @@ public partial class BulletPatterns : Node
 		return c * BASE_CADENCE_MULT * GetDynamicThrottle();
 	}
 
-	private static float GetDynamicThrottle()
+	private float GetDynamicThrottle()
 	{
 		// Throttle intensity based on current enemy bullet load
 		var ml = Engine.GetMainLoop();
@@ -61,14 +67,14 @@ public partial class BulletPatterns : Node
 		return 1.0f;
 	}
 
-	private static void SpawnBullet(Node node, Vector2 position, Vector2 direction, float speed)
+	private void SpawnBullet(Node node, Vector2 position, Vector2 direction, float speed)
 	{
 		// Use EntityFactory for bullet spawning with difficulty scaling and dynamic throttle
 		float dyn = GetDynamicThrottle();
 		var mainLoop = Engine.GetMainLoop();
 		if (mainLoop is SceneTree tree)
 		{
-			var entityFactory = tree.GetNodeOrNull("/root/EntityFactory") as EntityFactory;
+			var entityFactory = tree.Root.GetNodeOrNull<EntityFactory>("/root/EntityFactory");
 			if (entityFactory != null)
 			{
 				entityFactory.SpawnEnemyBullet(position, direction.Normalized(), speed * BASE_SPEED_MULT * _difficultyMultiplier * dyn);
@@ -76,7 +82,7 @@ public partial class BulletPatterns : Node
 
 			// TODO: Add audio system integration
 			// Play enemy shot sound through EventBus
-			// var eventBus = tree.GetNodeOrNull("/root/EventBus") as EventBus;
+			// var eventBus = tree.Root.GetNodeOrNull<EventBus>("/root/EventBus");
 			// if (eventBus != null)
 			// {
 			//     eventBus.EmitSignal(EventBus.SignalName.AudioRequested, "enemy_shot");
@@ -84,7 +90,7 @@ public partial class BulletPatterns : Node
 		}
 	}
 
-	private static async void AwaitSeconds(Node node, float seconds)
+	private async void AwaitSeconds(Node node, float seconds)
 	{
 		if (GodotObject.IsInstanceValid(node))
 		{
@@ -100,7 +106,7 @@ public partial class BulletPatterns : Node
 		}
 	}
 
-	public static void FireRing(Node node, Vector2 origin, int bulletCount, float speed = 120.0f, float startAngleRad = 0.0f)
+	public void FireRing(Node node, Vector2 origin, int bulletCount, float speed = 120.0f, float startAngleRad = 0.0f)
 	{
 		if (bulletCount <= 0) return;
 		int count = Mathf.Max(1, (int)Mathf.Round(bulletCount * GetDensityMultiplier()));
@@ -112,7 +118,7 @@ public partial class BulletPatterns : Node
 		}
 	}
 
-	public static void FireFan(Node node, Vector2 origin, int bulletCount, float spreadDegrees, float baseAngleDegrees, float speed = 130.0f)
+	public void FireFan(Node node, Vector2 origin, int bulletCount, float spreadDegrees, float baseAngleDegrees, float speed = 130.0f)
 	{
 		if (bulletCount <= 0) return;
 		int count = Mathf.Max(1, (int)Mathf.Round(bulletCount * GetDensityMultiplier()));
@@ -127,7 +133,7 @@ public partial class BulletPatterns : Node
 		}
 	}
 
-	public static async void FireSweepingSpread(Node node, Node2D originNode, float startDegrees, float endDegrees, float durationS, int steps, int bulletsPerStep, float speed = 120.0f)
+	public async void FireSweepingSpread(Node node, Node2D originNode, float startDegrees, float endDegrees, float durationS, int steps, int bulletsPerStep, float speed = 120.0f)
 	{
 		if (steps <= 0 || bulletsPerStep <= 0 || durationS <= 0.0f) return;
 		float startRad = Mathf.DegToRad(startDegrees);
@@ -146,7 +152,7 @@ public partial class BulletPatterns : Node
 		}
 	}
 
-	public static async void FireAimedBeam(Node node, Node2D originNode, Node2D targetNode, float durationS, float intervalS = 0.05f, float speed = 400.0f)
+	public async void FireAimedBeam(Node node, Node2D originNode, Node2D targetNode, float durationS, float intervalS = 0.05f, float speed = 400.0f)
 	{
 		if (durationS <= 0.0f || intervalS <= 0.0f) return;
 		float elapsed = 0.0f;
@@ -163,7 +169,7 @@ public partial class BulletPatterns : Node
 		}
 	}
 
-	public static async void FireCrossHatch(Node node, Node2D originNode, int waves, int bulletsPerFan = 7, float spreadDegrees = 60.0f, float speed = 120.0f, float intervalS = 0.25f)
+	public async void FireCrossHatch(Node node, Node2D originNode, int waves, int bulletsPerFan = 7, float spreadDegrees = 60.0f, float speed = 120.0f, float intervalS = 0.25f)
 	{
 		if (waves <= 0) return;
 		int bpf = Mathf.Max(1, (int)Mathf.Round(bulletsPerFan * GetDensityMultiplier()));
@@ -186,7 +192,7 @@ public partial class BulletPatterns : Node
 		}
 	}
 
-	public static async void FireRotatingRings(Node node, Node2D originNode, int bursts, int bulletsPerRing = 16, float speed = 100.0f, float rotationStepDegrees = 12.0f, float intervalS = 0.35f)
+	public async void FireRotatingRings(Node node, Node2D originNode, int bursts, int bulletsPerRing = 16, float speed = 100.0f, float rotationStepDegrees = 12.0f, float intervalS = 0.35f)
 	{
 		if (bursts <= 0) return;
 		float angle = 0.0f;
@@ -204,7 +210,7 @@ public partial class BulletPatterns : Node
 	}
 
 	// New patterns
-	public static async void FireSpiral(Node node, Node2D originNode, int turns = 2, int bulletsPerTurn = 24, float speed = 120.0f, float angularStepDeg = 10.0f, float accel = 0.0f)
+	public async void FireSpiral(Node node, Node2D originNode, int turns = 2, int bulletsPerTurn = 24, float speed = 120.0f, float angularStepDeg = 10.0f, float accel = 0.0f)
 	{
 		if (turns <= 0 || bulletsPerTurn <= 0) return;
 		int total = Mathf.Max(1, (int)Mathf.Round(turns * bulletsPerTurn * GetDensityMultiplier()));
@@ -221,7 +227,7 @@ public partial class BulletPatterns : Node
 		}
 	}
 
-	public static void FireAccelBloom(Node node, Vector2 origin, int petals = 12, float speed = 90.0f, float accel = 40.0f)
+	public void FireAccelBloom(Node node, Vector2 origin, int petals = 12, float speed = 90.0f, float accel = 40.0f)
 	{
 		int count = Mathf.Max(1, (int)Mathf.Round(petals * GetDensityMultiplier()));
 		float step = Mathf.Tau / count;
@@ -233,7 +239,7 @@ public partial class BulletPatterns : Node
 		}
 	}
 
-	public static async void FireWaveStream(Node node, Node2D originNode, float durationS = 1.2f, float intervalS = 0.06f, float baseAngleDeg = 90.0f, float wiggleAmp = 18.0f, float wiggleFreq = 2.0f, float speed = 120.0f)
+	public async void FireWaveStream(Node node, Node2D originNode, float durationS = 1.2f, float intervalS = 0.06f, float baseAngleDeg = 90.0f, float wiggleAmp = 18.0f, float wiggleFreq = 2.0f, float speed = 120.0f)
 	{
 		if (durationS <= 0.0f) return;
 		float elapsed = 0.0f;
@@ -249,7 +255,7 @@ public partial class BulletPatterns : Node
 		}
 	}
 
-	public static async void FireFixedBeam(Node node, Node2D originNode, float angleDegrees, float durationS, float intervalS = 0.02f, float speed = 450.0f)
+	public async void FireFixedBeam(Node node, Node2D originNode, float angleDegrees, float durationS, float intervalS = 0.02f, float speed = 450.0f)
 	{
 		if (durationS <= 0.0f || intervalS <= 0.0f) return;
 		float elapsed = 0.0f;
@@ -266,7 +272,7 @@ public partial class BulletPatterns : Node
 		}
 	}
 
-	public static async void FireDualLasers(Node node, Node2D originNode, float baseAngleDegrees, float separationDegrees, float durationS, float intervalS = 0.025f, float speed = 450.0f)
+	public async void FireDualLasers(Node node, Node2D originNode, float baseAngleDegrees, float separationDegrees, float durationS, float intervalS = 0.025f, float speed = 450.0f)
 	{
 		if (durationS <= 0.0f || intervalS <= 0.0f) return;
 		float elapsed = 0.0f;
@@ -288,5 +294,3 @@ public partial class BulletPatterns : Node
 		}
 	}
 }
-
-

@@ -146,7 +146,7 @@ func _cleanup_unused_resources() -> void:
 	# Clean up unused audio resources
 	var audio_server = AudioServer
 	if audio_server:
-        # Placeholder: actual cleanup depends on concrete audio system
+		# Placeholder: actual cleanup depends on concrete audio system
 		pass
 
 func _cleanup_all_pools() -> void:
@@ -174,7 +174,7 @@ func _compress_memory() -> void:
 
 func _force_garbage_collection() -> void:
 	"""Force garbage collection"""
-    # Placeholder: Godot doesn't expose explicit GC control
+	# Placeholder: Godot doesn't expose explicit GC control
 	# But we can trigger cleanup by clearing arrays and freeing resources
 	pass
 

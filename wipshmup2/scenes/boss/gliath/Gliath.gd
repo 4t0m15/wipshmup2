@@ -1,7 +1,7 @@
 extends BossBase
 
 const ENEMY_SCENE: PackedScene = preload("res://scenes/enemy/Enemy.tscn")
-const BP := preload("res://scripts/core/BulletPatterns.gd")
+const BP := preload("res://scripts/core/BulletPatterns.cs")
 func _init() -> void:
 	phases_total = 2
 

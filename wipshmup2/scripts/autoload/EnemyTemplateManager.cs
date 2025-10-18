@@ -10,7 +10,7 @@ public partial class EnemyTemplateManager : Node
 	private System.Collections.Generic.Dictionary<string, EnemyTemplate> _templates = new();
 	
 	// Helper method to safely get values from Godot Dictionary
-	private T GetDictValue<T>(Dictionary dict, string key, T defaultValue)
+	private T GetDictValue<[MustBeVariant] T>(Dictionary dict, string key, T defaultValue)
 	{
 		if (dict.ContainsKey(key))
 		{

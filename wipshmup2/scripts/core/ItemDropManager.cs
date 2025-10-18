@@ -17,14 +17,14 @@ public partial class ItemDropManager : Node
 	}
 
 	// Drop rates
-	private Dictionary _dropRates = new Dictionary
+	private Dictionary<ItemType, float> _dropRates = new Dictionary<ItemType, float>
 	{
-		{ (Variant)ItemType.POWER_UP, 0.15f },
-		{ (Variant)ItemType.SCORE_SMALL, 0.3f },
-		{ (Variant)ItemType.SCORE_LARGE, 0.05f },
-		{ (Variant)ItemType.LIFE_EXTEND, 0.01f },
-		{ (Variant)ItemType.BOMB, 0.08f },
-		{ (Variant)ItemType.SHIELD, 0.02f }
+		{ ItemType.POWER_UP, 0.15f },
+		{ ItemType.SCORE_SMALL, 0.3f },
+		{ ItemType.SCORE_LARGE, 0.05f },
+		{ ItemType.LIFE_EXTEND, 0.01f },
+		{ ItemType.BOMB, 0.08f },
+		{ ItemType.SHIELD, 0.02f }
 	};
 
 	private RandomNumberGenerator _rng = new RandomNumberGenerator();
@@ -34,14 +34,14 @@ public partial class ItemDropManager : Node
 	[Export] public float SimulatePickupDelay { get; set; } = 0.0f;  // If > 0, emit after a delay to simulate collection timing
 	
 	[Export]
-	public Dictionary ScoreValues { get; set; } = new Dictionary
+	public Dictionary<ItemType, int> ScoreValues { get; set; } = new Dictionary<ItemType, int>
 	{
-		{ (Variant)ItemType.SCORE_SMALL, 100 },
-		{ (Variant)ItemType.SCORE_LARGE, 500 },
-		{ (Variant)ItemType.POWER_UP, 0 },
-		{ (Variant)ItemType.LIFE_EXTEND, 0 },
-		{ (Variant)ItemType.BOMB, 0 },
-		{ (Variant)ItemType.SHIELD, 0 }
+		{ ItemType.SCORE_SMALL, 100 },
+		{ ItemType.SCORE_LARGE, 500 },
+		{ ItemType.POWER_UP, 0 },
+		{ ItemType.LIFE_EXTEND, 0 },
+		{ ItemType.BOMB, 0 },
+		{ ItemType.SHIELD, 0 }
 	};
 
 	public override void _Ready()
@@ -88,12 +88,16 @@ public partial class ItemDropManager : Node
 
 	public float GetDropRate(ItemType itemType)
 	{
-		return (float)_dropRates.Get((Variant)itemType, 0.0f);
+		if (_dropRates.TryGetValue(itemType, out float rate))
+		{
+			return rate;
+		}
+		return 0.0f;
 	}
 
 	public void SetDropRate(ItemType itemType, float rate)
 	{
-		_dropRates[(Variant)itemType] = Mathf.Clamp(rate, 0.0f, 1.0f);
+		_dropRates[itemType] = Mathf.Clamp(rate, 0.0f, 1.0f);
 	}
 
 	// Legacy / compatibility placeholders
@@ -119,9 +123,9 @@ public partial class ItemDropManager : Node
 	private ItemType SelectItemType()
 	{
 		float totalWeight = 0.0f;
-		foreach (Variant rate in _dropRates.Values)
+		foreach (var rate in _dropRates.Values)
 		{
-			totalWeight += (float)rate;
+			totalWeight += rate;
 		}
 		if (totalWeight <= 0.0f)
 		{
@@ -129,12 +133,12 @@ public partial class ItemDropManager : Node
 		}
 		float roll = _rng.Randf() * totalWeight;
 		float currentWeight = 0.0f;
-		foreach (ItemType itemType in _dropRates.Keys)
+		foreach (var kvp in _dropRates)
 		{
-			currentWeight += (float)_dropRates[itemType];
+			currentWeight += kvp.Value;
 			if (roll <= currentWeight)
 			{
-				return itemType;
+				return kvp.Key;
 			}
 		}
 		return ItemType.SCORE_SMALL;  // Fallback
@@ -150,19 +154,23 @@ public partial class ItemDropManager : Node
 		}
 		else if (AutoEmitOnSpawn && SimulatePickupDelay > 0.0f)
 		{
-			CallDeferred(nameof(DeferredEmitCollected), itemType); // simple delayed pickup simulation
+			CallDeferred(nameof(DeferredEmitCollected), (int)itemType); // simple delayed pickup simulation
 		}
 	}
 
-	private async void DeferredEmitCollected(ItemType itemType)
+	private async void DeferredEmitCollected(int itemTypeInt)
 	{
 		await ToSignal(GetTree().CreateTimer(SimulatePickupDelay), "timeout");
-		EmitCollected(itemType);
+		EmitCollected((ItemType)itemTypeInt);
 	}
 
 	private void EmitCollected(ItemType itemType)
 	{
-		int value = (int)ScoreValues.Get((Variant)itemType, 0);
+		int value = 0;
+		if (ScoreValues.TryGetValue(itemType, out int scoreValue))
+		{
+			value = scoreValue;
+		}
 		EmitSignal(SignalName.ItemCollected, itemType.ToString(), value);
 	}
 
@@ -230,9 +238,13 @@ public partial class ItemDropManager : Node
 		var gameState = GetNodeOrNull("/root/GameState");
 		if (gameState != null)
 		{
-			var playerPos = gameState.Get("player_position").As<Vector2>();
-			GD.Print($"[ItemDropManager] TEST: Force spawning triangle at player position: {playerPos}");
-			SpawnTriangleItem(playerPos);
+			var playerPosVariant = gameState.Get("player_position");
+			if (playerPosVariant.VariantType == Variant.Type.Vector2)
+			{
+				var playerPos = playerPosVariant.AsVector2();
+				GD.Print($"[ItemDropManager] TEST: Force spawning triangle at player position: {playerPos}");
+				SpawnTriangleItem(playerPos);
+			}
 		}
 	}
 
@@ -258,5 +270,4 @@ public partial class ItemDropManager : Node
 		}
 	}
 }
-
 
