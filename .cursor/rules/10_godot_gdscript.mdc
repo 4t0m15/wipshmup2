@@ -1,46 +1,1125 @@
 ---
-
-description: Godot/GDScript conventions and patterns to follow
-globs: ["wipshmup2/**/*.gd", "wipshmup2/**/*.tscn", "wipshmup2/**/*.gdshader"]
+description: Godot 4.5 and GDScript 2.0 conventions, patterns, and anti-patterns - Official style guide with project-specific patterns
+globs:
+  - "wipshmup2/**/*.gd"
+  - "wipshmup2/**/*.tscn"
+  - "wipshmup2/**/*.gdshader"
 alwaysApply: true
 ---
 
-# GDScript Style
-- Strong typing (e.g., `var lives: int = 3`). Avoid `Variant` where a precise type is known.
-- snake_case for variables/functions; PascalCase for class names.
-- Use `@export` for inspector fields with explicit types and sensible defaults.
-- Add concise docstrings for complex logic and invariants.
-- Prefer early returns and guard clauses over deep nesting.
+# GDScript 4.5 Style Guide
 
-## Typing & Exports
-- Annotate function signatures explicitly for public APIs and signals.
-- Prefer typed collections (e.g., `Array[Node]`) and dictionaries (e.g., `Dictionary[String, float]`).
-- Example: `@export var bullet_speed: float = 180.0`.
+This guide follows the official Godot GDScript style guide with project-specific extensions for our bullet-hell shmup architecture.
 
-## Exceptions Policy
-- Avoid try/catch by default; use guard checks and safe defaults instead.
-- Only catch exceptions where recovery is expected; never swallow errors silently.
-- If catching, handle meaningfully and emit via `push_error()` when critical.
+## Core Principles
+- **Static Typing First**: Use explicit types everywhere possible for performance and safety
+- **Export-Driven Design**: Inspector-editable values via `@export` with sensible defaults
+- **Signal-Based Communication**: Prefer signals over direct method calls for decoupling
+- **Early Returns**: Flatten nested logic with guard clauses
+- **Descriptive Naming**: No abbreviations; clarity over brevity
 
-# Signals and Safety
-- Connect with `Callable()` and guard with `is_instance_valid()`.
-- Prevent duplicate connections via `is_connected()` checks.
-- Disconnect signals on cleanup to avoid leaks.
+## Formatting
 
-# Scene Tree Ops
-- Prefer `call_deferred()` for add/remove in lifecycle-sensitive points.
-- Use `get_node_or_null()`; never assume nodes exist.
+### Encoding and Special Characters
+- Use **Tabs** for indentation (editor default)
+- Use line feed (LF) characters to break lines, not CRLF or CR
+- Use one line feed at the end of each file
+- Use UTF-8 encoding without a byte order mark
 
-# Physics/Process
-- Keep per-frame work minimal; cache nodes and resources.
-- Avoid `get_tree().get_nodes_in_group()` in hot paths; batch or cache.
+### Indentation
+Each indent level should be one greater than the block containing it:
 
-# Shaders
-- Keep CRT/bullet readability shaders intact; tune via exported params.
+```gdscript
+# ✅ GOOD
+for i in range(10):
+	print("hello")
 
-# Errors & Logging
-- Use `push_error()` for critical issues; `print()` for debug with class prefix.
+# ❌ BAD
+for i in range(10):
+  print("hello")  # Spaces instead of tab
 
-# Pooling & Spawning
-- Use `EntityFactory` for bullets/enemies/player; favor visibility toggles over frees in pools.
-- Respect rate limiting and MAX counts to avoid perf spikes.
+for i in range(10):
+		print("hello")  # Too many tabs
+```
+
+Use **2 indent levels** to distinguish continuation lines from regular code blocks:
+
+```gdscript
+# ✅ GOOD
+effect.interpolate_property(sprite, "transform/scale",
+		sprite.get_scale(), Vector2(2.0, 2.0), 0.3,
+		Tween.TRANS_QUAD, Tween.EASE_OUT)
+
+# ❌ BAD
+effect.interpolate_property(sprite, "transform/scale",
+	sprite.get_scale(), Vector2(2.0, 2.0), 0.3,
+	Tween.TRANS_QUAD, Tween.EASE_OUT)  # Only 1 indent level
+```
+
+**Exception**: Arrays, dictionaries, and enums use a **single indentation level**:
+
+```gdscript
+# ✅ GOOD
+var party: Array[String] = [
+	"Godot",
+	"Godette",
+	"Steve",
+]
+
+var character_dict: Dictionary = {
+	"Name": "Bob",
+	"Age": 27,
+	"Job": "Mechanic",
+}
+
+enum Tile {
+	BRICK,
+	FLOOR,
+	SPIKE,
+	TELEPORT,
+}
+
+# ❌ BAD
+var party: Array[String] = [
+		"Godot",  # Too much indentation
+		"Godette",
+		"Steve",
+]
+```
+
+### Trailing Commas
+Use trailing commas on the last line in arrays, dictionaries, and enums for better diffs:
+
+```gdscript
+# ✅ GOOD
+var array: Array[int] = [
+	1,
+	2,
+	3,
+]
+
+# ❌ BAD
+var array: Array[int] = [
+	1,
+	2,
+	3  # Missing trailing comma
+]
+```
+
+Trailing commas are unnecessary in single-line lists:
+
+```gdscript
+# ✅ GOOD
+var array: Array[int] = [1, 2, 3]
+
+# ❌ BAD
+var array: Array[int] = [1, 2, 3,]
+```
+
+### Blank Lines
+Surround functions and class definitions with **two blank lines**:
+
+```gdscript
+func heal(amount: int) -> void:
+	health += amount
+	health = min(health, max_health)
+	health_changed.emit(health)
+
+
+func take_damage(amount: int, effect: Node = null) -> void:
+	health -= amount
+	health = max(0, health)
+	health_changed.emit(health)
+```
+
+Use **one blank line** inside functions to separate logical sections.
+
+### Line Length
+- Keep lines under **100 characters** (hard limit)
+- Try to keep lines under **80 characters** when possible (soft limit)
+- This improves readability on small displays and side-by-side diffs
+
+### One Statement Per Line
+Avoid combining multiple statements on a single line:
+
+```gdscript
+# ✅ GOOD
+if position.x > width:
+	position.x = 0
+
+if flag:
+	print("flagged")
+
+# ❌ BAD
+if position.x > width: position.x = 0
+if flag: print("flagged")
+```
+
+**Exception**: Ternary operator is acceptable:
+
+```gdscript
+next_state = "idle" if is_on_floor() else "fall"
+```
+
+### Multiline Statements
+When wrapping long statements, use **2 indent levels** for continuation lines:
+
+```gdscript
+# ✅ GOOD
+var angle_degrees: int = 135
+var quadrant: String = (
+		"northeast" if angle_degrees <= 90
+		else "southeast" if angle_degrees <= 180
+		else "southwest" if angle_degrees <= 270
+		else "northwest"
+)
+
+var position := Vector2(250, 350)
+if (
+		position.x > 200 and position.x < 400
+		and position.y > 300 and position.y < 400
+):
+	pass
+
+# ❌ BAD
+var quadrant: String = "northeast" if angle_degrees <= 90 else "southeast" if angle_degrees <= 180 else "southwest" if angle_degrees <= 270 else "northwest"
+```
+
+Place `and`/`or` keywords at the **beginning** of continuation lines:
+
+```gdscript
+# ✅ GOOD
+if (
+		position.x > 200 and position.x < 400
+		and position.y > 300 and position.y < 400
+):
+	pass
+
+# ❌ BAD
+if (
+		position.x > 200 and position.x < 400 and
+		position.y > 300 and position.y < 400
+):
+	pass
+```
+
+### Unnecessary Parentheses
+Avoid parentheses unless needed for order of operations or multiline wrapping:
+
+```gdscript
+# ✅ GOOD
+if is_colliding():
+	queue_free()
+
+# ❌ BAD
+if (is_colliding()):
+	queue_free()
+```
+
+### Boolean Operators
+Use plain English versions for accessibility:
+
+```gdscript
+# ✅ GOOD
+if (foo and bar) or not baz:
+	print("condition is true")
+
+# ❌ BAD
+if foo && bar || !baz:
+	print("condition is true")
+```
+
+Prefer:
+- `and` instead of `&&`
+- `or` instead of `||`
+- `not` instead of `!`
+
+### Comment Spacing
+Regular comments (`#`) and doc comments (`##`) should start with a space:
+
+```gdscript
+# ✅ GOOD
+# This is a comment.
+## This is a documentation comment.
+#print("This is disabled code")
+
+# ❌ BAD
+#This is a comment.
+# print("This is disabled code")
+```
+
+Code region comments (`#region`/`#endregion`) must NOT have a space:
+
+```gdscript
+# ✅ GOOD
+#region Movement
+func move() -> void:
+	pass
+#endregion
+```
+
+Prefer writing comments on their own line rather than inline:
+
+```gdscript
+# ✅ GOOD
+# This is a long comment explaining complex logic.
+print("Example")
+print("Example")  # Short inline comment is OK.
+
+# ❌ BAD
+print("Example")  # This is a long comment that makes the line too long and hard to read.
+```
+
+### Whitespace
+Use one space around operators and after commas:
+
+```gdscript
+# ✅ GOOD
+position.x = 5
+position.y = target_position.y + 10
+dict["key"] = 5
+my_array = [4, 5, 6]
+my_dictionary = { key = "value" }  # Space after { and before }
+print("foo")
+
+# ❌ BAD
+position.x=5
+position.y = target_position.y+10
+dict ["key"] = 5
+my_array = [4,5,6]
+my_dictionary = {key = "value"}  # No spaces around braces
+print ("foo")
+```
+
+**Important**: Single-line dictionaries should have spaces after `{` and before `}` to distinguish from arrays:
+
+```gdscript
+my_array = [1, 2, 3]
+my_dict = { key = "value" }
+```
+
+Don't use spaces to align expressions vertically:
+
+```gdscript
+# ❌ BAD
+x        = 100
+y        = 100
+velocity = 500
+
+# ✅ GOOD
+x = 100
+y = 100
+velocity = 500
+```
+
+### Quotes
+Use **double quotes** by default. Use single quotes to avoid escaping:
+
+```gdscript
+# ✅ GOOD
+print("hello world")
+print("hello 'world'")
+print('hello "world"')  # Exception to avoid escapes
+print("'hello' \"world\"")  # Prefer double quotes in ties
+
+# ❌ BAD
+print('hello world')  # Should use double quotes
+```
+
+### Numbers
+
+#### Floating Point
+Don't omit leading or trailing zeros:
+
+```gdscript
+# ✅ GOOD
+var float_number: float = 0.234
+var other_float_number: float = 13.0
+
+# ❌ BAD
+var float_number: float = .234
+var other_float_number: float = 13.
+```
+
+#### Hexadecimal
+Use lowercase for hex digits:
+
+```gdscript
+# ✅ GOOD
+var hex_number: int = 0xfb8c0b
+
+# ❌ BAD
+var hex_number: int = 0xFB8C0B
+```
+
+#### Large Numbers
+Use underscores as separators for numbers >= 1,000,000:
+
+```gdscript
+# ✅ GOOD
+var large_number: int = 1_234_567_890
+var large_hex_number: int = 0xffff_f8f8_0000
+var large_bin_number: int = 0b1101_0010_1010
+var small_number: int = 12345  # No separator needed
+
+# ❌ BAD
+var large_number: int = 1234567890
+var small_number: int = 12_345  # Unnecessary separator
+```
+
+## Naming Conventions
+
+### Summary Table
+
+| Type | Convention | Example |
+|------|-----------|---------|
+| File names | snake_case | `yaml_parser.gd` |
+| Class names | PascalCase | `class_name YAMLParser` |
+| Node names | PascalCase | `Camera3D, Player` |
+| Functions | snake_case | `func load_level():` |
+| Variables | snake_case | `var particle_effect` |
+| Signals | snake_case (past tense) | `signal door_opened` |
+| Constants | CONSTANT_CASE | `const MAX_SPEED = 200` |
+| Enum names | PascalCase (singular) | `enum Element` |
+| Enum members | CONSTANT_CASE | `{EARTH, WATER, AIR}` |
+
+### File Names
+Use snake_case for file names. Convert PascalCase class names to snake_case:
+
+```gdscript
+# ✅ GOOD: weapon.gd
+class_name Weapon
+extends Node
+
+# ✅ GOOD: yaml_parser.gd
+class_name YAMLParser
+extends Object
+
+# ❌ BAD: Weapon.gd or WeaponController.gd
+```
+
+### Classes and Nodes
+Use PascalCase:
+
+```gdscript
+# ✅ GOOD
+class_name EnemyController extends Node2D
+class_name MovementBehavior extends Resource
+extends CharacterBody3D
+
+# Loading classes
+const Weapon = preload("res://weapon.gd")
+
+# ❌ BAD
+class_name enemyController  # Wrong casing
+class_name Controller  # Too generic
+```
+
+### Functions and Variables
+Use snake_case:
+
+```gdscript
+# ✅ GOOD
+var particle_effect: Node
+var movement_speed: float = 150.0
+
+func load_level() -> void:
+	pass
+
+func calculate_damage_multiplier(base_damage: float, rank: float) -> float:
+	return base_damage * (1.0 + rank * 0.1)
+
+# ❌ BAD
+var particleEffect  # camelCase
+var MovementSpeed  # PascalCase
+func LoadLevel():  # PascalCase
+```
+
+### Private Members
+Prepend a single underscore (`_`) for private/internal members:
+
+```gdscript
+# ✅ GOOD
+var _cached_player_ref: Player = null
+var _accumulator: float = 0.0
+
+func _internal_reset_state() -> void:
+	_accumulator = 0.0
+
+# Public API (no underscore)
+var health: int = 100
+
+func take_damage(amount: int) -> void:
+	health = maxi(0, health - amount)
+```
+
+### Signals
+Use **past tense** to name signals:
+
+```gdscript
+# ✅ GOOD
+signal door_opened
+signal score_changed
+signal enemy_defeated
+
+# ❌ BAD
+signal open_door  # Present tense
+signal change_score  # Verb form
+```
+
+### Constants and Enums
+Write constants in CONSTANT_CASE:
+
+```gdscript
+# ✅ GOOD
+const MAX_SPEED: int = 200
+const PLAYER_SPEED: float = 180.0
+const INVULNERABILITY_DURATION: float = 3.0
+
+# ❌ BAD
+const maxSpeed = 200  # Wrong casing
+const max_speed = 200  # Missing type
+```
+
+Use PascalCase for enum names (keep **singular**) and CONSTANT_CASE for members:
+
+```gdscript
+# ✅ GOOD
+enum Element {
+	EARTH,
+	WATER,
+	AIR,
+	FIRE,
+}
+
+enum BossPhase {
+	PHASE_1_OPENING,
+	PHASE_2_ENHANCED,
+	PHASE_3_FINAL,
+	PHASE_4_DESPERATION,
+}
+
+# ❌ BAD
+enum Elements { EARTH, WATER }  # Plural
+enum enemy_type { basic, fast }  # Wrong casing
+```
+
+Write enums with **each item on its own line** for better documentation and diffs:
+
+```gdscript
+# ✅ GOOD
+enum Element {
+	EARTH,
+	WATER,
+	AIR,
+	FIRE,
+}
+
+# ❌ BAD
+enum Element { EARTH, WATER, AIR, FIRE }
+```
+
+## Code Order
+
+Organize GDScript code in this specific order:
+
+1. `@tool`, `@icon`, `@static_unload`
+2. `class_name`
+3. `extends`
+4. `##` doc comment
+5. `signal` declarations
+6. `enum` declarations
+7. `const` declarations
+8. static variables
+9. `@export` variables
+10. regular variables
+11. `@onready` variables
+12. `_static_init()`
+13. remaining static methods
+14. overridden built-in virtual methods:
+    - `_init()`
+    - `_enter_tree()`
+    - `_ready()`
+    - `_process()`
+    - `_physics_process()`
+    - remaining virtual methods
+15. overridden custom methods
+16. remaining methods
+17. subclasses
+
+Within each section, order by access modifier:
+1. public
+2. private
+
+### Example Class Structure
+
+```gdscript
+@tool
+class_name StateMachine
+extends Node
+## Hierarchical State machine for the player.
+##
+## Initializes states and delegates engine callbacks ([method Node._physics_process],
+## [method Node._unhandled_input]) to the state.
+
+signal state_changed(previous, new)
+
+enum StateType {
+	IDLE,
+	MOVING,
+	ATTACKING,
+}
+
+const MAX_STATES: int = 10
+
+@export var initial_state: Node
+var is_active: bool = true:
+	set = set_is_active
+
+@onready var _state: Node = initial_state:
+	set = set_state
+@onready var _state_name: String = _state.name
+
+
+func _init() -> void:
+	add_to_group("state_machine")
+
+
+func _enter_tree() -> void:
+	print("this happens before the ready method!")
+
+
+func _ready() -> void:
+	state_changed.connect(_on_state_changed)
+	_state.enter()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	_state.unhandled_input(event)
+
+
+func _physics_process(delta: float) -> void:
+	_state.physics_process(delta)
+
+
+func transition_to(target_state_path: String, msg: Dictionary = {}) -> void:
+	if not has_node(target_state_path):
+		return
+
+	var target_state: Node = get_node(target_state_path)
+	assert(target_state.is_composite == false)
+
+	_state.exit()
+	self._state = target_state
+	_state.enter(msg)
+	Events.player_state_changed.emit(_state.name)
+
+
+func set_is_active(value: bool) -> void:
+	is_active = value
+	set_physics_process(value)
+	set_process_unhandled_input(value)
+	set_block_signals(not value)
+
+
+func set_state(value: Node) -> void:
+	_state = value
+	_state_name = _state.name
+
+
+func _on_state_changed(previous, new) -> void:
+	print("state changed")
+	state_changed.emit()
+
+
+class State:
+	var foo: int = 0
+
+	func _init() -> void:
+		print("Hello!")
+```
+
+### Class Declaration
+For inner classes, use single-line declarations when brief:
+
+```gdscript
+## A brief description of the class's role and functionality.
+@abstract class MyNode extends Node:
+	pass
+```
+
+## Static Typing
+
+GDScript supports optional static typing. **Always use it.**
+
+### Declared Types
+To declare a variable's type, use `<variable>: <type>`:
+
+```gdscript
+var health: int = 0
+```
+
+To declare function return type, use `-> <type>`:
+
+```gdscript
+func heal(amount: int) -> void:
+	health += amount
+```
+
+### Inferred Types
+Use `:=` when the type is obvious from the same line:
+
+```gdscript
+# ✅ GOOD
+var health: int = 0  # Could be int or float, so explicit is better
+var direction := Vector3(1, 2, 3)  # Clearly inferred as Vector3
+
+# ❌ BAD
+var health := 0  # Ambiguous - could be int or float
+var direction: Vector3 = Vector3(1, 2, 3)  # Redundant type hint
+```
+
+**Include the type hint when ambiguous, omit when redundant.**
+
+### Type Inference Exceptions
+Some functions can't infer types without help:
+
+```gdscript
+# ✅ GOOD
+@onready var health_bar: ProgressBar = get_node("UI/LifeBar")
+
+# ❌ BAD
+@onready var health_bar := get_node("UI/LifeBar")  # Infers as Node, not ProgressBar
+```
+
+Alternatively, use `as` keyword:
+
+```gdscript
+@onready var health_bar := get_node("UI/LifeBar") as ProgressBar
+```
+
+**Warning**: The `as` keyword silently casts to null on type mismatch (null-unsafe).
+
+### Typed Collections
+```gdscript
+# ✅ GOOD
+var active_bullets: Array[Bullet] = []
+var enemy_health_map: Dictionary[int, int] = {}
+var template_cache: Dictionary[String, EnemyTemplate] = {}
+
+var config_data: Dictionary[String, float] = {
+	"player_speed": 180.0,
+	"bullet_speed": 200.0,
+	"enemy_spawn_rate": 2.0,
+}
+
+# ❌ BAD
+var bullets = []
+var health_map = {}
+```
+
+## Export Annotations
+
+### Basic Exports
+```gdscript
+# ✅ GOOD
+@export var max_health: int = 100
+@export var movement_speed: float = 150.0
+@export var enemy_template_id: String = "popcorn_01"
+@export var is_boss: bool = false
+
+# With range hints
+@export_range(0, 1000, 10) var health: int = 100
+@export_range(0.0, 500.0, 0.1) var speed: float = 180.0
+@export_range(0.0, 1.0, 0.01) var opacity: float = 1.0
+
+# Export enums
+@export var enemy_type: EnemyType = EnemyType.BASIC
+
+# Export flags
+@export_flags("Player", "Enemy", "Bullet", "Item") var collision_layers: int = 0
+
+# ❌ BAD
+@export var health  # Missing type and default
+@export var speed = 100  # Ambiguous int vs float
+```
+
+### Export Groups and Categories
+```gdscript
+@export_category("Movement")
+@export var speed: float = 100.0
+@export var acceleration: float = 500.0
+@export var friction: float = 0.9
+
+@export_category("Combat")
+@export var max_health: int = 100
+@export var damage: int = 10
+@export var attack_cooldown: float = 1.0
+
+@export_group("Visual Effects")
+@export var hit_flash_color: Color = Color.WHITE
+@export var hit_flash_duration: float = 0.1
+@export var death_particle: PackedScene
+
+@export_subgroup("Audio")
+@export var hit_sound: AudioStream
+@export var death_sound: AudioStream
+```
+
+## Signal Best Practices
+
+### Signal Declaration
+Use typed signals with past-tense names and doc comments:
+
+```gdscript
+# ✅ GOOD
+## Emitted when this enemy takes damage from any source
+signal health_changed(new_health: int, old_health: int)
+
+## Emitted when this enemy is defeated (health reaches zero)
+signal defeated(enemy_id: int, position: Vector2, score_value: int)
+
+## Emitted when entering a new attack phase
+signal phase_entered(phase_number: int, phase_name: String)
+
+# ❌ BAD
+signal changed  # Vague
+signal event  # No context
+```
+
+### Signal Connection
+```gdscript
+# ✅ GOOD
+func _ready() -> void:
+	if not enemy.health_changed.is_connected(_on_enemy_health_changed):
+		enemy.health_changed.connect(_on_enemy_health_changed)
+
+func _on_enemy_health_changed(new_health: int, old_health: int) -> void:
+	if new_health <= 0:
+		_trigger_death_sequence()
+
+# ❌ BAD
+func _ready():
+	enemy.health_changed.connect(_on_health)  # Duplicate connection possible
+```
+
+### Signal Disconnection (Critical for Pooling)
+```gdscript
+# ✅ GOOD
+func _exit_tree() -> void:
+	if is_instance_valid(enemy) and enemy.health_changed.is_connected(_on_enemy_health_changed):
+		enemy.health_changed.disconnect(_on_enemy_health_changed)
+
+func reset_for_pooling() -> void:
+	# Disconnect ALL signals before returning to pool
+	if EventBus.player_died.is_connected(_on_player_died):
+		EventBus.player_died.disconnect(_on_player_died)
+	
+	for connection in get_signal_connection_list("custom_event"):
+		custom_event.disconnect(connection.callable)
+
+# ❌ BAD
+func reset_for_pooling():
+	position = Vector2.ZERO
+	# Forgot to disconnect signals!
+```
+
+## Node and Scene Tree Operations
+
+### Safe Node Retrieval
+```gdscript
+# ✅ GOOD
+func get_player_reference() -> Player:
+	var player := get_node_or_null("/root/Main/Player") as Player
+	if not is_instance_valid(player):
+		push_error("[EnemyAI] Player node not found or invalid")
+		return null
+	return player
+
+# ✅ GOOD: Cached references
+var _cached_player: Player = null
+
+func get_player() -> Player:
+	if not is_instance_valid(_cached_player):
+		_cached_player = get_node_or_null("/root/Main/Player") as Player
+	return _cached_player
+
+# ❌ BAD
+func get_player():
+	return get_node("/root/Main/Player")  # Crashes if missing!
+```
+
+### Deferred Scene Tree Modifications
+```gdscript
+# ✅ GOOD
+func _physics_process(delta: float) -> void:
+	if health <= 0:
+		call_deferred("_handle_death")
+
+func _handle_death() -> void:
+	if is_instance_valid(death_effect):
+		get_parent().add_child(death_effect)
+	queue_free()
+
+# ❌ BAD
+func _physics_process(delta: float) -> void:
+	if health <= 0:
+		queue_free()  # Can crash during iteration!
+```
+
+### Await Safety
+```gdscript
+# ✅ GOOD
+func delayed_attack() -> void:
+	await get_tree().create_timer(2.0).timeout
+	
+	# Re-validate after await
+	if not is_instance_valid(self):
+		return
+	
+	if not is_instance_valid(target):
+		push_error("[Enemy] Target became invalid during attack delay")
+		return
+	
+	_execute_attack()
+
+# ❌ BAD
+func delayed_attack() -> void:
+	await get_tree().create_timer(2.0).timeout
+	_execute_attack()  # Crashes if freed during wait!
+```
+
+## Physics and Processing
+
+### Frame Budget Optimization
+```gdscript
+# ✅ GOOD: Cached references, no allocations per frame
+var _cached_player: Player = null
+var _direction_to_player: Vector2
+
+func _physics_process(delta: float) -> void:
+	if not is_instance_valid(_cached_player):
+		_cached_player = _find_player()
+		if _cached_player == null:
+			return
+	
+	_direction_to_player = (_cached_player.global_position - global_position).normalized()
+	velocity = _direction_to_player * speed
+	move_and_slide()
+
+# ❌ BAD
+func _physics_process(delta: float) -> void:
+	var player = get_node("/root/Main/Player")  # Lookup every frame!
+	var direction = (player.position - position).normalized()  # New allocation
+	velocity = direction * speed
+	move_and_slide()
+```
+
+### Process Mode Management
+```gdscript
+# ✅ GOOD
+func return_to_pool() -> void:
+	visible = false
+	process_mode = Node.PROCESS_MODE_DISABLED
+	set_physics_process(false)
+	set_process(false)
+
+func activate_from_pool() -> void:
+	visible = true
+	process_mode = Node.PROCESS_MODE_INHERIT
+	set_physics_process(true)
+	set_process(true)
+```
+
+### Group Operations (Avoid in Hot Paths)
+```gdscript
+# ❌ EXPENSIVE
+func _process(delta: float) -> void:
+	var enemies := get_tree().get_nodes_in_group("enemies")  # Searches entire tree!
+	for enemy in enemies:
+		_check_collision(enemy)
+
+# ✅ GOOD: Cache group references
+var _cached_enemies: Array[Enemy] = []
+
+func _ready() -> void:
+	_refresh_enemy_cache()
+	EventBus.enemy_spawned.connect(_on_enemy_spawned)
+	EventBus.enemy_died.connect(_on_enemy_died)
+
+func _on_enemy_spawned(enemy: Enemy) -> void:
+	_cached_enemies.append(enemy)
+
+func _on_enemy_died(enemy: Enemy) -> void:
+	_cached_enemies.erase(enemy)
+
+func _process(delta: float) -> void:
+	for enemy in _cached_enemies:
+		if is_instance_valid(enemy):
+			_check_collision(enemy)
+```
+
+## Error Handling and Logging
+
+### Error Reporting
+```gdscript
+# ✅ GOOD
+func load_template(template_id: String) -> EnemyTemplate:
+	if template_id.is_empty():
+		push_error("[EnemyTemplateManager] Cannot load template with empty ID")
+		return _get_default_template()
+	
+	if not _templates.has(template_id):
+		push_error("[EnemyTemplateManager] Template not found: '%s'. Available: %s" % [
+			template_id,
+			str(_templates.keys())
+		])
+		return _get_default_template()
+	
+	return _templates[template_id]
+
+# ❌ BAD
+func load_template(id):
+	if not _templates.has(id):
+		return null  # Silent failure!
+```
+
+### Debug Logging
+```gdscript
+# ✅ GOOD
+const DEBUG_LOGGING: bool = false
+
+func spawn_bullet(type: String, pos: Vector2) -> void:
+	if DEBUG_LOGGING:
+		print("[EntityFactory] Spawning bullet: type=%s, pos=%v" % [type, pos])
+	
+	var bullet := _create_bullet(type, pos)
+	return bullet
+
+# ✅ GOOD: Prefix logs with system name
+func _on_wave_started() -> void:
+	print("[StageController] Wave %d started with %d enemies" % [wave_number, enemy_count])
+
+# ❌ BAD
+func _process(delta: float) -> void:
+	print("Player position: ", position)  # Spam!
+```
+
+## Shader Integration
+
+### Shader Parameter Access
+```gdscript
+# ✅ GOOD
+@export var scan_line_strength: float = 0.5:
+	set(value):
+		scan_line_strength = clampf(value, 0.0, 1.0)
+		if is_instance_valid(_crt_material):
+			_crt_material.set_shader_parameter("scanline_strength", scan_line_strength)
+
+func _ready() -> void:
+	_crt_material = $Sprite2D.material as ShaderMaterial
+	if _crt_material == null:
+		push_error("[CRTEffect] No ShaderMaterial found on Sprite2D")
+```
+
+## Pooling and Spawning Patterns
+
+### Entity Factory Integration
+```gdscript
+# ✅ GOOD
+func fire_bullet_pattern() -> void:
+	for angle_deg in range(0, 360, 30):
+		var direction := Vector2.RIGHT.rotated(deg_to_rad(angle_deg))
+		var bullet := EntityFactory.spawn_bullet(
+			"enemy_basic",
+			global_position,
+			direction
+		)
+		if bullet != null:
+			bullet.speed = 150.0
+
+# ❌ BAD
+var bullet_scene := preload("res://scenes/bullet/bullet.tscn")
+
+func fire_bullet() -> void:
+	var bullet := bullet_scene.instantiate()
+	get_tree().current_scene.add_child(bullet)
+	bullet.position = position
+```
+
+### Pool-Safe Reset
+```gdscript
+# ✅ GOOD
+func reset_for_pool() -> void:
+	# Disconnect all signals
+	for connection in get_incoming_connections():
+		var signal_obj: Signal = connection.signal
+		if signal_obj.is_connected(connection.callable):
+			signal_obj.disconnect(connection.callable)
+	
+	# Reset state
+	position = Vector2.ZERO
+	velocity = Vector2.ZERO
+	health = max_health
+	visible = false
+	process_mode = Node.PROCESS_MODE_DISABLED
+	
+	# Clear references
+	_cached_target = null
+
+# ❌ BAD
+func reset_for_pool() -> void:
+	position = Vector2.ZERO
+	# Forgot signals, health, velocity, cached refs!
+```
+
+## Performance: Integer vs Float Math
+
+```gdscript
+# ✅ GOOD
+var bullet_count: int = 100
+var half_bullets: int = bullet_count >> 1  # Bit shift for division by 2
+
+var player_speed: float = 180.0
+var delta_movement: float = player_speed * delta
+
+# ⚠️ CAUTION: Use // for integer division
+var enemy_count: int = 10
+var enemies_per_row: int = enemy_count // 2  # Integer division
+
+# ❌ BAD
+var enemies_per_row: int = enemy_count / 2  # Returns float!
+```
+
+## Summary Checklist
+
+Before committing GDScript code:
+- [ ] Using tabs for indentation
+- [ ] Trailing commas in multi-line arrays/dictionaries/enums
+- [ ] Two blank lines between functions
+- [ ] Lines under 100 characters (preferably 80)
+- [ ] One statement per line (except ternary)
+- [ ] Boolean operators use `and`/`or`/`not`
+- [ ] Comments start with space (except `#region`)
+- [ ] Double quotes preferred over single quotes
+- [ ] No leading/trailing zero omission in floats
+- [ ] Large numbers use underscore separators
+- [ ] File names are snake_case
+- [ ] Class names are PascalCase
+- [ ] Functions/variables are snake_case
+- [ ] Constants are CONSTANT_CASE
+- [ ] Enum names are PascalCase and singular
+- [ ] Signals use past tense
+- [ ] Code order follows standard structure
+- [ ] All variables have explicit type annotations
+- [ ] All function parameters and return types declared
+- [ ] All `@export` variables have types and defaults
+- [ ] Signal connections check for duplicates
+- [ ] Signal disconnections happen in cleanup/pooling
+- [ ] Node access uses `get_node_or_null()` and `is_instance_valid()`
+- [ ] Scene tree modifications use `call_deferred()` where needed
+- [ ] No allocations inside `_process()` or `_physics_process()`
+- [ ] Errors use `push_error()` with descriptive messages
+- [ ] Debug logs are gated or prefixed with system name
+- [ ] All spawns go through `EntityFactory`
+- [ ] Shader modifications are ONLY via exported parameters

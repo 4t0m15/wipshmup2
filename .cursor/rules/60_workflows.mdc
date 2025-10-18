@@ -1,49 +1,951 @@
 ---
-
-description: Step-by-step workflows for common tasks
-globs: ["**/*"]
+description: Step-by-step workflows for common development tasks - Detailed procedures for safe, repeatable implementations
+globs:
+  - "**/*"
 alwaysApply: false
 ---
 
-## Add a new enemy type
-1) Define template in `EnemyTemplateManager` (type, HP, behaviors).
-2) Implement movement/attack behaviors if new; export parameters.
-3) Ensure bullets spawn through `EntityFactory`; connect signals safely.
-4) Add to a wave via `WaveDefinition` or stage JSON/CFG if applicable.
-5) Play-test; cap bullet counts; verify cleanup and pooling.
+# Development Workflows
 
-## Add a new stage or wave
-1) Create `StageDefinition` and `WaveDefinition` resources.
-2) Use formation helpers; validate counts and defaults.
-3) Register stage in `StageTemplateManager` (only registered stages are traversed).
-4) Test progression and boss entry; ensure stage loops if fewer stages exist.
+## Workflow 1: Add a New Enemy Type
 
-## Add a new boss
-1) Define boss template + phases; use data-driven phase behaviors.
-2) Ensure behaviors are added directly (not deferred) once boss is in-tree.
-3) Hook defeat into `EventBus` and stage progression.
+### Prerequisites
+- Enemy sprite asset ready (PNG, recommended 32x32 or 64x64)
+- Design decided: HP, speed, attack pattern, score value
+- Movement behavior defined
 
-## Tweak bullet readability
-1) Adjust bullet shaders/settings via exported parameters.
-2) Consider glow/trails sparingly; keep performance in mind.
-3) Validate readability across ranks and screen shake.
+### Step-by-Step Procedure
 
-## Connect a signal safely
-1) Check signal existence and prevent duplicates with `is_connected()`.
-2) Use `Callable(self, "method_name")`; disconnect on cleanup/reuse.
-3) Guard handlers with `is_instance_valid()` and safe dictionary/array access.
+#### 1. Create Enemy Template (5 minutes)
+```gdscript
+# File: wipshmup2/scripts/autoload/enemy_template_manager.gd
 
-## Add a pooled bullet/enemy type
-1) Add pool registration via `EntityFactory` with limits and defaults.
-2) Expose spawn params via templates/config; avoid hardcoding.
-3) Validate reuse path: visibility toggle, signal disconnect, state reset.
+# In EnemyTemplateManager._ready() or separate initialization method:
+func _create_new_enemy_templates() -> void:
+    var new_enemy := EnemyTemplate.new()
+    new_enemy.template_id = "shooter_fast_01"
+    new_enemy.enemy_name = "Fast Shooter"
+    new_enemy.max_health = 30
+    new_enemy.score_value = 300
+    new_enemy.movement_type = "straight"
+    new_enemy.movement_speed = 120.0
+    new_enemy.attack_pattern = "aimed_shot"
+    new_enemy.attack_cooldown = 1.5
+    new_enemy.collision_radius = 12.0
+    new_enemy.item_drop_chance = 0.15
+    new_enemy.item_drop_types = ["power", "score"]
+    
+    register_template(new_enemy)
+```
 
-## Validate stage/wave data
-1) Run resource/JSON validators; supply safe defaults on missing fields.
-2) Ensure `StageTemplateManager` registration for traversal.
-3) Test under MAX bullet caps; confirm graceful degradation.
+**Alternatively**, add to `wipshmup2/config/enemies.json`:
+```json
+{
+    "template_id": "shooter_fast_01",
+    "enemy_name": "Fast Shooter",
+    "max_health": 30,
+    "score_value": 300,
+    "movement_type": "straight",
+    "movement_speed": 120.0,
+    "attack_pattern": "aimed_shot",
+    "attack_cooldown": 1.5,
+    "collision_radius": 12.0,
+    "item_drop_chance": 0.15,
+    "item_drop_types": ["power", "score"]
+}
+```
 
-## Quick debug checklist (non-intrusive)
-1) Gate logs; prefix with system (e.g., `[StageController]`).
-2) Verify node validity before use; re-check after `await`.
-3) Reproduce with minimal scene; profile allocations per frame.
+#### 2. Implement Movement Behavior (if new) (15 minutes)
+```gdscript
+# File: wipshmup2/scripts/components/movement_straight.gd
+
+class_name StraightMovement extends MovementBehavior
+
+@export var direction: Vector2 = Vector2.DOWN
+@export var speed: float = 100.0
+
+func _physics_process(delta: float) -> void:
+    var parent := get_parent() as Node2D
+    if not is_instance_valid(parent):
+        return
+    
+    parent.global_position += direction.normalized() * speed * delta
+```
+
+#### 3. Implement Attack Behavior (if new) (20 minutes)
+```gdscript
+# File: wipshmup2/scripts/components/attack_aimed_shot.gd
+
+class_name AimedShotAttack extends AttackBehavior
+
+@export var bullet_type: String = "enemy_basic"
+@export var bullet_speed: float = 150.0
+@export var cooldown: float = 2.0
+
+var _cooldown_timer: float = 0.0
+var _cached_player: Player = null
+
+func _process(delta: float) -> void:
+    _cooldown_timer -= delta
+    
+    if _cooldown_timer <= 0.0:
+        _execute_attack()
+        _cooldown_timer = cooldown
+
+func _execute_attack() -> void:
+    var parent := get_parent() as Node2D
+    if not is_instance_valid(parent):
+        return
+    
+    # Find player
+    if not is_instance_valid(_cached_player):
+        _cached_player = get_tree().get_first_node_in_group("player") as Player
+    
+    if not is_instance_valid(_cached_player):
+        return
+    
+    # Calculate direction to player
+    var direction := (
+        _cached_player.global_position - parent.global_position
+    ).normalized()
+    
+    # Spawn bullet via EntityFactory (pooled)
+    var bullet := EntityFactory.spawn_bullet(
+        bullet_type,
+        parent.global_position,
+        direction
+    )
+    
+    if bullet != null:
+        bullet.speed = bullet_speed
+        # Emit event for audio/visual feedback
+        EventBus.bullet_fired.emit(bullet, parent, bullet_type)
+```
+
+#### 4. Register in EntityFactory Pool (5 minutes)
+```gdscript
+# File: wipshmup2/scripts/core/entity_factory.gd
+
+# Add to pool configuration:
+const POOL_LIMITS: Dictionary = {
+    # ... existing pools ...
+    "enemy_shooter_fast": 20,  # New enemy pool
+}
+
+# EntityFactory will automatically create pool on startup
+```
+
+#### 5. Add to Wave Definition (10 minutes)
+```gdscript
+# File: wipshmup2/config/stages.json
+
+# In appropriate stage's wave definition:
+{
+    "wave_number": 3,
+    "spawn_entries": [
+        {
+            "template_id": "shooter_fast_01",
+            "spawn_time": 5.0,
+            "spawn_position": {"x": 160, "y": -20},
+            "formation": "line",
+            "formation_count": 5,
+            "formation_spacing": 40.0
+        }
+    ]
+}
+```
+
+#### 6. Test and Validate (15 minutes)
+1. Run game in debug mode
+2. Navigate to wave with new enemy
+3. Verify:
+   - [ ] Enemy spawns correctly
+   - [ ] Movement pattern works as expected
+   - [ ] Attack pattern functions (bullets spawn, aim correctly)
+   - [ ] Taking damage decreases health
+   - [ ] Death triggers correctly
+   - [ ] Score awarded on defeat
+   - [ ] Item drops work (if configured)
+   - [ ] Returns to pool correctly (check with multiple spawns)
+   - [ ] No errors in output console
+
+#### 7. Performance Check (5 minutes)
+- Spawn 20+ of the new enemy simultaneously
+- Verify frame rate stays at 60 FPS
+- Check Output console for rate limit warnings
+- Adjust pool size if needed
+
+**Total Time**: ~75 minutes for complete new enemy type
+
+---
+
+## Workflow 2: Add a New Stage or Wave
+
+### Prerequisites
+- Background asset ready (if new background)
+- Music track ready (if new track)
+- Enemy types already implemented
+- Stage pacing and difficulty planned
+
+### Step-by-Step Procedure
+
+#### 1. Create StageDefinition Resource (10 minutes)
+```gdscript
+# Option A: In code
+# File: wipshmup2/scripts/autoload/stage_template_manager.gd
+
+func _create_stage_3() -> StageDefinition:
+    var stage := StageDefinition.new()
+    stage.stage_number = 3
+    stage.stage_name = "Crystal Cavern"
+    stage.background_id = "cavern_01"
+    stage.music_track = "stage_03_theme"
+    stage.scroll_speed = 35.0
+    stage.boss_id = "boss_crystal_golem"
+    
+    # Add waves
+    stage.waves = [
+        _create_stage_3_wave_1(),
+        _create_stage_3_wave_2(),
+        _create_stage_3_wave_3(),
+    ]
+    
+    return stage
+
+func _create_stage_3_wave_1() -> WaveDefinition:
+    var wave := WaveDefinition.new()
+    wave.wave_number = 1
+    wave.wave_duration = 30.0
+    
+    # Add spawn entries
+    var entry_1 := SpawnEntry.new()
+    entry_1.template_id = "popcorn_01"
+    entry_1.spawn_time = 2.0
+    entry_1.spawn_position = Vector2(80, -20)
+    entry_1.formation = "line"
+    entry_1.formation_count = 5
+    entry_1.formation_spacing = 40.0
+    
+    wave.spawn_entries = [entry_1, entry_2, entry_3]
+    return wave
+```
+
+**Option B: In JSON config** (Recommended for non-programmers)
+```json
+// File: wipshmup2/config/stages.json
+{
+    "stages": [
+        {
+            "stage_number": 3,
+            "stage_name": "Crystal Cavern",
+            "background_id": "cavern_01",
+            "music_track": "stage_03_theme",
+            "scroll_speed": 35.0,
+            "boss_id": "boss_crystal_golem",
+            "waves": [
+                {
+                    "wave_number": 1,
+                    "wave_duration": 30.0,
+                    "spawn_entries": [
+                        {
+                            "template_id": "popcorn_01",
+                            "spawn_time": 2.0,
+                            "spawn_position": {"x": 80, "y": -20},
+                            "formation": "line",
+                            "formation_count": 5,
+                            "formation_spacing": 40.0
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
+```
+
+#### 2. Register Stage in StageTemplateManager (5 minutes)
+```gdscript
+# File: wipshmup2/scripts/autoload/stage_template_manager.gd
+
+func _ready() -> void:
+    _load_stages_from_config()
+    
+    # Verify registration
+    var available_stages := get_all_stage_numbers()
+    print("[StageTemplateManager] Loaded stages: %s" % str(available_stages))
+```
+
+#### 3. Create Formation Helpers (if needed) (15 minutes)
+```gdscript
+# File: wipshmup2/scripts/stages/formation_spawner.gd
+
+func spawn_line_formation(
+    template_id: String,
+    start_position: Vector2,
+    count: int,
+    spacing: float,
+    direction: Vector2 = Vector2.DOWN
+) -> Array[Enemy]:
+    var enemies: Array[Enemy] = []
+    var horizontal_offset := -(count - 1) * spacing * 0.5
+    
+    for i in range(count):
+        var spawn_pos := start_position + Vector2(horizontal_offset + i * spacing, 0)
+        var enemy := EntityFactory.spawn_enemy(template_id, spawn_pos, direction)
+        if enemy != null:
+            enemies.append(enemy)
+    
+    return enemies
+
+func spawn_v_formation(
+    template_id: String,
+    apex_position: Vector2,
+    count: int,
+    spacing: float
+) -> Array[Enemy]:
+    var enemies: Array[Enemy] = []
+    var half_count := count / 2
+    
+    # Left wing
+    for i in range(half_count):
+        var offset := Vector2(-i * spacing, i * spacing * 0.5)
+        var enemy := EntityFactory.spawn_enemy(
+            template_id,
+            apex_position + offset,
+            Vector2.DOWN
+        )
+        if enemy != null:
+            enemies.append(enemy)
+    
+    # Right wing (mirror)
+    for i in range(half_count):
+        var offset := Vector2(i * spacing, i * spacing * 0.5)
+        var enemy := EntityFactory.spawn_enemy(
+            template_id,
+            apex_position + offset,
+            Vector2.DOWN
+        )
+        if enemy != null:
+            enemies.append(enemy)
+    
+    return enemies
+```
+
+#### 4. Test Stage Progression (10 minutes)
+1. Start game from stage 1
+2. Progress through to new stage
+3. Verify:
+   - [ ] Stage transition is smooth
+   - [ ] Background changes correctly
+   - [ ] Music changes correctly
+   - [ ] Wave 1 spawns at correct times
+   - [ ] Wave transitions work
+   - [ ] Boss spawns after all waves
+   - [ ] Stage completion awards score
+   - [ ] Next stage loads correctly
+
+#### 5. Balance Testing (30 minutes)
+- Play through stage multiple times
+- Adjust:
+  - Enemy spawn timing (too dense? too sparse?)
+  - Formation spacing (too tight? too wide?)
+  - Enemy HP (too tanky? too fragile?)
+  - Attack frequency (too aggressive? too passive?)
+- Test with different player power levels
+- Ensure stage is beatable without bombs
+
+**Total Time**: ~70 minutes for complete new stage
+
+---
+
+## Workflow 3: Add a New Boss
+
+### Prerequisites
+- Boss sprite asset (recommend 64x64 or larger)
+- Boss phases designed (HP thresholds, attack patterns)
+- Attack patterns implemented as behaviors
+- Music track ready (optional)
+
+### Step-by-Step Procedure
+
+#### 1. Create BossTemplate (15 minutes)
+```gdscript
+# File: wipshmup2/scripts/autoload/boss_template_manager.gd
+
+func _create_boss_crystal_golem() -> BossTemplate:
+    var boss := BossTemplate.new()
+    boss.boss_id = "boss_crystal_golem"
+    boss.boss_name = "Crystal Golem"
+    boss.total_health = 3000
+    boss.warning_duration = 4.0
+    boss.defeat_score = 50000
+    boss.music_track = "boss_crystal_theme"
+    
+    # Phase 1: 100% - 66% HP
+    var phase_1 := BossPhase.new()
+    phase_1.phase_number = 1
+    phase_1.phase_name = "Awakening"
+    phase_1.health_threshold = 1.0
+    phase_1.movement_pattern = "figure_eight"
+    phase_1.attack_patterns = ["spread_shot", "aimed_burst"]
+    phase_1.attack_interval = 2.5
+    phase_1.speed_multiplier = 1.0
+    
+    # Phase 2: 66% - 33% HP
+    var phase_2 := BossPhase.new()
+    phase_2.phase_number = 2
+    phase_2.phase_name = "Enraged"
+    phase_2.health_threshold = 0.66
+    phase_2.movement_pattern = "aggressive_dash"
+    phase_2.attack_patterns = ["spread_shot", "aimed_burst", "laser_sweep"]
+    phase_2.attack_interval = 1.8
+    phase_2.speed_multiplier = 1.3
+    
+    # Phase 3: 33% - 0% HP
+    var phase_3 := BossPhase.new()
+    phase_3.phase_number = 3
+    phase_3.phase_name = "Desperation"
+    phase_3.health_threshold = 0.33
+    phase_3.movement_pattern = "erratic_teleport"
+    phase_3.attack_patterns = ["bullet_hell_spiral", "screen_clear_beam"]
+    phase_3.attack_interval = 1.2
+    phase_3.speed_multiplier = 1.5
+    
+    boss.phases = [phase_1, phase_2, phase_3]
+    return boss
+```
+
+#### 2. Implement Boss Scene (20 minutes)
+```gdscript
+# File: wipshmup2/scripts/boss/boss_controller.gd
+
+class_name BossController extends Node2D
+
+signal phase_changed(phase_number: int)
+signal defeated(boss_id: String, time: float, no_miss: bool)
+
+@export var boss_id: String = ""
+
+var current_phase: int = 0
+var health: int = 0
+var max_health: int = 0
+var spawn_time: float = 0.0
+var _template: BossTemplate = null
+var _movement_behavior: Node = null
+var _attack_behaviors: Array[Node] = []
+
+func _ready() -> void:
+    _template = BossTemplateManager.get_template(boss_id)
+    if _template == null:
+        push_error("[Boss] Template '%s' not found" % boss_id)
+        queue_free()
+        return
+    
+    max_health = _template.total_health
+    health = max_health
+    spawn_time = Time.get_ticks_msec() / 1000.0
+    
+    # Start with phase 1
+    _enter_phase(_template.phases[0])
+    
+    # Connect to EventBus
+    EventBus.boss_spawned.emit(self, boss_id)
+
+func take_damage(amount: int) -> void:
+    if health <= 0:
+        return
+    
+    health = maxi(0, health - amount)
+    
+    # Check for phase transitions
+    var health_percent := float(health) / float(max_health)
+    _check_phase_transition(health_percent)
+    
+    if health <= 0:
+        _on_defeated()
+
+func _check_phase_transition(health_percent: float) -> void:
+    for phase in _template.phases:
+        if (
+            phase.phase_number > current_phase
+            and health_percent <= phase.health_threshold
+        ):
+            _enter_phase(phase)
+            break
+
+func _enter_phase(phase: BossPhase) -> void:
+    current_phase = phase.phase_number
+    
+    # Clear old behaviors
+    _clear_behaviors()
+    
+    # Add movement behavior (NOT deferred - boss already in tree)
+    _movement_behavior = _create_movement_behavior(phase.movement_pattern)
+    if _movement_behavior != null:
+        add_child(_movement_behavior)
+    
+    # Add attack behaviors
+    for attack_id in phase.attack_patterns:
+        var attack_behavior := _create_attack_behavior(attack_id)
+        if attack_behavior != null:
+            add_child(attack_behavior)
+            _attack_behaviors.append(attack_behavior)
+    
+    # Emit phase change event
+    EventBus.boss_phase_changed.emit(boss_id, phase.phase_number, phase.phase_name)
+    phase_changed.emit(phase.phase_number)
+
+func _clear_behaviors() -> void:
+    if is_instance_valid(_movement_behavior):
+        _movement_behavior.queue_free()
+        _movement_behavior = null
+    
+    for behavior in _attack_behaviors:
+        if is_instance_valid(behavior):
+            behavior.queue_free()
+    _attack_behaviors.clear()
+
+func _on_defeated() -> void:
+    var completion_time := (Time.get_ticks_msec() / 1000.0) - spawn_time
+    var no_miss := true  # TODO: Track if player took damage during fight
+    
+    EventBus.boss_defeated.emit(boss_id, completion_time, no_miss)
+    defeated.emit(boss_id, completion_time, no_miss)
+    
+    GameState.add_score(_template.defeat_score)
+    call_deferred("queue_free")
+```
+
+#### 3. Implement Boss Attack Patterns (30-60 minutes)
+```gdscript
+# File: wipshmup2/scripts/boss/attacks/spread_shot_attack.gd
+
+class_name BossSpreadShotAttack extends AttackBehavior
+
+@export var bullet_count: int = 12
+@export var bullet_speed: float = 120.0
+@export var spread_angle: float = 360.0
+@export var cooldown: float = 2.0
+
+var _cooldown_timer: float = 0.0
+
+func _process(delta: float) -> void:
+    _cooldown_timer -= delta
+    if _cooldown_timer <= 0.0:
+        _execute_attack()
+        _cooldown_timer = cooldown
+
+func _execute_attack() -> void:
+    var parent := get_parent() as Node2D
+    if not is_instance_valid(parent):
+        return
+    
+    var angle_step := deg_to_rad(spread_angle / float(bullet_count))
+    var start_angle := -deg_to_rad(spread_angle * 0.5)
+    
+    for i in range(bullet_count):
+        var angle := start_angle + angle_step * i
+        var direction := Vector2.RIGHT.rotated(angle)
+        
+        var bullet := EntityFactory.spawn_bullet(
+            "enemy_boss_bullet",
+            parent.global_position,
+            direction
+        )
+        
+        if bullet != null:
+            bullet.speed = bullet_speed
+```
+
+#### 4. Integrate with StageController (10 minutes)
+```gdscript
+# File: wipshmup2/scripts/controllers/stage_controller.gd
+
+func _start_boss_phase() -> void:
+    if _current_stage.boss_id.is_empty():
+        _on_stage_complete()
+        return
+    
+    # Show boss warning
+    EventBus.boss_warning.emit(_current_stage.boss_id, 4.0)
+    await get_tree().create_timer(4.0).timeout
+    
+    if not is_instance_valid(self):
+        return
+    
+    # Spawn boss
+    var boss := EntityFactory.spawn_boss(_current_stage.boss_id, Vector2(160, 40))
+    if boss == null:
+        push_error("[StageController] Failed to spawn boss '%s'" % _current_stage.boss_id)
+        _on_stage_complete()
+        return
+    
+    # Wait for boss defeat
+    GameState.is_boss_active = true
+    await boss.defeated
+    GameState.is_boss_active = false
+    
+    _on_stage_complete()
+```
+
+#### 5. Test Boss Fight (30 minutes)
+1. Play through stage to reach boss
+2. Test each phase:
+   - [ ] Phase 1 starts correctly
+   - [ ] Attack patterns execute as designed
+   - [ ] Movement pattern works
+   - [ ] Phase 2 triggers at 66% HP
+   - [ ] Phase 3 triggers at 33% HP
+   - [ ] Defeat triggers at 0 HP
+   - [ ] Score awarded correctly
+   - [ ] Stage progression continues
+3. Test edge cases:
+   - [ ] Boss dies in one hit (debug mode)
+   - [ ] Player dies during fight
+   - [ ] Player bombs during fight
+4. Check performance (should stay at 60 FPS)
+
+**Total Time**: ~2-3 hours for complete new boss
+
+---
+
+## Workflow 4: Tweak Bullet Readability
+
+### Step-by-Step Procedure
+
+#### 1. Identify Readability Issue (5 minutes)
+- Bullets blend into background?
+- Bullet colors too similar to enemies?
+- Bullet trails obscure hitboxes?
+- Screen shake makes tracking difficult?
+
+#### 2. Adjust Bullet Visual Properties (10 minutes)
+```gdscript
+# File: wipshmup2/scripts/bullet/bullet_visuals.gd
+
+# Option A: Adjust bullet shader parameters (PREFERRED)
+@export_range(0.0, 5.0, 0.1) var glow_strength: float = 1.5
+@export_range(0.0, 2.0, 0.1) var outline_width: float = 0.5
+@export var outline_color: Color = Color.BLACK
+
+func _ready() -> void:
+    var material := $Sprite2D.material as ShaderMaterial
+    if material != null:
+        material.set_shader_parameter("glow_strength", glow_strength)
+        material.set_shader_parameter("outline_width", outline_width)
+        material.set_shader_parameter("outline_color", outline_color)
+
+# Option B: Adjust bullet colors
+const PLAYER_BULLET_COLOR: Color = Color(0.0, 1.0, 1.0, 1.0)  # Cyan
+const ENEMY_BULLET_COLOR: Color = Color(1.0, 0.3, 0.3, 1.0)  # Red-orange
+
+func set_bullet_type(is_player: bool) -> void:
+    $Sprite2D.modulate = PLAYER_BULLET_COLOR if is_player else ENEMY_BULLET_COLOR
+```
+
+#### 3. Adjust Background Contrast (if needed) (10 minutes)
+```gdscript
+# File: wipshmup2/scripts/backgrounds/background_controller.gd
+
+# Darken background during bullet-heavy sections
+@export_range(0.0, 1.0, 0.05) var background_dim: float = 0.7
+
+func set_battle_intensity(intensity: float) -> void:
+    # intensity: 0.0 = calm, 1.0 = bullet hell
+    var dim_amount := lerp(1.0, background_dim, intensity)
+    $BackgroundSprite.modulate = Color(dim_amount, dim_amount, dim_amount, 1.0)
+```
+
+#### 4. Test Readability Across Scenarios (20 minutes)
+- [ ] Test with 50+ bullets on screen
+- [ ] Test with 200+ bullets on screen
+- [ ] Test with 500+ bullets (max stress)
+- [ ] Test with all background variants
+- [ ] Test with screen shake active
+- [ ] Test with player power effects active
+- [ ] Get feedback from playtester (if available)
+
+**Total Time**: ~45 minutes
+
+---
+
+## Workflow 5: Connect a Signal Safely
+
+### Step-by-Step Procedure
+
+#### 1. Identify Signal Source and Handler (2 minutes)
+```gdscript
+# Source: EventBus, GameState, or custom node
+# Handler: The function that responds to the signal
+```
+
+#### 2. Declare Signal (if custom) (3 minutes)
+```gdscript
+# In source node:
+signal enemy_defeated(enemy_id: int, position: Vector2, score: int)
+```
+
+#### 3. Connect in _ready() with Duplicate Check (5 minutes)
+```gdscript
+func _ready() -> void:
+    # Check if already connected (prevents double connections)
+    if not EventBus.enemy_defeated.is_connected(_on_enemy_defeated):
+        EventBus.enemy_defeated.connect(_on_enemy_defeated)
+    
+    # For custom nodes:
+    if is_instance_valid(enemy_node):
+        if not enemy_node.health_changed.is_connected(_on_enemy_health_changed):
+            enemy_node.health_changed.connect(_on_enemy_health_changed)
+```
+
+#### 4. Implement Signal Handler with Validation (10 minutes)
+```gdscript
+func _on_enemy_defeated(enemy_id: int, position: Vector2, score: int) -> void:
+    # Validate parameters
+    if enemy_id < 0:
+        push_error("[ScoreSystem] Invalid enemy_id: %d" % enemy_id)
+        return
+    
+    if score < 0:
+        push_warning("[ScoreSystem] Negative score (%d), clamping to 0" % score)
+        score = 0
+    
+    # Process event
+    GameState.add_score(score)
+    _spawn_score_popup(position, score)
+    _update_chain_count()
+```
+
+#### 5. Disconnect in Cleanup (5 minutes)
+```gdscript
+func _exit_tree() -> void:
+    # Disconnect from EventBus
+    if EventBus.enemy_defeated.is_connected(_on_enemy_defeated):
+        EventBus.enemy_defeated.disconnect(_on_enemy_defeated)
+    
+    # Disconnect from custom nodes
+    if is_instance_valid(enemy_node):
+        if enemy_node.health_changed.is_connected(_on_enemy_health_changed):
+            enemy_node.health_changed.disconnect(_on_enemy_health_changed)
+
+# For pooled objects:
+func reset_for_pool() -> void:
+    # Disconnect ALL incoming connections
+    for connection in get_incoming_connections():
+        var sig: Signal = connection.signal
+        if sig.is_connected(connection.callable):
+            sig.disconnect(connection.callable)
+```
+
+**Total Time**: ~25 minutes
+
+---
+
+## Workflow 6: Add a Pooled Entity Type
+
+### Step-by-Step Procedure
+
+#### 1. Define Pool Configuration (5 minutes)
+```gdscript
+# File: wipshmup2/scripts/core/entity_factory.gd
+
+const POOL_LIMITS: Dictionary = {
+    # ... existing pools ...
+    "new_entity_type": 50,  # Max 50 instances
+}
+```
+
+#### 2. Implement Entity with Pool-Safe Reset (30 minutes)
+```gdscript
+# File: wipshmup2/scripts/entities/new_entity.gd
+
+class_name NewEntity extends Node2D
+
+@export var max_health: int = 100
+var health: int = 100
+var velocity: Vector2 = Vector2.ZERO
+var _target: Node2D = null
+
+func activate(spawn_position: Vector2, initial_velocity: Vector2) -> void:
+    global_position = spawn_position
+    velocity = initial_velocity
+    health = max_health
+    visible = true
+    process_mode = Node.PROCESS_MODE_INHERIT
+    set_physics_process(true)
+
+func reset_for_pool() -> void:
+    # 1. Disconnect signals
+    for connection in get_incoming_connections():
+        var sig: Signal = connection.signal
+        if sig.is_connected(connection.callable):
+            sig.disconnect(connection.callable)
+    
+    # 2. Reset transform
+    global_position = Vector2.ZERO
+    rotation = 0.0
+    scale = Vector2.ONE
+    
+    # 3. Reset state
+    health = max_health
+    velocity = Vector2.ZERO
+    _target = null
+    
+    # 4. Reset visual
+    modulate = Color.WHITE
+    visible = false
+    
+    # 5. Disable processing
+    process_mode = Node.PROCESS_MODE_DISABLED
+    set_physics_process(false)
+    set_process(false)
+
+func return_to_pool() -> void:
+    EntityFactory.return_to_pool(self, "new_entity_type")
+```
+
+#### 3. Add Spawn Method to EntityFactory (10 minutes)
+```gdscript
+# File: wipshmup2/scripts/core/entity_factory.gd
+
+func spawn_new_entity(position: Vector2, velocity: Vector2) -> NewEntity:
+    var entity := _acquire_from_pool("new_entity_type") as NewEntity
+    if entity == null:
+        push_warning("[EntityFactory] Pool 'new_entity_type' exhausted")
+        return null
+    
+    entity.activate(position, velocity)
+    return entity
+```
+
+#### 4. Test Pool Lifecycle (15 minutes)
+```gdscript
+# Test script:
+func _test_pooling() -> void:
+    print("[Test] Spawning 60 entities (pool size: 50)...")
+    
+    var entities: Array[NewEntity] = []
+    for i in range(60):
+        var entity := EntityFactory.spawn_new_entity(
+            Vector2(i * 10, 100),
+            Vector2.DOWN
+        )
+        if entity != null:
+            entities.append(entity)
+    
+    print("[Test] Successfully spawned: %d (expected: 50)" % entities.size())
+    
+    # Return to pool
+    for entity in entities:
+        entity.return_to_pool()
+    
+    # Re-spawn (should work again)
+    print("[Test] Re-spawning after return...")
+    var entity2 := EntityFactory.spawn_new_entity(Vector2.ZERO, Vector2.DOWN)
+    print("[Test] Re-spawn successful: %s" % (entity2 != null))
+```
+
+**Total Time**: ~60 minutes
+
+---
+
+## Workflow 7: Debug Performance Issue
+
+### Step-by-Step Procedure
+
+#### 1. Reproduce the Issue (10 minutes)
+- Identify exact conditions (stage, wave, boss phase)
+- Note when FPS drops occur
+- Record approximate entity counts
+
+#### 2. Enable Profiler (5 minutes)
+```
+In Godot Editor:
+- Menu > Debug > Profiler
+- Run game in debug mode
+- Navigate to problem area
+- Observe Frame Time, Physics Time, and Process Time
+```
+
+#### 3. Check Entity Counts (10 minutes)
+```gdscript
+# Add temporary debug display:
+func _process(delta: float) -> void:
+    var stats := EntityFactory.get_performance_stats()
+    print("[Debug] Bullets: %d, Enemies: %d, Particles: %d, FPS: %.1f" % [
+        stats.bullets,
+        stats.enemies,
+        stats.particles,
+        Engine.get_frames_per_second()
+    ])
+```
+
+#### 4. Identify Bottleneck (20 minutes)
+Common issues:
+- **Physics Time > 8ms**: Too many physics bodies or collision checks
+- **Process Time > 8ms**: Heavy _process() logic or allocations
+- **Many get_nodes_in_group() calls**: Cache groups instead
+- **Particle systems**: Switch from CPU to GPU particles
+- **Shader complexity**: Simplify per-pixel operations
+
+#### 5. Apply Targeted Fix (varies)
+```gdscript
+# Example: Cache groups instead of repeated lookups
+var _enemy_cache: Array[Enemy] = []
+
+func _ready() -> void:
+    EventBus.enemy_spawned.connect(_on_enemy_spawned)
+    EventBus.enemy_defeated.connect(_on_enemy_defeated)
+
+func _on_enemy_spawned(enemy: Enemy, _template_id: String) -> void:
+    _enemy_cache.append(enemy)
+
+func _on_enemy_defeated(_enemy_id: int, _pos: Vector2, _score: int) -> void:
+    _cache_needs_cleanup = true
+
+func _process(delta: float) -> void:
+    # Clean cache periodically, not every lookup
+    if _cache_needs_cleanup:
+        _enemy_cache = _enemy_cache.filter(func(e): return is_instance_valid(e))
+        _cache_needs_cleanup = false
+```
+
+#### 6. Verify Fix (10 minutes)
+- Re-run profiler in same scenario
+- Confirm FPS is stable at 60
+- Check for regressions in other areas
+
+**Total Time**: ~55 minutes (varies by complexity)
+
+---
+
+## General Workflow Principles
+
+### Before Starting Any Change
+1. Read relevant existing code
+2. Search for similar implementations
+3. Understand the current architecture
+4. Identify integration points (EventBus, EntityFactory, GameState, etc.)
+
+### During Implementation
+1. Make small, incremental changes
+2. Test frequently (after every 10-15 minutes)
+3. Keep console output clean (no errors/warnings)
+4. Use guard clauses and null checks liberally
+
+### After Completion
+1. Run full playtest (at least one complete stage)
+2. Check performance (should maintain 60 FPS)
+3. Review console output for errors/warnings
+4. Update related documentation/configs
+5. Commit with clear, descriptive message
+
+### If Stuck
+1. Search codebase for similar patterns (`grep`, `Ctrl+Shift+F`)
+2. Check `.cursor/rules/` for guidance
+3. Read related manager/system code
+4. Add debug logging to understand behavior
+5. Simplify the problem (minimal reproduction)
+6. Ask for clarification if truly blocked
+
+**These workflows ensure consistent, safe, and repeatable development.**

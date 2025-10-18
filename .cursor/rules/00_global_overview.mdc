@@ -1,38 +1,250 @@
 ---
-
-description: Global overview, goals, and must-follow principles for wipshmup2
-globs: ["**/*"]
-alwaysApply: true
+description: Global overview, goals, and must-follow principles for wipshmup2 - Core architecture and design philosophy
+alwaysApply: false
 ---
-
 # Project Overview
-- Godot 4.5 bullet-hell shmup (320x180) with CRT aesthetics and integer scaling.
-- Event-driven architecture via autoload singletons; enemies are component-based.
-- Data-driven content (templates/configs); performance relies on pooling and safe scene ops.
 
-# High-Level Goals for the AI
-- Prefer minimal, safe edits that fit the current architecture and patterns.
-- Maintain retro visual style and bullet readability at all times.
-- Preserve event-driven decoupling; avoid tight coupling or ad-hoc cross-calls.
-- Default to safe operations and guard-clauses; never crash on nulls or bad data.
+## Technical Specifications
+- **Engine**: Godot 4.5 (GDScript 4.5)
+- **Resolution**: 320x180 native with integer scaling
+- **Genre**: Vertical-scrolling bullet-hell shoot-em-up (danmaku/manic shooter)
+- **Visual Style**: CRT aesthetics with scanlines, phosphor glow, and dithering
+- **Performance Target**: Stable 60 FPS with 500+ simultaneous bullets
 
-# Must-Follow Principles
-- Composition over inheritance for enemies/behaviors.
-- Use signals and `EventBus` for cross-system communication.
-- Use `EntityFactory` for all spawns (player, enemies, bullets) with object pooling.
-- Use `GameState` for centralized player/game state; do not duplicate state.
-- Use Template Managers (`EnemyTemplateManager`, `BossTemplateManager`, `StageTemplateManager`).
-- Use `@export` for inspector-tunable values; keep GDScript types explicit.
-- For scene-tree modifications, prefer `call_deferred()` when needed.
-- Always check `is_instance_valid()` before using nodes; prefer `get_node_or_null()`.
-- Bounds-check arrays; return safe defaults for missing data.
+## Architectural Paradigms
 
-# When Unsure
-- Read the relevant manager/system code; follow its existing patterns.
-- Ask clarifying questions only if blocked; otherwise choose conservative, reversible edits.
+### Event-Driven Architecture
+- **Primary Pattern**: Publish-subscribe via `EventBus` autoload singleton
+- **Rationale**: Decouples systems, prevents circular dependencies, enables testability
+- **Anti-pattern**: Direct method calls between unrelated systems (e.g., `enemy.take_damage()` called from bullet)
+- **Correct pattern**: `EventBus.emit("enemy_hit", enemy_id, damage, position)`
 
-# Do / Don’t
-- Do keep diffs small and targeted; update related docs/configs when behavior changes.
-- Do keep performance in mind (pooling, rate limiters, low allocation per frame).
-- Don’t introduce synchronous heavy loops per frame; cache references and reuse.
-- Don’t bypass factories or managers to “just make it work.”
+### Component-Based Entity Design
+- **Entity Types**: Enemies, bosses, and complex behaviors
+- **Pattern**: Composition over inheritance
+- **Components**: Movement behaviors, attack patterns, health systems, collision handlers
+- **Example**: An enemy = base node + `MovementBehavior` + `AttackBehavior` + `HealthComponent`
+- **Anti-pattern**: Deep inheritance hierarchies (e.g., `Enemy > FlyingEnemy > FastFlyingEnemy`)
+
+### Data-Driven Content
+- **Configuration**: JSON and CFG files in `wipshmup2/config/`
+- **Templates**: Centralized managers (`EnemyTemplateManager`, `BossTemplateManager`, `StageTemplateManager`)
+- **Tunables**: All gameplay values (speeds, HP, bullet counts) in data files, NOT hardcoded
+- **Benefits**: Balance iteration without code changes, easy difficulty scaling
+
+### Object Pooling
+- **System**: `EntityFactory` autoload manages all pools
+- **Pooled Types**: Bullets, enemies, particles, visual effects
+- **Pattern**: Reuse instances by toggling `visible`, `process_mode`, and resetting state
+- **Anti-pattern**: Calling `queue_free()` and `instantiate()` repeatedly in gameplay loops
+- **Performance Impact**: 10x+ reduction in frame time spikes during bullet storms
+
+## High-Level Goals for AI Assistance
+
+### Code Changes Philosophy
+1. **Minimal Diffs**: Change only what's necessary; avoid reformatting unrelated code
+2. **Reversible Edits**: Prefer additive changes; avoid destructive refactors without explicit approval
+3. **Pattern Matching**: Study existing code first; replicate established patterns faithfully
+4. **Safe Defaults**: Always provide fallback values; never crash on missing/malformed data
+5. **Testing Mindset**: Consider edge cases (null nodes, empty arrays, division by zero)
+
+### Visual Integrity
+- **CRT Aesthetic**: Preserve scanline shader, phosphor glow, dithering, integer scaling
+- **Bullet Readability**: All bullet colors must contrast sharply against backgrounds
+- **Performance vs. Beauty**: Readability > visual flair when bullets exceed 300 on-screen
+- **Shader Modifications**: ONLY via exported parameters; do not rewrite shader code
+
+### System Decoupling
+- **Communication**: Signals and EventBus ONLY; no direct cross-system calls
+- **State Management**: Single source of truth via `GameState` autoload
+- **Spawning**: All entity creation via `EntityFactory`; no `PackedScene.instantiate()` in gameplay code
+- **Example Violation**: `player_script.gd` directly calling `boss.enter_phase_2()` ❌
+- **Correct Approach**: `EventBus.emit("boss_phase_trigger", 2)` with boss subscribing ✅
+
+### Safety and Robustness
+- **Null Safety**: ALWAYS use `is_instance_valid()` before node operations
+- **Array Bounds**: Check `array.size()` before accessing indices
+- **Dictionary Keys**: Use `.get(key, default)` instead of direct access `dict[key]`
+- **Async Safety**: Re-validate nodes after `await` (nodes may have been freed during wait)
+- **Signal Safety**: Check `is_connected()` before connecting; disconnect on cleanup
+
+## Must-Follow Principles
+
+### 1. Composition Over Inheritance
+```gdscript
+# ❌ BAD: Deep inheritance hierarchy
+class_name FastZigzagEnemy extends ZigzagEnemy
+
+# ✅ GOOD: Composition with behaviors
+class_name Enemy extends Node2D
+@export var movement_behavior: MovementBehavior
+@export var attack_behavior: AttackBehavior
+```
+
+### 2. Event-Driven Communication
+```gdscript
+# ❌ BAD: Direct coupling
+func _on_enemy_died() -> void:
+    get_node("/root/ScoreManager").add_score(100)
+
+# ✅ GOOD: Decoupled via EventBus
+func _on_enemy_died() -> void:
+    EventBus.emit("enemy_defeated", enemy_id, position, point_value)
+```
+
+### 3. Centralized State via GameState
+```gdscript
+# ❌ BAD: Duplicated state
+var player_lives: int = 3  # in multiple scripts
+
+# ✅ GOOD: Single source of truth
+var lives: int = GameState.get_lives()
+GameState.set_lives(lives - 1)
+```
+
+### 4. Factory Pattern for Spawning
+```gdscript
+# ❌ BAD: Direct instantiation
+var bullet := bullet_scene.instantiate()
+add_child(bullet)
+
+# ✅ GOOD: Pooled factory spawn
+var bullet := EntityFactory.spawn_bullet("player_basic", position, direction)
+```
+
+### 5. Strong Typing with @export
+```gdscript
+# ❌ BAD: Loose typing
+var speed = 100
+@export var behavior
+
+# ✅ GOOD: Explicit types
+var speed: float = 100.0
+@export var behavior: MovementBehavior
+@export var bullet_speed: float = 180.0
+```
+
+### 6. Safe Scene Tree Operations
+```gdscript
+# ❌ BAD: Assumes node exists
+get_node("Player").take_damage(10)
+
+# ✅ GOOD: Null-safe with validation
+var player := get_node_or_null("Player")
+if is_instance_valid(player):
+    player.take_damage(10)
+```
+
+### 7. Deferred Lifecycle Operations
+```gdscript
+# ❌ BAD: Immediate removal during physics
+func _physics_process(delta: float) -> void:
+    if health <= 0:
+        queue_free()  # Can cause crashes mid-frame
+
+# ✅ GOOD: Deferred removal
+func _physics_process(delta: float) -> void:
+    if health <= 0:
+        call_deferred("queue_free")
+```
+
+### 8. Template-Based Entity Configuration
+```gdscript
+# ❌ BAD: Hardcoded enemy stats
+func spawn_enemy() -> void:
+    enemy.health = 50
+    enemy.speed = 80
+    enemy.score = 200
+
+# ✅ GOOD: Template-driven configuration
+func spawn_enemy(template_id: String) -> void:
+    var template := EnemyTemplateManager.get_template(template_id)
+    enemy.apply_template(template)
+```
+
+## When Uncertain
+
+### Decision Hierarchy
+1. **Read First**: Search codebase for similar implementations
+2. **Pattern Match**: Replicate the most common pattern found
+3. **Conservative Choice**: Prefer existing architecture over "better" alternatives
+4. **Guard Clauses**: When in doubt, add safety checks (null checks, bounds checks)
+5. **Ask Only When Blocked**: If truly ambiguous (e.g., conflicting patterns), ask user
+
+### Red Flags (Stop and Ask)
+- ❌ Need to add a new autoload singleton
+- ❌ Need to modify core factory/manager interfaces
+- ❌ Need to rewrite shader code
+- ❌ Need to change `project.godot` autoload registrations
+- ❌ Need to remove existing safety checks or validation logic
+
+## Do / Don't Quick Reference
+
+### DO ✅
+- Keep diffs small (< 50 lines per file when possible)
+- Add guard clauses and null checks liberally
+- Use `call_deferred()` for scene tree modifications during lifecycle methods
+- Cache node references instead of repeated `get_node()` calls
+- Update related documentation when changing behavior
+- Run linters and address warnings
+- Provide safe defaults for missing configuration data
+- Emit events through `EventBus` for cross-system communication
+- Use strong typing with explicit `var name: Type = value` syntax
+- Respect rate limits and maximum bullet counts
+
+### DON'T ❌
+- Bypass `EntityFactory` for "quick" spawns
+- Create direct dependencies between unrelated systems
+- Hardcode gameplay values (use config files/templates)
+- Introduce synchronous heavy loops in `_process()` or `_physics_process()`
+- Assume nodes exist without `is_instance_valid()` checks
+- Swallow errors silently (use `push_error()` for critical issues)
+- Reformat entire files when making targeted changes
+- Add allocations inside per-frame processing loops
+- Use `get_tree().get_nodes_in_group()` in hot paths (cache instead)
+- Modify CRT/bullet readability shaders beyond exported parameters
+
+## Core System Reference
+
+### Autoload Singletons (Order Matters)
+1. **EventBus**: Global event hub (player/enemy/boss/combat/visual/audio events)
+2. **GameState**: Centralized state (lives, bombs, score, continues, rank, chain)
+3. **EntityFactory**: Object pooling and safe spawning (player, enemies, bullets, effects)
+4. **EnemyTemplateManager**: Enemy definitions (types, HP, behaviors, loot)
+5. **BossTemplateManager**: Boss definitions (phases, HP thresholds, patterns)
+6. **StageTemplateManager**: Stage/wave definitions (progression, formation patterns)
+
+### Key Directories
+- `wipshmup2/scripts/autoload/`: Singleton systems
+- `wipshmup2/scripts/core/`: Factories, managers, base classes
+- `wipshmup2/scripts/components/`: Reusable behavior components
+- `wipshmup2/scripts/controllers/`: High-level orchestration (StageController)
+- `wipshmup2/config/`: JSON/CFG data files for tunables
+- `wipshmup2/scenes/`: Scene files organized by entity type
+- `wipshmup2/shaders/`: CRT effects and bullet readability shaders
+
+## Integration Checklist
+
+Before making ANY code changes, verify:
+- [ ] I have read the relevant manager/system code
+- [ ] I understand the existing spawn/event/state flow
+- [ ] My changes follow established patterns in similar code
+- [ ] I am using `EntityFactory` for all spawns
+- [ ] I am emitting events via `EventBus` instead of direct calls
+- [ ] I am reading/writing state via `GameState` only
+- [ ] I have added null checks and safe defaults
+- [ ] I am respecting object pooling (visibility toggle vs free)
+- [ ] I am not modifying protected areas (shaders, autoloads, core interfaces)
+- [ ] I will update related configs/docs if behavior changes
+
+## Success Metrics
+
+A good change:
+- ✅ Compiles without errors or warnings
+- ✅ Follows existing code style and patterns exactly
+- ✅ Maintains 60 FPS during 500+ bullet scenarios
+- ✅ Does not introduce linter warnings
+- ✅ Uses proper typing and null safety throughout
+- ✅ Provides clear error messages via `push_error()` when things go wrong
+- ✅ Can be reverted with a simple `git revert` if needed
+- ✅ Works correctly even with missing/malformed data files

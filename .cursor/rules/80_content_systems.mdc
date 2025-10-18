@@ -1,17 +1,707 @@
 ---
+description: Content systems, data validation, and template management - Comprehensive guide to data-driven gameplay systems
+alwaysApply: false
+---
+# Data-Driven Content Philosophy
 
-description: Data/content rules for templates, stages, and balance
-globs: ["wipshmup2/scripts/**/*.gd", "wipshmup2/config/**/*"]
-alwaysApply: true
+## Core Principle
+**Gameplay logic is generic; specific behavior comes from data.**
+
+This separation allows:
+- Balance changes without code modifications
+- Rapid iteration on enemy/boss designs
+- Easy difficulty scaling
+- Community modding potential
+
 ---
 
-# Templates and Data
-- Enemies/Bosses/Stages are data-driven; keep logic generic and params in data.
-- Use config files (JSON/CFG) for tunables; avoid hardcoding numbers.
+## Enemy Template System
 
-# Balance
-- Respect difficulty scaling and rank pressure system; expose multipliers via config.
-- Keep early-stage difficulty accessible; scale density/speed via rank.
+### Template Structure
+```gdscript
+class_name EnemyTemplate extends Resource
 
-# Serialization Safety
-- Use safe defaults when fields are missing; never crash on bad data.
+@export var template_id: String = ""
+@export var enemy_name: String = "Unknown"
+@export var max_health: int = 10
+@export var score_value: int = 100
+@export var movement_type: String = "straight"
+@export var movement_speed: float = 100.0
+@export var attack_pattern: String = "none"
+@export var attack_cooldown: float = 2.0
+@export var sprite_path: String = ""
+@export var collision_radius: float = 8.0
+@export var item_drop_chance: float = 0.1
+@export var item_drop_types: Array[String] = []
+```
+
+### Validation Rules
+
+#### Required Fields
+```gdscript
+func validate_enemy_template(template: EnemyTemplate) -> bool:
+    var errors: Array[String] = []
+    
+    # template_id is mandatory and unique
+    if template.template_id.is_empty():
+        errors.append("template_id cannot be empty")
+    
+    if template.template_id.contains(" "):
+        errors.append("template_id cannot contain spaces (use underscores)")
+    
+    # enemy_name for display
+    if template.enemy_name.is_empty():
+        errors.append("enemy_name cannot be empty")
+    
+    # Health validation
+    if template.max_health <= 0:
+        errors.append("max_health must be positive (got: %d)" % template.max_health)
+    
+    if template.max_health > 10000:
+        errors.append("max_health suspiciously high (got: %d, expected <10000)" % template.max_health)
+    
+    # Score validation
+    if template.score_value < 0:
+        errors.append("score_value cannot be negative (got: %d)" % template.score_value)
+    
+    # Movement validation
+    if template.movement_type.is_empty():
+        errors.append("movement_type cannot be empty")
+    
+    var valid_movements := ["straight", "zigzag", "circle", "homing", "spiral"]
+    if not template.movement_type in valid_movements:
+        errors.append("Unknown movement_type '%s' (valid: %s)" % [
+            template.movement_type,
+            str(valid_movements)
+        ])
+    
+    if template.movement_speed <= 0.0:
+        errors.append("movement_speed must be positive (got: %.2f)" % template.movement_speed)
+    
+    if template.movement_speed > 500.0:
+        errors.append("movement_speed suspiciously high (got: %.2f, expected <500)" % template.movement_speed)
+    
+    # Attack validation
+    var valid_attacks := ["none", "single_shot", "spread_shot", "aimed_shot", "burst_fire"]
+    if not template.attack_pattern in valid_attacks:
+        errors.append("Unknown attack_pattern '%s' (valid: %s)" % [
+            template.attack_pattern,
+            str(valid_attacks)
+        ])
+    
+    if template.attack_cooldown < 0.5:
+        errors.append("attack_cooldown too low (got: %.2f, min: 0.5)" % template.attack_cooldown)
+    
+    # Collision validation
+    if template.collision_radius <= 0.0:
+        errors.append("collision_radius must be positive (got: %.2f)" % template.collision_radius)
+    
+    if template.collision_radius > 50.0:
+        errors.append("collision_radius suspiciously large (got: %.2f, expected <50)" % template.collision_radius)
+    
+    # Item drop validation
+    if template.item_drop_chance < 0.0 or template.item_drop_chance > 1.0:
+        errors.append("item_drop_chance must be 0.0-1.0 (got: %.2f)" % template.item_drop_chance)
+    
+    # Log errors
+    if not errors.is_empty():
+        push_error("[EnemyTemplate:%s] Validation failed:\n  - %s" % [
+            template.template_id,
+            "\n  - ".join(errors)
+        ])
+        return false
+    
+    return true
+```
+
+#### Safe Defaults
+```gdscript
+func apply_safe_defaults(template: EnemyTemplate) -> EnemyTemplate:
+    var safe := template.duplicate()
+    
+    # Clamp values to safe ranges
+    safe.max_health = clampi(safe.max_health, 1, 10000)
+    safe.score_value = maxi(0, safe.score_value)
+    safe.movement_speed = clampf(safe.movement_speed, 10.0, 500.0)
+    safe.attack_cooldown = maxf(safe.attack_cooldown, 0.5)
+    safe.collision_radius = clampf(safe.collision_radius, 2.0, 50.0)
+    safe.item_drop_chance = clampf(safe.item_drop_chance, 0.0, 1.0)
+    
+    # Provide defaults for empty strings
+    if safe.movement_type.is_empty():
+        safe.movement_type = "straight"
+        push_warning("[EnemyTemplate:%s] movement_type empty, defaulting to 'straight'" % safe.template_id)
+    
+    if safe.attack_pattern.is_empty():
+        safe.attack_pattern = "none"
+    
+    if safe.sprite_path.is_empty():
+        safe.sprite_path = "res://assets/enemies/default.png"
+        push_warning("[EnemyTemplate:%s] sprite_path empty, using default" % safe.template_id)
+    
+    return safe
+```
+
+### JSON Configuration
+
+#### Schema Example
+```json
+{
+    "templates": [
+        {
+            "template_id": "popcorn_01",
+            "enemy_name": "Popcorn Enemy",
+            "max_health": 10,
+            "score_value": 100,
+            "movement_type": "straight",
+            "movement_speed": 100.0,
+            "attack_pattern": "none",
+            "attack_cooldown": 2.0,
+            "sprite_path": "res://assets/enemies/popcorn.png",
+            "collision_radius": 8.0,
+            "item_drop_chance": 0.1,
+            "item_drop_types": ["power", "score"]
+        },
+        {
+            "template_id": "tank_01",
+            "enemy_name": "Tank",
+            "max_health": 80,
+            "score_value": 500,
+            "movement_type": "straight",
+            "movement_speed": 60.0,
+            "attack_pattern": "single_shot",
+            "attack_cooldown": 2.5,
+            "sprite_path": "res://assets/enemies/tank.png",
+            "collision_radius": 16.0,
+            "item_drop_chance": 0.2,
+            "item_drop_types": ["power", "bomb", "score"]
+        }
+    ]
+}
+```
+
+#### Loading and Validation
+```gdscript
+func load_enemy_templates_from_json(file_path: String) -> void:
+    if not FileAccess.file_exists(file_path):
+        push_error("[EnemyTemplateManager] Config file not found: %s" % file_path)
+        _load_default_templates()
+        return
+    
+    var file := FileAccess.open(file_path, FileAccess.READ)
+    if file == null:
+        push_error("[EnemyTemplateManager] Cannot open file: %s" % file_path)
+        _load_default_templates()
+        return
+    
+    var json_text := file.get_as_text()
+    file.close()
+    
+    var json := JSON.new()
+    var parse_result := json.parse(json_text)
+    
+    if parse_result != OK:
+        push_error("[EnemyTemplateManager] JSON parse error in %s: %s" % [
+            file_path,
+            json.get_error_message()
+        ])
+        _load_default_templates()
+        return
+    
+    var data := json.data as Dictionary
+    if not data.has("templates"):
+        push_error("[EnemyTemplateManager] JSON missing 'templates' array")
+        _load_default_templates()
+        return
+    
+    var templates_array := data["templates"] as Array
+    var loaded_count := 0
+    
+    for template_data in templates_array:
+        var template := _create_template_from_dict(template_data)
+        if validate_enemy_template(template):
+            register_template(template)
+            loaded_count += 1
+        else:
+            push_warning("[EnemyTemplateManager] Skipping invalid template: %s" % template.template_id)
+    
+    print("[EnemyTemplateManager] Loaded %d/%d templates from %s" % [
+        loaded_count,
+        templates_array.size(),
+        file_path
+    ])
+```
+
+#### Safe Dictionary Parsing
+```gdscript
+func _create_template_from_dict(data: Dictionary) -> EnemyTemplate:
+    var template := EnemyTemplate.new()
+    
+    # Use .get() with defaults for all fields
+    template.template_id = data.get("template_id", "unknown_%d" % randi())
+    template.enemy_name = data.get("enemy_name", "Unknown Enemy")
+    template.max_health = int(data.get("max_health", 10))
+    template.score_value = int(data.get("score_value", 100))
+    template.movement_type = data.get("movement_type", "straight")
+    template.movement_speed = float(data.get("movement_speed", 100.0))
+    template.attack_pattern = data.get("attack_pattern", "none")
+    template.attack_cooldown = float(data.get("attack_cooldown", 2.0))
+    template.sprite_path = data.get("sprite_path", "res://assets/enemies/default.png")
+    template.collision_radius = float(data.get("collision_radius", 8.0))
+    template.item_drop_chance = float(data.get("item_drop_chance", 0.1))
+    
+    # Array parsing with validation
+    var drop_types := data.get("item_drop_types", [])
+    if drop_types is Array:
+        template.item_drop_types = []
+        for item_type in drop_types:
+            if item_type is String:
+                template.item_drop_types.append(item_type)
+    
+    # Apply safe defaults
+    return apply_safe_defaults(template)
+```
+
+---
+
+## Boss Template System
+
+### Boss Template Structure
+```gdscript
+class_name BossTemplate extends Resource
+
+@export var boss_id: String = ""
+@export var boss_name: String = "Unknown Boss"
+@export var total_health: int = 1000
+@export var warning_duration: float = 3.0
+@export var defeat_score: int = 10000
+@export var sprite_path: String = ""
+@export var music_track: String = ""
+@export var phases: Array[BossPhase] = []
+
+class_name BossPhase extends Resource
+
+@export var phase_number: int = 1
+@export var phase_name: String = "Phase 1"
+@export var health_threshold: float = 1.0  # 1.0 = start, 0.0 = death
+@export var movement_pattern: String = "circle"
+@export var attack_patterns: Array[String] = []
+@export var attack_interval: float = 2.0
+@export var speed_multiplier: float = 1.0
+```
+
+### Validation Rules
+```gdscript
+func validate_boss_template(template: BossTemplate) -> bool:
+    var errors: Array[String] = []
+    
+    # Boss ID validation
+    if template.boss_id.is_empty():
+        errors.append("boss_id cannot be empty")
+    
+    # Health validation
+    if template.total_health <= 0:
+        errors.append("total_health must be positive (got: %d)" % template.total_health)
+    
+    if template.total_health < 1000:
+        errors.append("total_health too low for boss (got: %d, min: 1000)" % template.total_health)
+    
+    # Score validation
+    if template.defeat_score < 0:
+        errors.append("defeat_score cannot be negative")
+    
+    # Warning duration validation
+    if template.warning_duration < 0.0:
+        errors.append("warning_duration cannot be negative")
+    
+    if template.warning_duration > 10.0:
+        errors.append("warning_duration too long (got: %.1f, max: 10.0)" % template.warning_duration)
+    
+    # Phase validation
+    if template.phases.is_empty():
+        errors.append("Boss must have at least one phase")
+    
+    for phase in template.phases:
+        var phase_errors := _validate_boss_phase(phase)
+        errors.append_array(phase_errors)
+    
+    # Phase health threshold ordering
+    if template.phases.size() > 1:
+        var prev_threshold := 1.1  # Start above 1.0
+        for phase in template.phases:
+            if phase.health_threshold >= prev_threshold:
+                errors.append("Phase %d threshold (%.2f) must be less than previous (%.2f)" % [
+                    phase.phase_number,
+                    phase.health_threshold,
+                    prev_threshold
+                ])
+            prev_threshold = phase.health_threshold
+    
+    if not errors.is_empty():
+        push_error("[BossTemplate:%s] Validation failed:\n  - %s" % [
+            template.boss_id,
+            "\n  - ".join(errors)
+        ])
+        return false
+    
+    return true
+
+func _validate_boss_phase(phase: BossPhase) -> Array[String]:
+    var errors: Array[String] = []
+    
+    if phase.phase_number <= 0:
+        errors.append("Phase number must be positive (got: %d)" % phase.phase_number)
+    
+    if phase.phase_name.is_empty():
+        errors.append("Phase %d name cannot be empty" % phase.phase_number)
+    
+    if phase.health_threshold < 0.0 or phase.health_threshold > 1.0:
+        errors.append("Phase %d threshold must be 0.0-1.0 (got: %.2f)" % [
+            phase.phase_number,
+            phase.health_threshold
+        ])
+    
+    if phase.movement_pattern.is_empty():
+        errors.append("Phase %d movement_pattern cannot be empty" % phase.phase_number)
+    
+    if phase.attack_patterns.is_empty():
+        errors.append("Phase %d must have at least one attack pattern" % phase.phase_number)
+    
+    if phase.attack_interval < 0.5:
+        errors.append("Phase %d attack_interval too low (got: %.2f, min: 0.5)" % [
+            phase.phase_number,
+            phase.attack_interval
+        ])
+    
+    if phase.speed_multiplier <= 0.0:
+        errors.append("Phase %d speed_multiplier must be positive (got: %.2f)" % [
+            phase.phase_number,
+            phase.speed_multiplier
+        ])
+    
+    return errors
+```
+
+### Example Boss JSON
+```json
+{
+    "bosses": [
+        {
+            "boss_id": "boss_01_golem",
+            "boss_name": "Stone Golem",
+            "total_health": 3000,
+            "warning_duration": 4.0,
+            "defeat_score": 50000,
+            "sprite_path": "res://assets/bosses/golem.png",
+            "music_track": "boss_theme_01",
+            "phases": [
+                {
+                    "phase_number": 1,
+                    "phase_name": "Awakening",
+                    "health_threshold": 1.0,
+                    "movement_pattern": "circle",
+                    "attack_patterns": ["spread_shot", "aimed_burst"],
+                    "attack_interval": 2.5,
+                    "speed_multiplier": 1.0
+                },
+                {
+                    "phase_number": 2,
+                    "phase_name": "Enraged",
+                    "health_threshold": 0.5,
+                    "movement_pattern": "dash",
+                    "attack_patterns": ["spread_shot", "aimed_burst", "laser_sweep"],
+                    "attack_interval": 1.5,
+                    "speed_multiplier": 1.3
+                }
+            ]
+        }
+    ]
+}
+```
+
+---
+
+## Stage Template System
+
+### Stage Definition Structure
+```gdscript
+class_name StageDefinition extends Resource
+
+@export var stage_number: int = 1
+@export var stage_name: String = "Stage 1"
+@export var background_id: String = "space_01"
+@export var music_track: String = "stage_01"
+@export var scroll_speed: float = 30.0
+@export var boss_id: String = ""  # Empty = no boss
+@export var waves: Array[WaveDefinition] = []
+
+class_name WaveDefinition extends Resource
+
+@export var wave_number: int = 1
+@export var wave_duration: float = 30.0
+@export var spawn_entries: Array[SpawnEntry] = []
+
+class_name SpawnEntry extends Resource
+
+@export var template_id: String = ""
+@export var spawn_time: float = 0.0  # Seconds from wave start
+@export var spawn_position: Vector2 = Vector2.ZERO
+@export var formation: String = "single"
+@export var formation_count: int = 1
+@export var formation_spacing: float = 32.0
+```
+
+### Validation Rules
+```gdscript
+func validate_stage_definition(stage: StageDefinition) -> bool:
+    var errors: Array[String] = []
+    
+    # Stage number validation
+    if stage.stage_number <= 0:
+        errors.append("stage_number must be positive (got: %d)" % stage.stage_number)
+    
+    # Stage name validation
+    if stage.stage_name.is_empty():
+        errors.append("stage_name cannot be empty")
+    
+    # Scroll speed validation
+    if stage.scroll_speed < 0.0:
+        errors.append("scroll_speed cannot be negative (got: %.2f)" % stage.scroll_speed)
+    
+    if stage.scroll_speed > 200.0:
+        errors.append("scroll_speed suspiciously high (got: %.2f, expected <200)" % stage.scroll_speed)
+    
+    # Boss validation
+    if not stage.boss_id.is_empty():
+        if not BossTemplateManager.has_template(stage.boss_id):
+            errors.append("Boss template not found: %s" % stage.boss_id)
+    
+    # Wave validation
+    if stage.waves.is_empty():
+        errors.append("Stage must have at least one wave")
+    
+    for wave in stage.waves:
+        var wave_errors := _validate_wave_definition(wave)
+        errors.append_array(wave_errors)
+    
+    if not errors.is_empty():
+        push_error("[StageDefinition:%d] Validation failed:\n  - %s" % [
+            stage.stage_number,
+            "\n  - ".join(errors)
+        ])
+        return false
+    
+    return true
+
+func _validate_wave_definition(wave: WaveDefinition) -> Array[String]:
+    var errors: Array[String] = []
+    
+    if wave.wave_number <= 0:
+        errors.append("Wave number must be positive")
+    
+    if wave.wave_duration <= 0.0:
+        errors.append("Wave %d duration must be positive" % wave.wave_number)
+    
+    if wave.wave_duration > 300.0:
+        errors.append("Wave %d duration suspiciously long (%.1fs)" % [
+            wave.wave_number,
+            wave.wave_duration
+        ])
+    
+    if wave.spawn_entries.is_empty():
+        errors.append("Wave %d has no spawn entries" % wave.wave_number)
+    
+    for entry in wave.spawn_entries:
+        var entry_errors := _validate_spawn_entry(entry, wave.wave_number)
+        errors.append_array(entry_errors)
+    
+    return errors
+
+func _validate_spawn_entry(entry: SpawnEntry, wave_num: int) -> Array[String]:
+    var errors: Array[String] = []
+    
+    if entry.template_id.is_empty():
+        errors.append("Wave %d: Spawn entry has empty template_id" % wave_num)
+    
+    if not EnemyTemplateManager.has_template(entry.template_id):
+        errors.append("Wave %d: Enemy template not found: %s" % [wave_num, entry.template_id])
+    
+    if entry.spawn_time < 0.0:
+        errors.append("Wave %d: Spawn time cannot be negative (%.2fs)" % [
+            wave_num,
+            entry.spawn_time
+        ])
+    
+    # Formation validation
+    var valid_formations := ["single", "line", "v_formation", "circle", "grid"]
+    if not entry.formation in valid_formations:
+        errors.append("Wave %d: Unknown formation '%s' (valid: %s)" % [
+            wave_num,
+            entry.formation,
+            str(valid_formations)
+        ])
+    
+    if entry.formation_count <= 0:
+        errors.append("Wave %d: formation_count must be positive (got: %d)" % [
+            wave_num,
+            entry.formation_count
+        ])
+    
+    if entry.formation_count > 50:
+        errors.append("Wave %d: formation_count suspiciously high (%d, expected <50)" % [
+            wave_num,
+            entry.formation_count
+        ])
+    
+    return errors
+```
+
+---
+
+## Difficulty Scaling System
+
+### Rank Pressure Configuration
+```ini
+; File: wipshmup2/config/difficulty.cfg
+
+[rank_system]
+time_pressure_per_second = 0.01  ; Rank increase per second
+power_pressure_per_level = 0.5   ; Rank increase per power level
+death_penalty = -0.5             ; Rank decrease on death
+min_rank = 0.0
+max_rank = 10.0
+
+[difficulty_scaling]
+enemy_health_per_rank = 1.1      ; Multiplier per rank point
+enemy_speed_per_rank = 1.05      ; Multiplier per rank point
+bullet_speed_per_rank = 1.03     ; Multiplier per rank point
+spawn_rate_per_rank = 1.08       ; Multiplier per rank point
+```
+
+### Loading and Validation
+```gdscript
+func load_difficulty_config(file_path: String) -> Dictionary:
+    var config := ConfigFile.new()
+    var err := config.load(file_path)
+    
+    if err != OK:
+        push_error("[DifficultyManager] Cannot load config: %s (error: %d)" % [file_path, err])
+        return _get_default_difficulty_config()
+    
+    var difficulty_config := {
+        "time_pressure": config.get_value("rank_system", "time_pressure_per_second", 0.01),
+        "power_pressure": config.get_value("rank_system", "power_pressure_per_level", 0.5),
+        "death_penalty": config.get_value("rank_system", "death_penalty", -0.5),
+        "min_rank": config.get_value("rank_system", "min_rank", 0.0),
+        "max_rank": config.get_value("rank_system", "max_rank", 10.0),
+        "health_scaling": config.get_value("difficulty_scaling", "enemy_health_per_rank", 1.1),
+        "speed_scaling": config.get_value("difficulty_scaling", "enemy_speed_per_rank", 1.05),
+        "bullet_scaling": config.get_value("difficulty_scaling", "bullet_speed_per_rank", 1.03),
+        "spawn_scaling": config.get_value("difficulty_scaling", "spawn_rate_per_rank", 1.08),
+    }
+    
+    # Validate ranges
+    difficulty_config = _validate_difficulty_config(difficulty_config)
+    return difficulty_config
+
+func _validate_difficulty_config(config: Dictionary) -> Dictionary:
+    # Clamp to safe ranges
+    config["time_pressure"] = clampf(config["time_pressure"], 0.0, 0.1)
+    config["power_pressure"] = clampf(config["power_pressure"], 0.0, 2.0)
+    config["death_penalty"] = clampf(config["death_penalty"], -2.0, 0.0)
+    config["min_rank"] = clampf(config["min_rank"], 0.0, 5.0)
+    config["max_rank"] = clampf(config["max_rank"], config["min_rank"], 20.0)
+    config["health_scaling"] = clampf(config["health_scaling"], 1.0, 2.0)
+    config["speed_scaling"] = clampf(config["speed_scaling"], 1.0, 2.0)
+    config["bullet_scaling"] = clampf(config["bullet_scaling"], 1.0, 2.0)
+    config["spawn_scaling"] = clampf(config["spawn_scaling"], 1.0, 3.0)
+    
+    return config
+```
+
+---
+
+## Serialization Safety
+
+### General Principles
+1. **Always provide defaults** for missing fields
+2. **Validate and clamp** all numeric values
+3. **Check types** before casting
+4. **Log warnings** for malformed data
+5. **Never crash** on bad data
+
+### Safe Dictionary Access Pattern
+```gdscript
+# ✅ GOOD: Safe access with defaults
+func parse_config(data: Dictionary) -> ConfigData:
+    var config := ConfigData.new()
+    
+    config.setting_1 = data.get("setting_1", DEFAULT_SETTING_1)
+    config.setting_2 = int(data.get("setting_2", DEFAULT_SETTING_2))
+    config.setting_3 = float(data.get("setting_3", DEFAULT_SETTING_3))
+    
+    # Array with type checking
+    var array_data := data.get("items", [])
+    if array_data is Array:
+        for item in array_data:
+            if item is String:
+                config.items.append(item)
+    
+    return config
+
+# ❌ BAD: Direct access (crashes on missing keys)
+func parse_config(data: Dictionary) -> ConfigData:
+    var config := ConfigData.new()
+    config.setting_1 = data["setting_1"]  # CRASH if missing!
+    config.setting_2 = data["setting_2"]
+    return config
+```
+
+---
+
+## Content Update Workflow
+
+### Adding New Enemy Type (Content-Only)
+1. Edit `wipshmup2/config/enemies.json`
+2. Add new template entry
+3. Validate JSON syntax
+4. Test in-game
+5. No code changes required!
+
+### Modifying Balance
+1. Edit relevant config file
+2. Document change reasoning in comments or commit message
+3. Playtest the change
+4. Iterate as needed
+
+### Versioning Content
+```json
+{
+    "version": "1.2.0",
+    "last_updated": "2025-10-18",
+    "templates": [
+        // ...
+    ]
+}
+```
+
+---
+
+## Content System Checklist
+
+When working with content systems:
+- [ ] All required fields have safe defaults
+- [ ] All numeric values are clamped to safe ranges
+- [ ] All string fields are checked for empty/null
+- [ ] All arrays are type-checked before iteration
+- [ ] Missing templates fall back to default template
+- [ ] Validation errors are logged with context
+- [ ] Invalid data never crashes the game
+- [ ] Config files are valid JSON/CFG format
+- [ ] Changes are tested in-game before committing
+
+---
+
+## Summary
+
+Data-driven content allows rapid iteration without code changes. Always validate input data, provide safe defaults, and never crash on malformed data. The game should gracefully degrade and log warnings when content is missing or invalid.

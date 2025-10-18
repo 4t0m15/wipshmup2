@@ -1,16 +1,501 @@
 ---
+description: Protected areas, sensitive files, and change control policies - Critical guidelines for maintaining system stability
+alwaysApply: false
+---
+# Protected Areas and Change Policy
 
-description: Sensitive/protected areas and change policy
-globs: ["**/*"]
-alwaysApply: true
+## Philosophy
+
+Certain parts of the codebase are **PROTECTED** because changes can have cascading effects, break core systems, or compromise performance. This file documents these protected areas and the strict policies for modifying them.
+
+## Level 1: CRITICAL - Never Modify Without Explicit Approval
+
+### CRT and Bullet Readability Shaders
+
+#### Protected Files
+- `wipshmup2/shaders/crt_effect.gdshader`
+- `wipshmup2/shaders/bullet_glow.gdshader`
+- `wipshmup2/shaders/dithering.gdshader`
+- `wipshmup2/shaders/phosphor_persistence.gdshader`
+
+#### Why Protected
+- Carefully tuned for 320x180 resolution and integer scaling
+- CRT aesthetic is core to the game's visual identity
+- Bullet readability is CRITICAL for gameplay (players must see bullets clearly)
+- Shader bugs can cause performance drops or visual glitches
+
+#### Allowed Modifications
+```gdscript
+# ✅ ALLOWED: Adjust via exported parameters ONLY
+@export_range(0.0, 1.0, 0.01) var scanline_strength: float = 0.5:
+    set(value):
+        scanline_strength = value
+        if is_instance_valid(_crt_material):
+            _crt_material.set_shader_parameter("scanline_strength", scanline_strength)
+
+# ✅ ALLOWED: Add new shader parameters with defaults
+uniform float new_effect_strength : hint_range(0.0, 1.0) = 0.3;
+
+# ❌ FORBIDDEN: Rewrite shader logic
+// DON'T change the core CRT algorithm
+// DON'T modify bullet glow calculations
+// DON'T alter dithering patterns
+```
+
+#### Change Request Process
+1. Describe the visual issue or desired effect
+2. Provide screenshots/video showing the problem
+3. Wait for approval from project lead
+4. Test extensively with 500+ bullets on screen
+5. Validate across all background variants
+6. Ensure 60 FPS is maintained
+
 ---
 
-# Protected Areas (Think Twice Before Editing)
-- CRT and dithering shaders: keep retro look; tune via params, not rewrites.
-- Autoload registrations in `project.godot`: add new cautiously; prefer existing systems.
-- Core factories/managers: extend rather than fork; keep interfaces stable.
+### Autoload Singleton Registrations
 
-# Change Policy
-- Prefer small, reversible edits.
-- When changing behavior, update docs/configs and run lints.
-- Do not bypass pooling/spawn systems for quick fixes.
+#### Protected File
+- `wipshmup2/project.godot` (Autoload section)
+
+#### Current Autoload Order (DO NOT CHANGE)
+```ini
+[autoload]
+
+EventBus="*res://scripts/autoload/event_bus.gd"
+GameState="*res://scripts/autoload/game_state.gd"
+EntityFactory="*res://scripts/core/entity_factory.gd"
+EnemyTemplateManager="*res://scripts/core/enemy_template_manager.gd"
+BossTemplateManager="*res://scripts/core/boss_template_manager.gd"
+StageTemplateManager="*res://scripts/core/stage_template_manager.gd"
+```
+
+#### Why Protected
+- Load order determines dependency resolution
+- Changing order can break initialization logic
+- Other systems rely on these autoloads being available early
+- Adding autoloads carelessly creates global state pollution
+
+#### Rules for Adding New Autoloads
+```gdscript
+# ❌ DON'T add autoloads for:
+- Utility functions (use static classes instead)
+- Single-use managers (use composition)
+- Debug/development tools (use editor plugins)
+- Temporary systems (use regular nodes)
+
+# ✅ DO add autoloads ONLY for:
+- True global singletons needed everywhere
+- Cross-cutting concerns (audio, input, etc.)
+- Systems that must persist across scene changes
+
+# ✅ IF adding is justified:
+1. Add at END of autoload list (don't reorder)
+2. Document dependencies clearly
+3. Ensure no circular dependencies
+4. Provide safe defaults if dependencies missing
+```
+
+#### Example: Adding an AudioManager (Acceptable)
+```gdscript
+# 1. Create the manager with safe defaults
+# File: wipshmup2/scripts/autoload/audio_manager.gd
+extends Node
+
+func _ready() -> void:
+    # Don't depend on other autoloads in _ready()
+    call_deferred("_late_init")
+
+func _late_init() -> void:
+    # Safe to use other autoloads now
+    EventBus.music_change_requested.connect(_on_music_change_requested)
+
+# 2. Add to project.godot at END
+[autoload]
+# ... existing autoloads ...
+AudioManager="*res://scripts/autoload/audio_manager.gd"  # New: Added 2025-10-18
+```
+
+---
+
+### Core Factory and Manager Interfaces
+
+#### Protected Files
+- `wipshmup2/scripts/core/entity_factory.gd`
+- `wipshmup2/scripts/autoload/event_bus.gd`
+- `wipshmup2/scripts/autoload/game_state.gd`
+- `wipshmup2/scripts/core/enemy_template_manager.gd`
+- `wipshmup2/scripts/core/boss_template_manager.gd`
+- `wipshmup2/scripts/core/stage_template_manager.gd`
+
+#### Why Protected
+- Public interfaces are used throughout the codebase
+- Changing signatures breaks many call sites
+- Performance-critical code (profiled and optimized)
+- Pooling logic is fragile and easy to break
+
+#### Rules for Modifications
+
+##### Adding New Methods (Allowed)
+```gdscript
+# ✅ GOOD: Add new methods without breaking existing API
+func spawn_bullet_with_callback(
+    bullet_type: String,
+    position: Vector2,
+    direction: Vector2,
+    on_hit_callback: Callable
+) -> Bullet:
+    var bullet := spawn_bullet(bullet_type, position, direction)
+    if bullet != null:
+        bullet.on_hit = on_hit_callback
+    return bullet
+```
+
+##### Changing Existing Methods (Requires Approval)
+```gdscript
+# ⚠️ DANGEROUS: Changing signature breaks all callers
+# OLD:
+func spawn_bullet(bullet_type: String, position: Vector2, direction: Vector2) -> Bullet:
+    pass
+
+# NEW (BAD):
+func spawn_bullet(bullet_type: String, position: Vector2, direction: Vector2, speed: float) -> Bullet:
+    pass  # Breaks 50+ call sites!
+
+# ✅ BETTER: Add overload or optional parameter
+func spawn_bullet(
+    bullet_type: String,
+    position: Vector2,
+    direction: Vector2,
+    speed: float = -1.0  # Optional, -1.0 means use template default
+) -> Bullet:
+    pass
+```
+
+##### Internal Implementation Changes (Allowed with Testing)
+```gdscript
+# ✅ ALLOWED: Change internal logic as long as API is unchanged
+func spawn_bullet(bullet_type: String, position: Vector2, direction: Vector2) -> Bullet:
+    # Old implementation:
+    # return _pool_manager.acquire(bullet_type)
+    
+    # New implementation (better rate limiting):
+    if not _rate_limiter.can_spawn():
+        return null
+    return _pool_manager.acquire(bullet_type)
+```
+
+##### Removing Methods (Forbidden Without Migration Period)
+```gdscript
+# ❌ NEVER do this:
+# func old_spawn_method() -> void:
+#     pass  # Deleted!
+
+# ✅ INSTEAD: Deprecate first, remove later
+func old_spawn_method() -> void:
+    push_warning("[EntityFactory] old_spawn_method() is deprecated, use spawn_bullet() instead")
+    # Forward to new method
+    return spawn_bullet("default", Vector2.ZERO, Vector2.DOWN)
+```
+
+---
+
+## Level 2: SENSITIVE - Modify with Caution
+
+### Object Pooling Implementation
+
+#### Sensitive Areas
+- `EntityFactory` pool acquisition/release logic
+- `reset_for_pool()` implementations in pooled entities
+- Pool size configurations
+
+#### Common Mistakes
+```gdscript
+# ❌ BAD: Incomplete reset leaves stale state
+func reset_for_pool() -> void:
+    position = Vector2.ZERO
+    # Forgot to disconnect signals!
+    # Forgot to reset velocity!
+    # Forgot to clear references!
+
+# ❌ BAD: Resetting too much (overhead)
+func reset_for_pool() -> void:
+    # Don't recreate nodes/resources
+    $Sprite2D.queue_free()  # DON'T DO THIS
+    var new_sprite := Sprite2D.new()
+    add_child(new_sprite)
+
+# ✅ GOOD: Complete, efficient reset
+func reset_for_pool() -> void:
+    # Disconnect signals
+    for connection in get_incoming_connections():
+        var sig: Signal = connection.signal
+        if sig.is_connected(connection.callable):
+            sig.disconnect(connection.callable)
+    
+    # Reset state
+    global_position = Vector2.ZERO
+    velocity = Vector2.ZERO
+    health = max_health
+    
+    # Clear references
+    target_node = null
+    
+    # Reset visual (reuse existing sprite)
+    $Sprite2D.modulate = Color.WHITE
+    visible = false
+```
+
+#### Testing Checklist for Pool Changes
+- [ ] Spawn 100+ entities rapidly
+- [ ] Verify all return to pool correctly
+- [ ] No errors in output console
+- [ ] No memory leaks (check with profiler)
+- [ ] Entities reactivate correctly after pooling
+- [ ] No stale state (old velocity, targets, etc.)
+
+---
+
+### Event System Architecture
+
+#### Sensitive Areas
+- Adding new signals to `EventBus`
+- Changing signal parameter types
+- Removing signals
+
+#### Rules for EventBus Signals
+
+##### Adding New Signals (Allowed with Documentation)
+```gdscript
+# ✅ GOOD: Add with clear documentation and types
+## Emitted when the player activates their shield ability.
+## @param shield_duration: How long the shield lasts in seconds
+## @param shield_strength: Damage absorption capacity
+signal player_shield_activated(shield_duration: float, shield_strength: int)
+```
+
+##### Changing Signal Parameters (Requires Migration)
+```gdscript
+# ⚠️ BREAKING CHANGE: Requires updating all listeners
+# OLD:
+signal enemy_defeated(enemy_id: int, position: Vector2)
+
+# NEW:
+signal enemy_defeated(enemy_id: int, position: Vector2, score: int)
+
+# ✅ MIGRATION STRATEGY:
+# 1. Add new signal with different name
+signal enemy_defeated_v2(enemy_id: int, position: Vector2, score: int)
+
+# 2. Emit both during transition period
+func _on_enemy_death() -> void:
+    enemy_defeated.emit(id, pos)  # Old (deprecated)
+    enemy_defeated_v2.emit(id, pos, score)  # New
+
+# 3. Update all listeners to use v2
+# 4. After all migrations, remove old signal
+```
+
+##### Removing Signals (Forbidden Without Deprecation Period)
+```gdscript
+# ❌ DON'T just delete
+# signal old_signal()
+
+# ✅ DO deprecate first
+signal old_signal()  # DEPRECATED: Use new_signal() instead
+
+func _emit_old_signal() -> void:
+    push_warning("[EventBus] old_signal is deprecated, use new_signal")
+    old_signal.emit()
+```
+
+---
+
+### Performance-Critical Code
+
+#### Sensitive Areas
+- `_physics_process()` and `_process()` in managers
+- Collision detection logic
+- Bullet update loops
+- Particle system updates
+
+#### Rules
+1. **No Allocations**: Don't create new objects/arrays/dictionaries in hot paths
+2. **Cache Everything**: Node references, calculations, lookups
+3. **Profile Before and After**: Use Godot profiler to validate changes
+4. **Test Under Load**: Always test with 500+ bullets
+
+```gdscript
+# ❌ BAD: Allocations in _process
+func _process(delta: float) -> void:
+    var enemies = get_tree().get_nodes_in_group("enemies")  # Tree traversal!
+    for enemy in enemies:
+        var direction = (enemy.position - position).normalized()  # Vector allocation!
+
+# ✅ GOOD: Cached and reused
+var _enemy_cache: Array[Enemy] = []
+var _direction: Vector2 = Vector2.ZERO
+
+func _process(delta: float) -> void:
+    for enemy in _enemy_cache:
+        if not is_instance_valid(enemy):
+            continue
+        _direction = (enemy.global_position - global_position).normalized()
+```
+
+---
+
+## Level 3: STANDARD - Follow Normal Change Process
+
+### Game Balance Configuration
+
+#### Configuration Files
+- `wipshmup2/config/enemies.json`
+- `wipshmup2/config/bosses.json`
+- `wipshmup2/config/stages.json`
+- `wipshmup2/config/difficulty.cfg`
+- `wipshmup2/config/game_balance.cfg`
+
+#### Guidelines
+- Always validate JSON syntax before committing
+- Test balance changes through actual gameplay
+- Document reasoning for significant balance changes
+- Keep backups of previous balance values
+
+```json
+// ✅ GOOD: Documented balance change
+{
+    "template_id": "tank_01",
+    "max_health": 80,  // Increased from 50 (2025-10-18: Too fragile at higher ranks)
+    "score_value": 500,
+    "movement_speed": 60.0  // Decreased from 80.0 (Too fast for casual players)
+}
+```
+
+---
+
+### UI and HUD
+
+#### Guidelines
+- Maintain CRT aesthetic (pixelated fonts, limited colors)
+- Keep UI elements non-intrusive (no blocking critical play area)
+- Test at 320x180 resolution (elements must be readable)
+- Respect integer scaling (no sub-pixel positioning)
+
+```gdscript
+# ✅ GOOD: Integer positioning for pixel-perfect rendering
+$ScoreLabel.position = Vector2(
+    floori($ScoreLabel.position.x),
+    floori($ScoreLabel.position.y)
+)
+```
+
+---
+
+## Change Control Process
+
+### For CRITICAL Changes (Level 1)
+1. **Proposal**: Document the change and rationale
+2. **Approval**: Get explicit approval from project lead
+3. **Branch**: Create a separate feature branch
+4. **Implement**: Make changes with extensive safety checks
+5. **Test**: Thorough testing (see specific area checklists)
+6. **Review**: Code review before merging
+7. **Monitor**: Watch for issues after deployment
+
+### For SENSITIVE Changes (Level 2)
+1. **Research**: Study existing code and patterns
+2. **Plan**: Outline the change approach
+3. **Implement**: Follow safety guidelines
+4. **Test**: Performance and functional testing
+5. **Review**: Self-review before committing
+6. **Commit**: Clear commit message with reasoning
+
+### For STANDARD Changes (Level 3)
+1. **Implement**: Make the change
+2. **Test**: Basic functional testing
+3. **Commit**: Commit with clear message
+
+---
+
+## Rollback Procedures
+
+### If a Change Breaks the Game
+```bash
+# 1. Immediate rollback via git
+git revert <commit-hash>
+
+# 2. For multiple commits
+git revert <start-commit>..<end-commit>
+
+# 3. For uncommitted changes
+git checkout -- <file>
+```
+
+### If a Change Causes Performance Regression
+1. Use `git bisect` to find the offending commit
+2. Analyze with profiler to confirm
+3. Revert the specific change
+4. Re-implement with performance in mind
+
+---
+
+## Protected File Summary
+
+### NEVER MODIFY (without explicit approval)
+- `wipshmup2/shaders/*.gdshader` (CRT/readability shaders)
+- `wipshmup2/project.godot` (autoload order)
+
+### MODIFY WITH EXTREME CAUTION
+- `wipshmup2/scripts/core/entity_factory.gd` (pooling system)
+- `wipshmup2/scripts/autoload/event_bus.gd` (event system)
+- `wipshmup2/scripts/autoload/game_state.gd` (state management)
+- All `reset_for_pool()` implementations
+
+### MODIFY WITH TESTING
+- `wipshmup2/config/*.json` (game balance)
+- `wipshmup2/scripts/controllers/stage_controller.gd` (stage flow)
+- `_process()` and `_physics_process()` in managers
+
+---
+
+## Red Flags - Stop and Ask
+
+If you're about to:
+- ❌ Rewrite a shader
+- ❌ Change autoload order
+- ❌ Modify EntityFactory public API
+- ❌ Change EventBus signal signatures
+- ❌ Remove safety checks "because they're redundant"
+- ❌ "Refactor" pooling logic "to be cleaner"
+- ❌ Add a new autoload singleton
+- ❌ Change core manager interfaces
+
+**STOP. Ask for guidance first.**
+
+---
+
+## Change Philosophy
+
+> "The codebase works. Changes should be reversible, minimal, and well-tested. When in doubt, prefer extending over modifying, adding over removing, and safety over cleverness."
+
+### Principles
+1. **Stability > Features**: Working game > cool new feature
+2. **Reversibility**: Always have a rollback plan
+3. **Incrementalism**: Small changes, test often
+4. **Safety**: Add guards, don't remove them
+5. **Documentation**: Explain WHY, not just WHAT
+
+---
+
+## Checklist: Before Modifying Protected Code
+
+- [ ] I have read this document thoroughly
+- [ ] I understand why this code is protected
+- [ ] I have explicit approval (if Level 1)
+- [ ] I have a rollback plan
+- [ ] I have written tests or a test procedure
+- [ ] I have profiled performance impact (if applicable)
+- [ ] I have documented the change rationale
+- [ ] I am confident this won't break existing functionality
+
+If any checkbox is unchecked, reconsider the change or seek guidance.

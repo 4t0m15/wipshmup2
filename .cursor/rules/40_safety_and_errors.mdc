@@ -1,17 +1,652 @@
 ---
-
-description: Safety patterns and error handling
-globs: ["wipshmup2/scripts/**/*.gd"]
+description: Safety patterns, error handling, and defensive programming - Comprehensive guide to robust code
+globs:
+  - "wipshmup2/scripts/**/*.gd"
 alwaysApply: true
 ---
 
-# Safety Patterns
-- Always check `is_instance_valid()` before using nodes.
-- Bounds-check arrays; use safe getters and defaults for dictionaries.
-- Validate signals exist before connecting; guard duplicate connections.
-- For async waits, re-check validity after `await`.
+# Safety-First Philosophy
 
-# Error Handling
-- Use `push_error()` for critical faults.
-- Prefer safe defaults over stopping the game loop.
-- When recovery is possible, do so silently; log with a clear prefix (e.g., `[StageController]`).
+## Core Principle
+**NEVER CRASH**. In a bullet-hell game, a crash means the player loses their progress. Always provide safe defaults, validate inputs, and handle errors gracefully.
+
+## Null Safety and Node Validation
+
+### is_instance_valid() - The Golden Rule
+```gdscript
+# ✅ GOOD: Always validate before using nodes
+func attack_target() -> void:
+    if not is_instance_valid(target_node):
+        push_error("[Enemy] Target node is invalid, aborting attack")
+        return
+    
+    var bullet := EntityFactory.spawn_bullet("enemy_basic", global_position, _calculate_direction())
+    if bullet != null:
+        bullet.target = target_node
+
+# ❌ BAD: Assume node exists
+func attack_target() -> void:
+    var bullet := EntityFactory.spawn_bullet("enemy_basic", global_position, _calculate_direction())
+    bullet.target = target_node  # CRASH if target_node was freed!
+```
+
+### get_node_or_null() Over get_node()
+```gdscript
+# ✅ GOOD: Safe node retrieval
+func find_player() -> Player:
+    var player := get_node_or_null("/root/Main/Player") as Player
+    if player == null:
+        push_error("[EnemyAI] Player node not found at expected path")
+        return null
+    return player
+
+# ✅ GOOD: Safe child node access
+func get_sprite() -> Sprite2D:
+    var sprite := get_node_or_null("Sprite2D") as Sprite2D
+    if sprite == null:
+        push_error("[%s] Sprite2D child not found" % name)
+    return sprite
+
+# ❌ BAD: Direct get_node() crashes if missing
+func find_player() -> Player:
+    return get_node("/root/Main/Player") as Player  # CRASH if path changed!
+```
+
+### Cached References with Validation
+```gdscript
+# ✅ GOOD: Lazy-loaded cached reference with validation
+var _cached_player: Player = null
+
+func get_player() -> Player:
+    # Re-validate cached reference
+    if not is_instance_valid(_cached_player):
+        _cached_player = get_tree().get_first_node_in_group("player") as Player
+        if _cached_player == null:
+            # Player doesn't exist yet or was removed
+            return null
+    return _cached_player
+
+func _physics_process(delta: float) -> void:
+    var player := get_player()
+    if player == null:
+        # No player - idle behavior
+        return
+    
+    # Safe to use player here
+    _pursue_target(player.global_position)
+
+# ❌ BAD: Cache once, never re-validate
+var _cached_player: Player = null
+
+func _ready() -> void:
+    _cached_player = get_node("/root/Main/Player") as Player
+
+func _physics_process(delta: float) -> void:
+    # CRASH if player died and was removed!
+    var dir := (_cached_player.position - position).normalized()
+```
+
+### Weak References (Advanced)
+```gdscript
+# ✅ GOOD: Use WeakRef for optional references
+var _target_weakref: WeakRef = null
+
+func set_target(target: Node) -> void:
+    _target_weakref = weakref(target)
+
+func get_target() -> Node:
+    if _target_weakref == null:
+        return null
+    var target := _target_weakref.get_ref()
+    if not is_instance_valid(target):
+        _target_weakref = null
+        return null
+    return target
+```
+
+## Array and Collection Safety
+
+### Bounds Checking
+```gdscript
+# ✅ GOOD: Always check array size before access
+func get_enemy_at_index(index: int) -> Enemy:
+    if index < 0 or index >= _enemies.size():
+        push_error("[EnemyManager] Index %d out of bounds (size: %d)" % [index, _enemies.size()])
+        return null
+    return _enemies[index]
+
+# ✅ GOOD: Safe iteration with size check
+func update_all_enemies(delta: float) -> void:
+    if _enemies.is_empty():
+        return
+    
+    # Iterate backwards for safe removal
+    for i in range(_enemies.size() - 1, -1, -1):
+        var enemy := _enemies[i]
+        if is_instance_valid(enemy):
+            enemy.update_logic(delta)
+        else:
+            _enemies.remove_at(i)
+
+# ❌ BAD: No bounds checking
+func get_enemy(index: int) -> Enemy:
+    return _enemies[index]  # CRASH if index >= size!
+```
+
+### Safe Dictionary Access
+```gdscript
+# ✅ GOOD: Use .get() with defaults
+func get_enemy_health(enemy_id: int) -> int:
+    return _health_map.get(enemy_id, 0)  # Returns 0 if key missing
+
+func get_template(template_id: String) -> EnemyTemplate:
+    var template := _templates.get(template_id, null)
+    if template == null:
+        push_error("[TemplateManager] Template '%s' not found, using default" % template_id)
+        return _default_template
+    return template
+
+# ✅ GOOD: Check .has() before access
+func apply_damage(enemy_id: int, damage: int) -> void:
+    if not _health_map.has(enemy_id):
+        push_warning("[CombatSystem] Enemy %d not in health map, ignoring damage" % enemy_id)
+        return
+    
+    _health_map[enemy_id] = maxi(0, _health_map[enemy_id] - damage)
+
+# ❌ BAD: Direct access crashes on missing key
+func get_enemy_health(enemy_id: int) -> int:
+    return _health_map[enemy_id]  # CRASH if enemy_id not in map!
+```
+
+### Typed Collections with Validation
+```gdscript
+# ✅ GOOD: Type-safe collection with validation
+var _active_bullets: Array[Bullet] = []
+
+func add_bullet(bullet: Variant) -> void:
+    if not bullet is Bullet:
+        push_error("[BulletManager] Attempted to add non-Bullet object: %s" % str(bullet))
+        return
+    
+    if not is_instance_valid(bullet):
+        push_error("[BulletManager] Attempted to add invalid Bullet")
+        return
+    
+    _active_bullets.append(bullet as Bullet)
+
+# ✅ GOOD: Filter invalid entries during iteration
+func cleanup_invalid_bullets() -> void:
+    _active_bullets = _active_bullets.filter(func(b): return is_instance_valid(b))
+```
+
+## Signal Safety
+
+### Connection Validation
+```gdscript
+# ✅ GOOD: Check if already connected before connecting
+func _ready() -> void:
+    if not EventBus.player_died.is_connected(_on_player_died):
+        EventBus.player_died.connect(_on_player_died)
+    
+    if is_instance_valid(enemy) and not enemy.health_changed.is_connected(_on_enemy_health_changed):
+        enemy.health_changed.connect(_on_enemy_health_changed)
+
+# ❌ BAD: Double connection creates duplicate calls
+func _ready() -> void:
+    EventBus.player_died.connect(_on_player_died)
+    # If _ready() called twice (e.g. scene reload), signal connected twice!
+```
+
+### Disconnection Safety
+```gdscript
+# ✅ GOOD: Safe disconnection with validation
+func _exit_tree() -> void:
+    if EventBus.player_died.is_connected(_on_player_died):
+        EventBus.player_died.disconnect(_on_player_died)
+    
+    if is_instance_valid(_target_enemy):
+        if _target_enemy.defeated.is_connected(_on_enemy_defeated):
+            _target_enemy.defeated.disconnect(_on_enemy_defeated)
+
+# ✅ GOOD: Disconnect all incoming connections
+func disconnect_all_signals() -> void:
+    for connection in get_incoming_connections():
+        var sig: Signal = connection.signal
+        if sig.is_connected(connection.callable):
+            sig.disconnect(connection.callable)
+
+# ❌ BAD: Disconnect without checking
+func _exit_tree() -> void:
+    EventBus.player_died.disconnect(_on_player_died)  # Error if not connected!
+```
+
+### Signal Handlers with Validation
+```gdscript
+# ✅ GOOD: Validate signal parameters
+func _on_enemy_defeated(enemy_id: int, position: Vector2, score: int) -> void:
+    if enemy_id < 0:
+        push_error("[ScoreSystem] Invalid enemy_id: %d" % enemy_id)
+        return
+    
+    if score < 0:
+        push_warning("[ScoreSystem] Negative score value: %d, clamping to 0" % score)
+        score = 0
+    
+    GameState.add_score(score)
+    _spawn_score_popup(position, score)
+
+# ❌ BAD: Assume parameters are valid
+func _on_enemy_defeated(enemy_id: int, position: Vector2, score: int) -> void:
+    GameState.add_score(score)  # What if score is -999999?
+```
+
+## Await Safety (Critical)
+
+### Re-validate After Await
+```gdscript
+# ✅ GOOD: Re-check validity after every await
+func delayed_attack() -> void:
+    await get_tree().create_timer(2.0).timeout
+    
+    # Node might have been freed during wait!
+    if not is_instance_valid(self):
+        return
+    
+    if not is_instance_valid(target):
+        push_warning("[Enemy] Target became invalid during attack delay")
+        return
+    
+    _fire_bullet_at_target()
+
+# ✅ GOOD: Multiple await points, validate each
+func boss_intro_sequence() -> void:
+    EventBus.boss_warning.emit(boss_id, 3.0)
+    await get_tree().create_timer(3.0).timeout
+    
+    if not is_instance_valid(self):
+        return
+    
+    _enter_phase_1()
+    await _phase_1_pattern_complete
+    
+    if not is_instance_valid(self):
+        return
+    
+    _enter_phase_2()
+
+# ❌ BAD: Assume node still exists after await
+func delayed_attack() -> void:
+    await get_tree().create_timer(2.0).timeout
+    _fire_bullet_at_target()  # CRASH if freed during wait!
+```
+
+### Safe Signal Awaiting
+```gdscript
+# ✅ GOOD: Timeout protection for awaits
+func wait_for_player_death() -> void:
+    var timeout := get_tree().create_timer(10.0)
+    var result := await EventBus.player_died.or(timeout.timeout)
+    
+    if not is_instance_valid(self):
+        return
+    
+    if result == timeout:
+        push_warning("[Enemy] Timeout waiting for player death")
+        return
+    
+    _on_player_death_confirmed()
+
+# ❌ BAD: Await without timeout (could hang forever)
+func wait_for_player_death() -> void:
+    await EventBus.player_died
+    _on_player_death_confirmed()  # What if signal never fires?
+```
+
+## Error Handling and Reporting
+
+### push_error() for Critical Failures
+```gdscript
+# ✅ GOOD: Descriptive error messages with context
+func load_stage_definition(stage_id: int) -> StageDefinition:
+    if stage_id < 1:
+        push_error("[StageManager] Invalid stage_id: %d (must be >= 1)" % stage_id)
+        return _get_default_stage()
+    
+    var stage_path := "res://config/stages/stage_%02d.tres" % stage_id
+    if not ResourceLoader.exists(stage_path):
+        push_error("[StageManager] Stage file not found: %s" % stage_path)
+        return _get_default_stage()
+    
+    var stage := load(stage_path) as StageDefinition
+    if stage == null:
+        push_error("[StageManager] Failed to load stage from: %s" % stage_path)
+        return _get_default_stage()
+    
+    return stage
+
+# ❌ BAD: Silent failure or vague error
+func load_stage_definition(stage_id: int):
+    var stage = load("res://config/stages/stage_%02d.tres" % stage_id)
+    if stage == null:
+        push_error("Stage load failed")  # Which stage? Why?
+        return null  # Crash later when used!
+    return stage
+```
+
+### push_warning() for Non-Critical Issues
+```gdscript
+# ✅ GOOD: Warnings for recoverable issues
+func spawn_enemy_wave(enemy_count: int) -> void:
+    if enemy_count > 100:
+        push_warning("[Spawner] High enemy count (%d), may impact performance" % enemy_count)
+    
+    if enemy_count <= 0:
+        push_warning("[Spawner] Invalid enemy_count: %d, skipping wave" % enemy_count)
+        return
+    
+    for i in range(enemy_count):
+        _spawn_single_enemy()
+
+# ❌ BAD: Use error for non-critical issue
+func spawn_enemy_wave(enemy_count: int) -> void:
+    if enemy_count > 100:
+        push_error("Too many enemies!")  # Not an error, just a warning
+```
+
+### Structured Error Messages
+```gdscript
+# ✅ GOOD: Structured error with system name, context, and solution
+func apply_template(template: EnemyTemplate) -> void:
+    if template == null:
+        push_error("[Enemy:%s] apply_template called with null template. Using default template instead." % name)
+        template = EnemyTemplateManager.get_default_template()
+    
+    if template.max_health <= 0:
+        push_error("[Enemy:%s] Template '%s' has invalid health (%d). Setting to 10." % [
+            name,
+            template.template_id,
+            template.max_health
+        ])
+        template.max_health = 10
+    
+    # Apply template...
+
+# Format: [System:Context] Problem description. Resolution.
+```
+
+## Safe Defaults Pattern
+
+### Configuration with Fallbacks
+```gdscript
+# ✅ GOOD: Layered fallback system
+func load_config(path: String) -> Dictionary:
+    # Try loading custom config
+    if FileAccess.file_exists(path):
+        var config := _parse_json_file(path)
+        if not config.is_empty():
+            return _apply_defaults(_merge_configs(_default_config, config))
+    
+    # Fall back to default config
+    push_warning("[ConfigLoader] Using default config (file not found: %s)" % path)
+    return _default_config.duplicate()
+
+func _apply_defaults(config: Dictionary) -> Dictionary:
+    var result := config.duplicate()
+    for key in _default_config:
+        if not result.has(key):
+            result[key] = _default_config[key]
+    return result
+
+# ❌ BAD: No fallback, crash on missing config
+func load_config(path: String) -> Dictionary:
+    var file := FileAccess.open(path, FileAccess.READ)
+    return JSON.parse_string(file.get_as_text())  # CRASH if file missing!
+```
+
+### Safe Resource Loading
+```gdscript
+# ✅ GOOD: Multiple fallback layers
+func get_enemy_texture(texture_path: String) -> Texture2D:
+    # Try loading requested texture
+    if ResourceLoader.exists(texture_path):
+        var tex := load(texture_path) as Texture2D
+        if tex != null:
+            return tex
+    
+    # Try fallback texture
+    push_warning("[Assets] Texture not found: %s, using fallback" % texture_path)
+    if _fallback_texture != null:
+        return _fallback_texture
+    
+    # Emergency fallback: placeholder texture
+    push_error("[Assets] Fallback texture is null! Using generated placeholder")
+    return _generate_placeholder_texture()
+
+func _generate_placeholder_texture() -> Texture2D:
+    var img := Image.create(32, 32, false, Image.FORMAT_RGB8)
+    img.fill(Color.MAGENTA)  # Obvious placeholder
+    return ImageTexture.create_from_image(img)
+```
+
+## Division by Zero Protection
+
+### Safe Division with Clamping
+```gdscript
+# ✅ GOOD: Prevent division by zero
+func calculate_damage_multiplier(distance: float, max_range: float) -> float:
+    if max_range <= 0.0:
+        push_warning("[Combat] Invalid max_range: %.2f, using 1.0" % max_range)
+        max_range = 1.0
+    
+    var normalized_dist := clampf(distance / max_range, 0.0, 1.0)
+    return 1.0 - normalized_dist
+
+# ✅ GOOD: Check denominator before division
+func calculate_accuracy(hits: int, shots: int) -> float:
+    if shots <= 0:
+        return 0.0  # No shots fired = 0% accuracy
+    
+    return float(hits) / float(shots)
+
+# ❌ BAD: No zero check
+func calculate_accuracy(hits: int, shots: int) -> float:
+    return float(hits) / float(shots)  # CRASH if shots == 0!
+```
+
+## Scene Tree Safety
+
+### Deferred Operations
+```gdscript
+# ✅ GOOD: Deferred tree modifications
+func _on_health_depleted() -> void:
+    call_deferred("_handle_death")
+
+func _handle_death() -> void:
+    # Safe to modify tree here
+    var explosion := _spawn_explosion_effect()
+    get_parent().add_child(explosion)
+    queue_free()
+
+# ✅ GOOD: Deferred in signal handlers
+func _on_bullet_hit(body: Node) -> void:
+    body.call_deferred("take_damage", damage)
+    call_deferred("queue_free")
+
+# ❌ BAD: Immediate tree modification during physics
+func _physics_process(delta: float) -> void:
+    if health <= 0:
+        get_parent().add_child(explosion)  # CRASH!
+        queue_free()  # CRASH!
+```
+
+### Parent Validation
+```gdscript
+# ✅ GOOD: Validate parent before operations
+func spawn_item_drop() -> void:
+    var parent := get_parent()
+    if not is_instance_valid(parent):
+        push_error("[Enemy] No valid parent to spawn item into")
+        return
+    
+    var item := EntityFactory.spawn_item("power_up", global_position)
+    if item != null:
+        parent.call_deferred("add_child", item)
+
+# ❌ BAD: Assume parent exists
+func spawn_item_drop() -> void:
+    var item := create_item()
+    get_parent().add_child(item)  # CRASH if no parent!
+```
+
+## Type Validation
+
+### Runtime Type Checks
+```gdscript
+# ✅ GOOD: Explicit type validation
+func apply_damage_to_entity(entity: Variant, damage: int) -> void:
+    if not is_instance_valid(entity):
+        push_error("[Combat] Entity is invalid")
+        return
+    
+    if not entity is Node:
+        push_error("[Combat] Entity is not a Node: %s" % typeof(entity))
+        return
+    
+    if not entity.has_method("take_damage"):
+        push_error("[Combat] Entity %s does not implement take_damage()" % entity.name)
+        return
+    
+    entity.take_damage(damage)
+
+# ✅ GOOD: Safe casting with validation
+func get_enemy_from_collision(body: Node) -> Enemy:
+    if not is_instance_valid(body):
+        return null
+    
+    var enemy := body as Enemy
+    if enemy == null:
+        push_warning("[Collision] Body %s is not an Enemy" % body.name)
+        return null
+    
+    return enemy
+```
+
+## Pooling Safety
+
+### Complete State Reset
+```gdscript
+# ✅ GOOD: Thorough pooling reset
+func reset_for_pool() -> void:
+    # 1. Disconnect signals (prevents memory leaks)
+    disconnect_all_signals()
+    
+    # 2. Reset transform
+    global_position = Vector2.ZERO
+    rotation = 0.0
+    scale = Vector2.ONE
+    
+    # 3. Reset physics
+    velocity = Vector2.ZERO
+    linear_velocity = Vector2.ZERO  # If RigidBody2D
+    angular_velocity = 0.0
+    
+    # 4. Reset gameplay state
+    health = max_health
+    is_alive = true
+    state_machine_state = State.IDLE
+    
+    # 5. Clear references (prevent leaks)
+    target_node = null
+    owner_entity = null
+    _cached_player = null
+    
+    # 6. Reset visual
+    modulate = Color.WHITE
+    visible = false
+    
+    # 7. Disable processing
+    process_mode = Node.PROCESS_MODE_DISABLED
+    set_physics_process(false)
+    set_process(false)
+    
+    # 8. Clear timers
+    _attack_cooldown = 0.0
+    _invulnerability_timer = 0.0
+
+# ❌ BAD: Incomplete reset (stale state lingers)
+func reset_for_pool() -> void:
+    position = Vector2.ZERO
+    visible = false
+    # Forgot: signals, velocity, health, references, processing!
+```
+
+## Defensive Programming Checklist
+
+For every function that:
+- [ ] Accesses a node → Validate with `is_instance_valid()`
+- [ ] Accesses an array → Check bounds with `index < size()`
+- [ ] Accesses a dictionary → Use `.get(key, default)`
+- [ ] Performs division → Check denominator != 0
+- [ ] Awaits a signal → Re-validate nodes after await
+- [ ] Modifies scene tree → Use `call_deferred()` if in lifecycle method
+- [ ] Connects a signal → Check `is_connected()` first
+- [ ] Accepts external data → Validate and provide safe defaults
+- [ ] Returns null → Document why and handle at call site
+- [ ] Fails critically → Use `push_error()` with detailed message
+- [ ] Has recoverable issue → Use `push_warning()` with context
+
+## Error Recovery Examples
+
+### Graceful Stage Loading Failure
+```gdscript
+# ✅ GOOD: Multi-layer fallback
+func load_stage(stage_number: int) -> void:
+    var stage_def := StageTemplateManager.get_stage(stage_number)
+    
+    if stage_def == null:
+        push_warning("[StageController] Stage %d not found, looping to stage 1" % stage_number)
+        stage_def = StageTemplateManager.get_stage(1)
+    
+    if stage_def == null:
+        push_error("[StageController] Critical: Stage 1 missing! Generating emergency stage")
+        stage_def = _create_emergency_stage()
+    
+    _start_stage(stage_def)
+
+func _create_emergency_stage() -> StageDefinition:
+    var emergency_stage := StageDefinition.new()
+    emergency_stage.stage_number = 1
+    emergency_stage.stage_name = "Emergency Stage"
+    emergency_stage.waves = [_create_simple_wave()]
+    return emergency_stage
+```
+
+### Robust Entity Spawning
+```gdscript
+# ✅ GOOD: Handle spawn failures gracefully
+func spawn_enemy_formation(template_id: String, count: int) -> Array[Enemy]:
+    var spawned_enemies: Array[Enemy] = []
+    var failed_spawns: int = 0
+    
+    for i in range(count):
+        var enemy := EntityFactory.spawn_enemy(template_id, _calculate_position(i), Vector2.DOWN)
+        
+        if enemy == null:
+            failed_spawns += 1
+            if failed_spawns > count / 2:
+                push_error("[Spawner] Failed to spawn >50%% of enemies, aborting formation")
+                break
+            continue
+        
+        spawned_enemies.append(enemy)
+    
+    if failed_spawns > 0:
+        push_warning("[Spawner] %d/%d enemy spawns failed" % [failed_spawns, count])
+    
+    return spawned_enemies
+```
+
+## Summary
+
+Safety is NON-NEGOTIABLE. Every node access, array index, dictionary key, and division must be validated. Use defensive programming everywhere, provide safe defaults for all failures, and NEVER crash the player's game.

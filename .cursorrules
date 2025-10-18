@@ -1,74 +1,186 @@
-# Cursor Rules for wipshmup2 – Godot 4.5 Shmup
+# Cursor Rules for wipshmup2 – Godot 4.5 Bullet-Hell Shmup
 
-This file defines enforceable rules for Cursor agents. Detailed guidance lives in `.cursor/rules/*.mdc`.
+This root rule file provides a high-level overview and quick reference. Detailed, comprehensive rules are located in `.cursor/rules/*.mdc` (modern Cursor rules format).
 
-## Scope & Precedence
-- Root rules are mandatory. Use modular rules for details; do not duplicate.
-- Prefer minimal, reversible edits; never crash on bad data.
+## About This Project
 
-## Cursor Execution Policy
-- Search-first: use semantic search to understand affected systems before edits.
-- Prefer parallel read-only queries; only sequence when outputs are dependent.
-- Always provide brief status updates when running tools and before/after batches.
-- End turns with a short high-signal summary of changes/answers when appropriate.
-- Prefer absolute paths in tool calls; avoid interactive prompts (use non-interactive flags).
+**Genre**: Vertical-scrolling bullet-hell shoot-em-up (danmaku)  
+**Engine**: Godot 4.5 with GDScript 2.0  
+**Resolution**: 320x180 native with integer scaling  
+**Visual Style**: CRT aesthetics (scanlines, phosphor glow, dithering)  
+**Performance Target**: Stable 60 FPS with 500+ simultaneous bullets
 
-### Code Citation & Proposals
-- When referencing existing code, use CODE REFERENCES with the exact syntax:
-  - ```startLine:endLine:filepath
-    // code content
-    ```
-- For new/proposed code, use standard markdown code blocks with a language tag (e.g., ```gdscript, ```bash).
-- Never mix formats, never include line numbers inside code blocks, never indent the opening backticks.
+## Core Architecture Principles
 
-### Safety & Ops
-- Do not run long-lived commands in the foreground; background them when needed.
-- Keep edits minimal and reversible; prefer guard clauses to prevent crashes.
+### 1. Event-Driven Communication
+- Use `EventBus` autoload for all cross-system communication
+- Emit signals instead of direct method calls
+- Example: `EventBus.enemy_defeated.emit(id, pos, score)` instead of `ScoreManager.add_score(100)`
 
-## Core Integration Rules
-- Spawns: use `EntityFactory` (pooled). Do not instantiate scenes ad-hoc.
-- Events: use `EventBus`; avoid cross-calls between systems.
-- State: read/write via `GameState` only; do not duplicate.
-- Templates: use Enemy/Boss/Stage managers; keep params in data.
+### 2. Component-Based Entity Design
+- Composition over inheritance for enemies and bosses
+- Attach behavior components (MovementBehavior, AttackBehavior) to entities
+- Keep base classes generic; behaviors provide specialization
 
-## Godot Safety Cribsheet
-- Strong typing and `@export` for inspector-tunable values.
-- Use `call_deferred()` for lifecycle-sensitive adds/removes.
-- Guard with `is_instance_valid()`; prefer `get_node_or_null()`.
-- Validate signals; prevent duplicates; disconnect on cleanup.
-- Re-check validity after `await` points.
+### 3. Data-Driven Content
+- Enemy/Boss/Stage definitions in JSON/CFG files
+- Use Template Managers (`EnemyTemplateManager`, `BossTemplateManager`, `StageTemplateManager`)
+- Gameplay values come from data, not hardcoded in scripts
 
-## Performance & Pooling
-- Reuse pooled instances (toggle visibility vs `queue_free()` where suitable).
-- Respect bullet caps and rate limits; degrade gracefully under load.
-- Avoid heavy per-frame allocations; cache references.
-- Avoid `get_nodes_in_group()` in hot paths; batch or cache instead.
+### 4. Object Pooling (Critical for Performance)
+- All entity spawning via `EntityFactory` autoload
+- Reuse instances (toggle visibility) instead of instantiate/free
+- Implement complete `reset_for_pool()` methods (disconnect signals, clear state)
+
+### 5. Centralized State Management
+- Single source of truth via `GameState` autoload
+- Read/write player stats (lives, bombs, score) only through GameState
+- Never duplicate state in multiple scripts
+
+## Must-Follow Patterns
+
+### Spawning Entities
+```gdscript
+# ✅ CORRECT: Use EntityFactory (pooled)
+var bullet := EntityFactory.spawn_bullet("player_basic", position, direction)
+
+# ❌ WRONG: Direct instantiation (bypasses pooling)
+var bullet := bullet_scene.instantiate()
+add_child(bullet)
+```
+
+### Cross-System Communication
+```gdscript
+# ✅ CORRECT: Event-driven via EventBus
+EventBus.enemy_defeated.emit(enemy_id, position, score_value)
+
+# ❌ WRONG: Direct coupling
+get_node("/root/ScoreManager").add_score(100)
+```
+
+### State Management
+```gdscript
+# ✅ CORRECT: Via GameState
+var lives := GameState.get_lives()
+GameState.lose_life()
+
+# ❌ WRONG: Local state duplication
+var player_lives: int = 3  # Don't duplicate GameState!
+```
+
+### Safety and Null Checks
+```gdscript
+# ✅ CORRECT: Always validate nodes
+var player := get_node_or_null("Player") as Player
+if not is_instance_valid(player):
+    return
+
+# ❌ WRONG: Assume node exists
+var player := get_node("Player") as Player
+player.take_damage(10)  # Crash if Player missing!
+```
+
+## Godot 4.5 / GDScript 2.0 Requirements
+
+- **Strong Typing**: All variables and function signatures must be explicitly typed
+- **Exports**: Use `@export` with types and defaults for inspector-editable values
+- **Signals**: Declare with typed parameters: `signal health_changed(new_health: int, old_health: int)`
+- **Null Safety**: Use `is_instance_valid()` and `get_node_or_null()` everywhere
+- **Deferred Operations**: Use `call_deferred()` for scene tree modifications in lifecycle methods
+
+## Performance Imperatives
+
+- **No allocations in `_process()` or `_physics_process()`**
+- Cache node references (avoid repeated `get_node()` calls)
+- Avoid `get_tree().get_nodes_in_group()` in hot paths (cache group references)
+- Respect bullet caps and rate limits (degrade gracefully under load)
+- All bullets/enemies/particles use object pooling
+
+## Protected Areas (DO NOT MODIFY)
+
+### Critical - Never Touch Without Explicit Approval
+- `wipshmup2/shaders/*.gdshader` — CRT and bullet readability shaders
+- `project.godot` autoload order — System initialization dependencies
+- Core factory/manager public APIs — Used throughout codebase
+
+### Sensitive - Modify with Extreme Caution
+- `EntityFactory` pooling logic
+- `EventBus` signal signatures (breaking change)
+- `GameState` state variables
+- `reset_for_pool()` implementations
+
+## Code Style Quick Reference
+
+- **Naming**: `snake_case` for variables/functions, `PascalCase` for classes, `SCREAMING_SNAKE_CASE` for constants
+- **Private Members**: Prefix with underscore (`_cached_player`, `_internal_method()`)
+- **Indentation**: Tabs or 4 spaces (consistent)
+- **Line Length**: Max 100 characters (120 absolute max)
+- **Early Returns**: Use guard clauses instead of deep nesting
+- **Comments**: Explain WHY, not WHAT (code should be self-documenting)
+
+## Comprehensive Rules Reference
+
+For detailed, pedantic, and comprehensive guidance, see:
+
+### Core Systems
+- **`.cursor/rules/00_global_overview.mdc`** — Project overview, architecture principles, integration checklist
+- **`.cursor/rules/10_godot_gdscript.mdc`** — GDScript 2.0 patterns, anti-patterns, typing, signals, shaders
+- **`.cursor/rules/20_architecture_systems.mdc`** — Autoload singletons, EventBus events, component behaviors
+- **`.cursor/rules/30_performance.mdc`** — Pooling, rate limiting, profiling, optimization techniques
+- **`.cursor/rules/40_safety_and_errors.mdc`** — Null safety, error handling, defensive programming, await safety
+
+### Quality and Workflows
+- **`.cursor/rules/50_code_style_and_quality.mdc`** — Formatting, documentation, linting, testing patterns
+- **`.cursor/rules/60_workflows.mdc`** — Step-by-step procedures for common tasks (add enemy, boss, stage, etc.)
+- **`.cursor/rules/70_protected_and_sensitive.mdc`** — Change control policies, protected files, rollback procedures
+- **`.cursor/rules/80_content_systems.mdc`** — Template validation, data serialization, balance configuration
 
 ## Pre-Edit Checklist
-- Read relevant manager/system code; confirm spawn/event/state paths.
-- Keep CRT/bullet readability shaders intact; tune via exported params only.
-- Consider rate limits and pooling implications; add guard clauses and safe defaults.
-- Ensure edits preserve event-driven decoupling; no ad-hoc cross-calls.
-- Update related docs/configs if behavior changes.
 
-## Protected Areas
-- CRT and dithering shaders.
-- Autoload registrations in `project.godot`.
-- Core factory/manager interfaces.
+Before making ANY code changes:
+- [ ] Read relevant manager/system code to understand existing patterns
+- [ ] Confirm you're using `EntityFactory` for all spawns
+- [ ] Confirm you're using `EventBus` for cross-system communication
+- [ ] Confirm you're using `GameState` for player stats
+- [ ] Add null checks and safe defaults
+- [ ] Respect object pooling (visibility toggle vs free)
+- [ ] Do not modify protected areas (shaders, autoloads, core interfaces)
+- [ ] Update related configs/docs if behavior changes
 
-## Mini Glossary
-- `EntityFactory`: centralized spawning and object pooling for player/enemies/bullets.
-- `EventBus`: global event hub for combat/visual/audio/game flow.
-- `GameState`: lives, bombs, score, flags, chain; emits changes.
-- Template Managers: `EnemyTemplateManager`, `BossTemplateManager`, `StageTemplateManager`.
+## When Uncertain
 
-## See Also (authoritative)
-- `.cursor/rules/00_global_overview.mdc`
-- `.cursor/rules/10_godot_gdscript.mdc`
-- `.cursor/rules/20_architecture_systems.mdc`
-- `.cursor/rules/30_performance.mdc`
-- `.cursor/rules/40_safety_and_errors.mdc`
-- `.cursor/rules/50_code_style_and_quality.mdc`
-- `.cursor/rules/60_workflows.mdc`
-- `.cursor/rules/70_protected_and_sensitive.mdc`
-- `.cursor/rules/80_content_systems.mdc`
+1. Search the codebase for similar implementations (`Ctrl+Shift+F` in editor)
+2. Read the relevant `.cursor/rules/*.mdc` file for detailed guidance
+3. Follow the most common pattern found
+4. Prefer conservative, reversible changes
+5. Add guard clauses and safety checks liberally
+6. Ask for clarification only if truly blocked
+
+## Red Flags - Stop and Ask
+
+If you're about to:
+- ❌ Rewrite a shader file
+- ❌ Change autoload registration order
+- ❌ Modify `EntityFactory` public API
+- ❌ Change `EventBus` signal signatures
+- ❌ Remove existing safety checks
+- ❌ Add a new autoload singleton
+- ❌ Bypass pooling "just this once"
+
+**STOP.** These are protected areas. Request explicit approval first.
+
+## Summary
+
+This project follows strict architectural patterns for maintainability and performance:
+- **Event-driven** via EventBus
+- **Component-based** entity design
+- **Data-driven** content via templates
+- **Object pooling** for all dynamic entities
+- **Centralized state** via GameState
+
+Follow existing patterns, prioritize safety over cleverness, and keep performance in mind at all times. When in doubt, read the comprehensive rules in `.cursor/rules/*.mdc`.
+
+---
+
+**For incredibly detailed, pedantic guidance on every aspect of this project, consult the `.cursor/rules/*.mdc` files.**
+

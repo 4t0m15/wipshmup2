@@ -1,24 +1,681 @@
 ---
-
-description: Performance rules for bullet-hell gameplay
-globs: ["wipshmup2/scripts/**/*.gd", "wipshmup2/shaders/**/*.gdshader"]
+description: Performance optimization rules, metrics, and thresholds for bullet-hell gameplay - Comprehensive performance guide
+globs:
+  - "wipshmup2/scripts/**/*.gd"
+  - "wipshmup2/shaders/**/*.gdshader"
+  - "wipshmup2/scenes/**/*.tscn"
 alwaysApply: true
 ---
 
-# Object Pooling
-- Reuse bullet/enemy instances; toggle `visible` instead of `queue_free()` where applicable.
-- Cleanup via factory; disconnect signals before reusing.
+# Performance Requirements
 
-# Rate Limiting
-- Respect MAX bullet counts and per-second caps; degrade gracefully when exceeded.
+## Target Metrics
 
-# Per-Frame Budget
-- Avoid allocations in `_process/_physics_process`.
-- Cache nodes/resources; pre-load where hot.
-- Avoid unbounded loops; split work across frames if needed.
+### Frame Rate Targets
+- **Minimum**: 60 FPS (16.67ms per frame) under all gameplay conditions
+- **Target**: 60 FPS with 500+ simultaneous bullets on screen
+- **Critical Threshold**: Never drop below 55 FPS (18.18ms per frame)
+- **Stress Test**: Maintain 60 FPS with 1000 entities (bullets + enemies + particles)
 
-# Math & Types
-- Prefer integer-safe ops where relevant (e.g., bit-shift for halves in counts).
+### Frame Time Budget Breakdown
+```
+Total frame budget: 16.67ms
 
-# Diagnostics
-- When adding logs, gate them or keep them terse to prevent spam during bullet storms.
+Ideal allocation:
+- Physics processing: 4ms (24%)
+- Rendering: 6ms (36%)
+- Game logic: 3ms (18%)
+- Audio: 1ms (6%)
+- Overhead: 2.67ms (16%)
+```
+
+### Memory Allocation Targets
+- **No per-frame allocations** in hot paths (`_process`, `_physics_process`)
+- **Pool pre-allocation**: All pools initialized at startup
+- **Maximum pool size**: 2000 total pooled entities
+- **Memory budget**: < 200MB total for gameplay (excluding assets)
+
+## Object Pooling System
+
+### Pool Configuration
+```gdscript
+# ✅ GOOD: Pre-configured pool sizes based on profiling
+const POOL_SIZES: Dictionary[String, int] = {
+    # Player bullets (high frequency, small footprint)
+    "player_bullet_basic": 200,
+    "player_bullet_focused": 150,
+    "player_bullet_homing": 50,
+    
+    # Enemy bullets (very high frequency during boss fights)
+    "enemy_bullet_basic": 300,
+    "enemy_bullet_fast": 200,
+    "enemy_bullet_aimed": 150,
+    
+    # Enemies (moderate frequency)
+    "enemy_popcorn": 50,
+    "enemy_tank": 20,
+    "enemy_shooter": 30,
+    
+    # Visual effects (high frequency, short lifetime)
+    "particle_explosion_small": 50,
+    "particle_explosion_large": 20,
+    "particle_hit_spark": 100,
+    "particle_bullet_trail": 200,
+    
+    # Items (low frequency)
+    "item_power": 10,
+    "item_bomb": 5,
+    "item_score": 20,
+}
+
+# ❌ BAD: Dynamic allocation with no caps
+func spawn_bullet():
+    var bullet = Bullet.new()  # Allocates every time!
+    add_child(bullet)
+```
+
+### Pool Lifecycle Management
+```gdscript
+# ✅ GOOD: Complete pool lifecycle implementation
+class_name BulletPool extends Node
+
+var _active_bullets: Array[Bullet] = []
+var _inactive_bullets: Array[Bullet] = []
+var _pool_size: int = 200
+
+func _ready() -> void:
+    # Pre-allocate entire pool at startup
+    for i in range(_pool_size):
+        var bullet := Bullet.new()
+        bullet.visible = false
+        bullet.process_mode = Node.PROCESS_MODE_DISABLED
+        add_child(bullet)
+        _inactive_bullets.append(bullet)
+
+func acquire() -> Bullet:
+    if _inactive_bullets.is_empty():
+        # Pool exhausted - degrade gracefully
+        return null
+    
+    var bullet := _inactive_bullets.pop_back()
+    _active_bullets.append(bullet)
+    
+    # Activate bullet (no allocation)
+    bullet.visible = true
+    bullet.process_mode = Node.PROCESS_MODE_INHERIT
+    
+    return bullet
+
+func release(bullet: Bullet) -> void:
+    # Deactivate bullet (no deallocation)
+    bullet.visible = false
+    bullet.process_mode = Node.PROCESS_MODE_DISABLED
+    bullet.position = Vector2.ZERO
+    bullet.velocity = Vector2.ZERO
+    
+    # Move between pools
+    var index := _active_bullets.find(bullet)
+    if index != -1:
+        _active_bullets.remove_at(index)
+    _inactive_bullets.append(bullet)
+
+# ❌ BAD: Incomplete pooling with allocations
+func release(bullet):
+    bullet.queue_free()  # Defeats the purpose of pooling!
+    _active_bullets.erase(bullet)
+```
+
+### Pool Reuse Pattern
+```gdscript
+# ✅ GOOD: Complete state reset for reused objects
+func reset_for_pool() -> void:
+    # 1. Disconnect ALL signals (critical for avoiding leaks)
+    for connection in get_incoming_connections():
+        var sig: Signal = connection.signal
+        if sig.is_connected(connection.callable):
+            sig.disconnect(connection.callable)
+    
+    # 2. Reset position and physics
+    global_position = Vector2.ZERO
+    velocity = Vector2.ZERO
+    rotation = 0.0
+    scale = Vector2.ONE
+    
+    # 3. Reset gameplay state
+    damage = 0
+    lifetime = 0.0
+    is_player_bullet = false
+    
+    # 4. Clear references (prevent memory leaks)
+    target_node = null
+    source_node = null
+    
+    # 5. Reset visual state
+    modulate = Color.WHITE
+    visible = false
+    
+    # 6. Disable processing
+    process_mode = Node.PROCESS_MODE_DISABLED
+    set_physics_process(false)
+    set_process(false)
+
+# ❌ BAD: Incomplete reset leaves stale state
+func reset_for_pool() -> void:
+    position = Vector2.ZERO
+    # Forgot: signals, velocity, references, processing state!
+```
+
+## Rate Limiting
+
+### Bullet Spawn Rate Limiting
+```gdscript
+# ✅ GOOD: Rate limiter with per-second caps
+class_name RateLimiter extends Node
+
+@export var max_per_second: int = 300
+@export var burst_allowance: int = 50
+
+var _spawn_count_this_second: int = 0
+var _time_accumulator: float = 0.0
+
+func _process(delta: float) -> void:
+    _time_accumulator += delta
+    if _time_accumulator >= 1.0:
+        _time_accumulator = 0.0
+        _spawn_count_this_second = 0
+
+func can_spawn() -> bool:
+    if _spawn_count_this_second >= max_per_second + burst_allowance:
+        return false
+    return true
+
+func register_spawn() -> void:
+    _spawn_count_this_second += 1
+
+# Usage in spawn logic
+func fire_bullet() -> void:
+    if not rate_limiter.can_spawn():
+        # Degrade gracefully - skip this bullet
+        return
+    
+    var bullet := EntityFactory.spawn_bullet("enemy_basic", position, direction)
+    if bullet != null:
+        rate_limiter.register_spawn()
+
+# ❌ BAD: No rate limiting - performance spikes
+func fire_bullet_pattern():
+    for i in range(360):  # 360 bullets at once!
+        var bullet = EntityFactory.spawn_bullet(...)
+```
+
+### Graceful Degradation
+```gdscript
+# ✅ GOOD: Skip non-critical spawns when under load
+func spawn_enemy_wave() -> void:
+    var active_count := _get_active_bullet_count()
+    
+    if active_count > 400:
+        # High load - reduce spawn rate
+        if randf() > 0.5:
+            return  # Skip 50% of spawns
+    
+    if active_count > 600:
+        # Critical load - skip all non-essential spawns
+        push_warning("[Spawner] High bullet count (%d), skipping enemy spawn" % active_count)
+        return
+    
+    var enemy := EntityFactory.spawn_enemy("popcorn_01", position, direction)
+
+# ✅ GOOD: Reduce visual effects under load
+func spawn_hit_particles(position: Vector2) -> void:
+    if _get_active_particle_count() > 50:
+        return  # Skip particles when too many active
+    
+    var particles := EntityFactory.spawn_effect("hit_spark", position)
+
+# ❌ BAD: No degradation - guaranteed frame drops
+func spawn_wave():
+    for i in range(100):  # Always spawn 100, even if lagging
+        spawn_enemy()
+```
+
+## Per-Frame Performance Optimization
+
+### Cache Node References
+```gdscript
+# ✅ GOOD: Cached references with lazy initialization
+var _cached_player: Player = null
+var _cached_game_state: GameState = null
+
+func _get_player() -> Player:
+    if not is_instance_valid(_cached_player):
+        _cached_player = get_tree().get_first_node_in_group("player") as Player
+    return _cached_player
+
+func _physics_process(delta: float) -> void:
+    var player := _get_player()
+    if player == null:
+        return
+    
+    # Use cached reference (no tree traversal)
+    var direction_to_player := (player.global_position - global_position).normalized()
+    velocity = direction_to_player * speed
+
+# ❌ BAD: Repeated node lookups every frame
+func _physics_process(delta: float) -> void:
+    var player = get_node("/root/Main/Player")  # Tree traversal every frame!
+    var direction = (player.position - position).normalized()
+```
+
+### Avoid Allocations in Process Functions
+```gdscript
+# ✅ GOOD: Reuse vectors, no allocations
+var _direction_cache: Vector2 = Vector2.ZERO
+var _velocity_cache: Vector2 = Vector2.ZERO
+
+func _physics_process(delta: float) -> void:
+    # Reuse cached vectors
+    _direction_cache = (_target_position - global_position).normalized()
+    _velocity_cache = _direction_cache * speed
+    global_position += _velocity_cache * delta
+
+# ❌ BAD: Allocates new vectors every frame
+func _physics_process(delta: float) -> void:
+    var direction = (_target_position - global_position).normalized()  # Allocation
+    var velocity = direction * speed  # Another allocation
+    global_position += velocity * delta  # Another allocation
+```
+
+### Batch Operations
+```gdscript
+# ✅ GOOD: Batch processing with early outs
+func update_all_bullets(delta: float) -> void:
+    # Iterate backwards to allow safe removal
+    for i in range(_active_bullets.size() - 1, -1, -1):
+        var bullet := _active_bullets[i]
+        
+        # Quick validity check
+        if not is_instance_valid(bullet):
+            _active_bullets.remove_at(i)
+            continue
+        
+        # Update bullet
+        bullet.position += bullet.velocity * delta
+        
+        # Bounds check (cheap operation first)
+        if _is_out_of_bounds(bullet.position):
+            _return_bullet_to_pool(bullet)
+            _active_bullets.remove_at(i)
+
+# ⚠️ CAUTION: Avoid nested loops over large collections
+func check_all_collisions() -> void:
+    # O(n*m) - expensive with 500 bullets and 50 enemies!
+    for bullet in bullets:
+        for enemy in enemies:
+            if bullet.overlaps(enemy):
+                _handle_collision(bullet, enemy)
+
+# ✅ BETTER: Use spatial partitioning or quadtree
+func check_all_collisions() -> void:
+    var spatial_grid := _build_spatial_grid(enemies, 64)  # 64px cells
+    
+    for bullet in bullets:
+        var nearby_enemies := spatial_grid.query(bullet.position, bullet.collision_radius)
+        for enemy in nearby_enemies:
+            if bullet.overlaps(enemy):
+                _handle_collision(bullet, enemy)
+```
+
+### Minimize get_tree().get_nodes_in_group() Calls
+```gdscript
+# ❌ VERY BAD: Calling in _process (traverses entire tree every frame!)
+func _process(delta: float) -> void:
+    var enemies := get_tree().get_nodes_in_group("enemies")
+    for enemy in enemies:
+        _update_enemy(enemy)
+
+# ✅ GOOD: Cache group and update via signals
+var _enemy_cache: Array[Enemy] = []
+
+func _ready() -> void:
+    EventBus.enemy_spawned.connect(_on_enemy_spawned)
+    EventBus.enemy_defeated.connect(_on_enemy_defeated)
+    _refresh_enemy_cache()
+
+func _refresh_enemy_cache() -> void:
+    _enemy_cache.clear()
+    _enemy_cache.append_array(get_tree().get_nodes_in_group("enemies"))
+
+func _on_enemy_spawned(enemy: Enemy, _template_id: String) -> void:
+    _enemy_cache.append(enemy)
+
+func _on_enemy_defeated(_enemy_id: int, _pos: Vector2, _score: int) -> void:
+    # Remove invalid entries on next process
+    _cache_dirty = true
+
+func _process(delta: float) -> void:
+    if _cache_dirty:
+        _enemy_cache = _enemy_cache.filter(func(e): return is_instance_valid(e))
+        _cache_dirty = false
+    
+    for enemy in _enemy_cache:
+        _update_enemy(enemy)
+```
+
+## Math Optimization
+
+### Integer Math for Counters
+```gdscript
+# ✅ GOOD: Integer operations for counts
+var bullet_count: int = 500
+var half_bullets: int = bullet_count >> 1  # Bit shift (faster than division)
+var quarter_bullets: int = bullet_count >> 2
+
+# ✅ GOOD: Use int() for explicit integer division
+var enemies_per_row: int = int(total_enemies / row_count)
+
+# ⚠️ CAUTION: Default division returns float in GDScript 2.0
+var result = 10 / 2  # Returns 5.0 (float), not 5 (int)
+var correct_int_result: int = 10 // 2  # Returns 5 (int)
+```
+
+### Trigonometry Optimization
+```gdscript
+# ✅ GOOD: Pre-calculate trigonometric values
+const ANGLE_STEP: float = TAU / 360.0
+var _cos_table: Array[float] = []
+var _sin_table: Array[float] = []
+
+func _ready() -> void:
+    # Build lookup tables at startup
+    _cos_table.resize(360)
+    _sin_table.resize(360)
+    for i in range(360):
+        var angle := i * ANGLE_STEP
+        _cos_table[i] = cos(angle)
+        _sin_table[i] = sin(angle)
+
+func get_direction_from_angle(angle_degrees: int) -> Vector2:
+    var index := angle_degrees % 360
+    return Vector2(_cos_table[index], _sin_table[index])
+
+# ❌ BAD: Calculating sin/cos every frame
+func get_direction(angle: float) -> Vector2:
+    return Vector2(cos(angle), sin(angle))  # Expensive!
+```
+
+### Vector Operations
+```gdscript
+# ✅ GOOD: Avoid sqrt when possible (use squared distance)
+func is_in_range(target_pos: Vector2, max_range: float) -> bool:
+    var dist_squared := global_position.distance_squared_to(target_pos)
+    return dist_squared <= max_range * max_range
+
+# ❌ BAD: Unnecessary sqrt calculation
+func is_in_range(target_pos: Vector2, max_range: float) -> bool:
+    var dist := global_position.distance_to(target_pos)  # sqrt inside!
+    return dist <= max_range
+
+# ✅ GOOD: Reuse normalized vectors
+var _last_direction: Vector2 = Vector2.DOWN
+var _direction_dirty: bool = true
+
+func get_movement_direction() -> Vector2:
+    if _direction_dirty:
+        _last_direction = (_target_position - position).normalized()
+        _direction_dirty = false
+    return _last_direction
+```
+
+## Shader Performance
+
+### Fragment Shader Optimization
+```gdscript
+# ✅ GOOD: Minimize per-pixel calculations in shaders
+shader_type canvas_item;
+
+uniform float time : hint_range(0, 100);
+uniform vec2 resolution;
+
+void fragment() {
+    // Pre-calculate constants outside loops
+    vec2 uv = UV;
+    float aspect = resolution.x / resolution.y;
+    
+    // Avoid expensive operations like pow, sin, cos in hot paths
+    vec2 centered_uv = (uv - 0.5) * 2.0;
+    float dist = length(centered_uv);
+    
+    // Simple operations only
+    COLOR.rgb *= 1.0 - dist * 0.1;
+}
+
+# ❌ BAD: Expensive per-pixel operations
+void fragment() {
+    for (int i = 0; i < 10; i++) {
+        COLOR.rgb += texture(TEXTURE, UV + vec2(sin(TIME * float(i)))).rgb;
+    }
+    // This runs for EVERY pixel EVERY frame!
+}
+```
+
+### Shader Parameter Updates
+```gdscript
+# ✅ GOOD: Update shader parameters sparingly
+var _last_shader_update: float = 0.0
+const SHADER_UPDATE_INTERVAL: float = 0.1  # 10 FPS for shader params
+
+func _process(delta: float) -> void:
+    _last_shader_update += delta
+    if _last_shader_update >= SHADER_UPDATE_INTERVAL:
+        _material.set_shader_parameter("time", Time.get_ticks_msec() * 0.001)
+        _last_shader_update = 0.0
+
+# ❌ BAD: Update every frame (60 FPS)
+func _process(delta: float) -> void:
+    _material.set_shader_parameter("time", Time.get_ticks_msec() * 0.001)
+```
+
+## Particle System Optimization
+
+### GPU Particles vs CPU Particles
+```gdscript
+# ✅ GOOD: Use GPUParticles2D for many particles
+var explosion_particles := GPUParticles2D.new()
+explosion_particles.amount = 100  # GPU handles efficiently
+explosion_particles.one_shot = true
+explosion_particles.emitting = true
+
+# ⚠️ CAUTION: Use CPUParticles2D only for <10 particles or when needing precise control
+var trail_particles := CPUParticles2D.new()
+trail_particles.amount = 5  # Small count
+
+# ❌ BAD: CPUParticles2D with high counts
+var particles := CPUParticles2D.new()
+particles.amount = 500  # Will destroy framerate!
+```
+
+### Particle Pooling
+```gdscript
+# ✅ GOOD: Pool particle systems
+func spawn_explosion(pos: Vector2) -> void:
+    var particles := _particle_pool.acquire()
+    if particles == null:
+        return  # Pool exhausted, skip effect
+    
+    particles.global_position = pos
+    particles.emitting = true
+    particles.one_shot = true
+    
+    # Return to pool when finished
+    await get_tree().create_timer(particles.lifetime).timeout
+    if is_instance_valid(particles):
+        particles.emitting = false
+        _particle_pool.release(particles)
+```
+
+## Profiling and Diagnostics
+
+### Performance Monitoring
+```gdscript
+# ✅ GOOD: Track frame times and entity counts
+var _frame_times: Array[float] = []
+var _frame_time_index: int = 0
+const FRAME_TIME_SAMPLES: int = 60
+
+func _process(delta: float) -> void:
+    # Record frame time
+    _frame_times[_frame_time_index] = delta
+    _frame_time_index = (_frame_time_index + 1) % FRAME_TIME_SAMPLES
+    
+    # Calculate average FPS
+    var avg_delta := 0.0
+    for ft in _frame_times:
+        avg_delta += ft
+    avg_delta /= float(_frame_times.size())
+    var avg_fps := 1.0 / avg_delta
+    
+    if avg_fps < 55.0:
+        push_warning("[Performance] FPS below target: %.1f" % avg_fps)
+
+func get_performance_stats() -> Dictionary:
+    return {
+        "active_bullets": EntityFactory.get_active_count("bullet"),
+        "active_enemies": EntityFactory.get_active_count("enemy"),
+        "active_particles": EntityFactory.get_active_count("particle"),
+        "fps": Engine.get_frames_per_second(),
+        "physics_time": Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS),
+        "process_time": Performance.get_monitor(Performance.TIME_PROCESS),
+    }
+```
+
+### Debug Visualization (Gated)
+```gdscript
+# ✅ GOOD: Gate expensive debug rendering
+const DEBUG_DRAW: bool = false
+
+func _draw() -> void:
+    if not DEBUG_DRAW:
+        return
+    
+    # Expensive debug drawing only when enabled
+    for bullet in _active_bullets:
+        draw_circle(bullet.position, 3.0, Color.RED)
+        draw_line(bullet.position, bullet.position + bullet.velocity, Color.YELLOW)
+
+# ❌ BAD: Always-on debug drawing
+func _draw() -> void:
+    for bullet in _active_bullets:  # Runs every frame in production!
+        draw_circle(bullet.position, 3.0, Color.RED)
+```
+
+## Performance Checklist
+
+Before committing performance-sensitive code:
+- [ ] No allocations in `_process()` or `_physics_process()`
+- [ ] All entities use object pooling (bullets, enemies, particles)
+- [ ] Node references are cached (no repeated `get_node()`)
+- [ ] Groups are cached (no `get_nodes_in_group()` in hot paths)
+- [ ] Rate limiters prevent spawn spikes
+- [ ] Graceful degradation under high load
+- [ ] Integer math used for counters and indices
+- [ ] Trigonometry pre-calculated or cached
+- [ ] Distance checks use `distance_squared_to()` when possible
+- [ ] Shader operations minimized per-pixel
+- [ ] Particle systems use GPU particles (>20 particles)
+- [ ] Debug code is gated behind constants
+- [ ] Profiled with 500+ bullets on screen
+- [ ] Maintains 60 FPS during stress test
+
+## Profiling Tools
+
+### Built-in Profiler
+```
+Editor > Menu > Debug > Profiler
+- Monitor: Frame Time, Physics Time, Process Time
+- Check: Object count, Memory usage, Render calls
+```
+
+### Custom Performance Logger
+```gdscript
+# ✅ GOOD: Detailed performance logging
+class_name PerformanceLogger extends Node
+
+var _samples: int = 0
+var _total_time: float = 0.0
+
+func _physics_process(delta: float) -> void:
+    _samples += 1
+    _total_time += delta
+    
+    if _samples >= 600:  # Every 10 seconds at 60 FPS
+        var avg_fps := _samples / _total_time
+        var stats := {
+            "avg_fps": avg_fps,
+            "bullets": EntityFactory.get_active_count("bullet"),
+            "enemies": EntityFactory.get_active_count("enemy"),
+            "memory_mb": Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
+        }
+        print("[Performance] %s" % JSON.stringify(stats))
+        
+        _samples = 0
+        _total_time = 0.0
+```
+
+## Common Performance Pitfalls
+
+### 1. String Concatenation in Loops
+```gdscript
+# ❌ BAD: String allocation every iteration
+func build_debug_string() -> String:
+    var result := ""
+    for i in range(1000):
+        result += str(i) + " "  # Allocates new string each time!
+    return result
+
+# ✅ GOOD: Use Array.join()
+func build_debug_string() -> String:
+    var parts: Array[String] = []
+    for i in range(1000):
+        parts.append(str(i))
+    return " ".join(parts)
+```
+
+### 2. Unnecessary Collision Layer Checks
+```gdscript
+# ❌ BAD: Checking every object for collision
+func _physics_process(delta: float) -> void:
+    for body in get_tree().get_nodes_in_group("all_objects"):
+        if body.overlaps(self):
+            _handle_collision(body)
+
+# ✅ GOOD: Use collision layers and Area2D signals
+func _ready() -> void:
+    collision_layer = 1  # Player bullet layer
+    collision_mask = 2   # Enemy layer only
+    body_entered.connect(_on_body_entered)
+
+func _on_body_entered(body: Node2D) -> void:
+    # Only called for relevant collisions
+    _handle_collision(body)
+```
+
+### 3. Excessive Signal Emissions
+```gdscript
+# ❌ BAD: Emitting signals every frame
+func _process(delta: float) -> void:
+    position_changed.emit(position)  # 60 times per second!
+
+# ✅ GOOD: Emit only on significant changes
+var _last_emitted_pos: Vector2 = Vector2.ZERO
+const EMIT_THRESHOLD: float = 5.0
+
+func _process(delta: float) -> void:
+    if position.distance_squared_to(_last_emitted_pos) > EMIT_THRESHOLD * EMIT_THRESHOLD:
+        position_changed.emit(position)
+        _last_emitted_pos = position
+```
+
+## Summary
+
+Performance is CRITICAL for bullet-hell gameplay. Always profile with realistic load (500+ bullets), use object pooling religiously, cache everything, and degrade gracefully under stress. When in doubt, measure first, optimize second.
