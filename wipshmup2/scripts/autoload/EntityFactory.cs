@@ -92,10 +92,13 @@ public partial class EntityFactory : Node
 				var bullet = _bulletScene.Instantiate();
 				if (bullet != null && GodotObject.IsInstanceValid(bullet))
 				{
-					bullet.Visible = false;
+					if (bullet is CanvasItem canvasItem)
+					{
+						canvasItem.Visible = false;
+					}
 					bullet.SetMeta("pooled", true);
 					bullet.SetMeta("pool_kind", "player");
-					bullet.SetMeta("pool_created_time", Time.GetTicksMsec());
+					bullet.SetMeta("pool_created_time", (long)Time.GetTicksMsec());
 					_bulletPool.Add(bullet);
 				}
 			}
@@ -108,10 +111,13 @@ public partial class EntityFactory : Node
 				var enemyBullet = _enemyBulletScene.Instantiate();
 				if (enemyBullet != null && GodotObject.IsInstanceValid(enemyBullet))
 				{
-					enemyBullet.Visible = false;
+					if (enemyBullet is CanvasItem canvasItem)
+					{
+						canvasItem.Visible = false;
+					}
 					enemyBullet.SetMeta("pooled", true);
 					enemyBullet.SetMeta("pool_kind", "enemy");
-					enemyBullet.SetMeta("pool_created_time", Time.GetTicksMsec());
+					enemyBullet.SetMeta("pool_created_time", (long)Time.GetTicksMsec());
 					_enemyBulletPool.Add(enemyBullet);
 				}
 			}
@@ -497,9 +503,11 @@ public partial class EntityFactory : Node
 		// Apply properties
 		foreach (var key in properties.Keys)
 		{
-			if (enemy.HasMethod("set") || enemy.Get(key.ToString()) != null)
+			var keyStr = key.ToString();
+			var value = enemy.Get(keyStr);
+			if (enemy.HasMethod("set") || value.VariantType != Variant.Type.Nil)
 			{
-				enemy.Set(key.ToString(), properties[key]);
+				enemy.Set(keyStr, properties[key]);
 			}
 		}
 
@@ -553,9 +561,11 @@ public partial class EntityFactory : Node
 		// Apply properties
 		foreach (var key in properties.Keys)
 		{
-			if (boss.HasMethod("set") || boss.Get(key.ToString()) != null)
+			var keyStr = key.ToString();
+			var value = boss.Get(keyStr);
+			if (boss.HasMethod("set") || value.VariantType != Variant.Type.Nil)
 			{
-				boss.Set(key.ToString(), properties[key]);
+				boss.Set(keyStr, properties[key]);
 			}
 		}
 

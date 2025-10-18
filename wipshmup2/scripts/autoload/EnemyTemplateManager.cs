@@ -7,7 +7,21 @@ public partial class EnemyTemplateManager : Node
 	// EnemyTemplateManager - Manages enemy templates and creation
 	// Provides easy access to enemy templates by name
 
-	private Dictionary<string, EnemyTemplate> _templates = new();
+	private System.Collections.Generic.Dictionary<string, EnemyTemplate> _templates = new();
+	
+	// Helper method to safely get values from Godot Dictionary
+	private T GetDictValue<T>(Dictionary dict, string key, T defaultValue)
+	{
+		if (dict.ContainsKey(key))
+		{
+			var value = dict[key];
+			if (value.VariantType != Variant.Type.Nil)
+			{
+				return value.As<T>();
+			}
+		}
+		return defaultValue;
+	}
 
 	public override void _Ready()
 	{
@@ -144,35 +158,35 @@ public partial class EnemyTemplateManager : Node
 		var template = new EnemyTemplate();
 
 		// Set basic properties
-		template.TypeName = templateData.GetValueOrDefault("type_name", templateName).ToString();
-		template.Hp = (int)templateData.GetValueOrDefault("hp", 1);
-		template.Points = (int)templateData.GetValueOrDefault("points", 100);
-		template.Speed = (float)templateData.GetValueOrDefault("speed", 50.0f);
-		template.SpriteKey = templateData.GetValueOrDefault("sprite_key", "enemy").ToString();
+		template.TypeName = GetDictValue(templateData, "type_name", templateName);
+		template.Hp = GetDictValue(templateData, "hp", 1);
+		template.Points = GetDictValue(templateData, "points", 100);
+		template.Speed = GetDictValue(templateData, "speed", 50.0f);
+		template.SpriteKey = GetDictValue(templateData, "sprite_key", "enemy");
 
 		// Set behaviors
-		template.MovementBehavior = templateData.GetValueOrDefault("movement_behavior", "StraightDown").ToString();
-		template.AttackBehavior = templateData.GetValueOrDefault("attack_behavior", "AimedShot").ToString();
+		template.MovementBehavior = GetDictValue(templateData, "movement_behavior", "StraightDown");
+		template.AttackBehavior = GetDictValue(templateData, "attack_behavior", "AimedShot");
 
 		// Set parameters
-		template.MovementParams = (Dictionary)templateData.GetValueOrDefault("movement_params", new Dictionary());
-		template.AttackParams = (Dictionary)templateData.GetValueOrDefault("attack_params", new Dictionary());
+		template.MovementParams = GetDictValue(templateData, "movement_params", new Dictionary());
+		template.AttackParams = GetDictValue(templateData, "attack_params", new Dictionary());
 
 		// Set visual properties
-		template.SpriteScale = (float)templateData.GetValueOrDefault("sprite_scale", 1.0f);
-		template.GlowColor = (Color)templateData.GetValueOrDefault("glow_color", Colors.White);
-		template.DangerLevel = (int)templateData.GetValueOrDefault("danger_level", 1);
+		template.SpriteScale = GetDictValue(templateData, "sprite_scale", 1.0f);
+		template.GlowColor = GetDictValue(templateData, "glow_color", Colors.White);
+		template.DangerLevel = GetDictValue(templateData, "danger_level", 1);
 
 		// Set collision properties
-		template.CollisionRadius = (float)templateData.GetValueOrDefault("collision_radius", 8.0f);
-		template.CollisionLayer = (int)templateData.GetValueOrDefault("collision_layer", 1);
-		template.CollisionMask = (int)templateData.GetValueOrDefault("collision_mask", 1);
+		template.CollisionRadius = GetDictValue(templateData, "collision_radius", 8.0f);
+		template.CollisionLayer = GetDictValue(templateData, "collision_layer", 1);
+		template.CollisionMask = GetDictValue(templateData, "collision_mask", 1);
 
 		// Set special properties
-		template.IgnoreShotDamage = (bool)templateData.GetValueOrDefault("ignore_shot_damage", false);
-		template.IgnoreBombDamage = (bool)templateData.GetValueOrDefault("ignore_bomb_damage", false);
-		template.BombPointsOverride = (int)templateData.GetValueOrDefault("bomb_points_override", -1);
-		template.BombPointsMultiplier = (float)templateData.GetValueOrDefault("bomb_points_multiplier", 10.0f);
+		template.IgnoreShotDamage = GetDictValue(templateData, "ignore_shot_damage", false);
+		template.IgnoreBombDamage = GetDictValue(templateData, "ignore_bomb_damage", false);
+		template.BombPointsOverride = GetDictValue(templateData, "bomb_points_override", -1);
+		template.BombPointsMultiplier = GetDictValue(templateData, "bomb_points_multiplier", 10.0f);
 
 		_templates[templateName] = template;
 	}
@@ -180,7 +194,7 @@ public partial class EnemyTemplateManager : Node
 	public EnemyTemplate GetTemplate(string templateName)
 	{
 		// Get an enemy template by name
-		return _templates.GetValueOrDefault(templateName, null);
+		return _templates.ContainsKey(templateName) ? _templates[templateName] : null;
 	}
 
 	public Node CreateEnemy(string templateName, Vector2 position)
