@@ -49,6 +49,7 @@ func _ready() -> void:
 	_apply_high_quality_font_settings()
 	
 	# Connect core game state signals
+
 	EventBus.lives_changed.connect(_on_lives_changed)
 	EventBus.bombs_changed.connect(_on_bombs_changed)
 	EventBus.score_changed.connect(_on_score_changed)

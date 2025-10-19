@@ -6,7 +6,7 @@ using System;
 public partial class SpriteManager : Node
 {
 	// Target sizes
-	private static readonly Dictionary<string, float> TARGET_SIZES = new Dictionary<string, float>
+	private static readonly System.Collections.Generic.Dictionary<string, float> TARGET_SIZES = new System.Collections.Generic.Dictionary<string, float>
 	{
 		{ "player", 18.0f },
 		{ "enemy_fighter", 20.0f },
@@ -19,7 +19,7 @@ public partial class SpriteManager : Node
 	};
 
 	// Scale presets
-	private static readonly Dictionary<string, Vector2> SCALE_PRESETS = new Dictionary<string, Vector2>
+	private static readonly System.Collections.Generic.Dictionary<string, Vector2> SCALE_PRESETS = new System.Collections.Generic.Dictionary<string, Vector2>
 	{
 		{ "player", new Vector2(1.0f, 1.0f) },  // Full size for better visibility
 		{ "enemy_fighter", new Vector2(1.2f, 1.2f) },
@@ -32,7 +32,7 @@ public partial class SpriteManager : Node
 	};
 
 	// Color presets
-	private static readonly Dictionary<string, Color> COLOR_PRESETS = new Dictionary<string, Color>
+	private static readonly System.Collections.Generic.Dictionary<string, Color> COLOR_PRESETS = new System.Collections.Generic.Dictionary<string, Color>
 	{
 		// Player: bright cyan
 		{ "player", new Color(0.2f, 1.0f, 0.8f, 1.0f) },
@@ -54,7 +54,7 @@ public partial class SpriteManager : Node
 	};
 
 	// Health-based color tinting for damaged enemies
-	private static readonly Dictionary<string, Color> HEALTH_COLORS = new Dictionary<string, Color>
+	private static readonly System.Collections.Generic.Dictionary<string, Color> HEALTH_COLORS = new System.Collections.Generic.Dictionary<string, Color>
 	{
 		{ "healthy", new Color(1.0f, 1.0f, 1.0f, 1.0f) },      // White
 		{ "damaged", new Color(1.0f, 0.8f, 0.6f, 1.0f) },      // Light orange

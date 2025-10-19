@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "wipshmup2.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "tools\\GodotLauncher\\GodotLauncher.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

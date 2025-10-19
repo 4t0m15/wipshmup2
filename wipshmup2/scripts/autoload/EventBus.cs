@@ -79,17 +79,30 @@ public partial class EventBus : Node
 	[Signal] public delegate void EntityDestroyedEventHandler(Node entity, string entityType);
 
 	// GDScript-compatible signal aliases (snake_case)
-	[Signal] public delegate void bullet_hit_enemyEventHandler(Vector2 enemyPosition, int damage);
-	[Signal] public delegate void bullet_hit_playerEventHandler(Vector2 bulletPosition);
+	[Signal] public delegate void lives_changedEventHandler(int newLives);
+	[Signal] public delegate void bombs_changedEventHandler(int newBombs);
+	[Signal] public delegate void score_changedEventHandler(int newScore);
+	[Signal] public delegate void player_hitEventHandler();
+	[Signal] public delegate void game_overEventHandler();
+	[Signal] public delegate void game_startedEventHandler();
+	[Signal] public delegate void game_pausedEventHandler();
+	[Signal] public delegate void game_resumedEventHandler();
 	[Signal] public delegate void enemy_killedEventHandler(int points, Vector2 position, string enemyType);
 	[Signal] public delegate void boss_defeatedEventHandler(string bossName, int points);
+	[Signal] public delegate void bullet_hit_playerEventHandler(Vector2 bulletPosition);
+	[Signal] public delegate void bullet_hit_enemyEventHandler(Vector2 enemyPosition, int damage);
 	[Signal] public delegate void bomb_usedEventHandler(Vector2 position);
-	[Signal] public delegate void player_hitEventHandler();
-	[Signal] public delegate void shield_absorbedEventHandler();
+	[Signal] public delegate void stage_startedEventHandler(int stageNumber);
+	[Signal] public delegate void stage_completedEventHandler(int stageNumber);
+	[Signal] public delegate void enemy_spawnedEventHandler(Node enemy, string enemyType);
+	[Signal] public delegate void boss_spawnedEventHandler(Node boss, string bossName);
+	[Signal] public delegate void wave_startedEventHandler(int waveNumber);
+	[Signal] public delegate void wave_completedEventHandler(int waveNumber);
+	[Signal] public delegate void item_droppedEventHandler(string itemType, Vector2 position);
+	[Signal] public delegate void item_collectedEventHandler(string itemType, int value);
 	[Signal] public delegate void entity_spawnedEventHandler(Node entity, string entityType);
 	[Signal] public delegate void entity_destroyedEventHandler(Node entity, string entityType);
-	[Signal] public delegate void game_overEventHandler();
-	[Signal] public delegate void stage_completedEventHandler(int stageNumber);
+
 
 	public override void _Ready()
 	{

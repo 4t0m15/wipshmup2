@@ -18,7 +18,7 @@ public partial class RankManager : Node
 	private int _previousLives = -1;
 
 	// Max multiplier caps - AGGRESSIVE SCALING
-	private Dictionary<string, float> _multipliers = new Dictionary<string, float>
+	private System.Collections.Generic.Dictionary<string, float> _multipliers = new System.Collections.Generic.Dictionary<string, float>
 	{
 		{ "enemy_speed", 2.5f },      // Increased from 1.4 - enemies get MUCH faster
 		{ "enemy_hp", 3.5f },         // Increased from 2.0 - enemies become tanks

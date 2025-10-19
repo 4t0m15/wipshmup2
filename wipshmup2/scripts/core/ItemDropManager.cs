@@ -17,7 +17,7 @@ public partial class ItemDropManager : Node
 	}
 
 	// Drop rates
-	private Dictionary<ItemType, float> _dropRates = new Dictionary<ItemType, float>
+	private System.Collections.Generic.Dictionary<ItemType, float> _dropRates = new System.Collections.Generic.Dictionary<ItemType, float>
 	{
 		{ ItemType.POWER_UP, 0.15f },
 		{ ItemType.SCORE_SMALL, 0.3f },
@@ -33,8 +33,7 @@ public partial class ItemDropManager : Node
 	[Export] public bool AutoEmitOnSpawn { get; set; } = true;
 	[Export] public float SimulatePickupDelay { get; set; } = 0.0f;  // If > 0, emit after a delay to simulate collection timing
 	
-	[Export]
-	public Dictionary<ItemType, int> ScoreValues { get; set; } = new Dictionary<ItemType, int>
+	public System.Collections.Generic.Dictionary<ItemType, int> ScoreValues { get; set; } = new System.Collections.Generic.Dictionary<ItemType, int>
 	{
 		{ ItemType.SCORE_SMALL, 100 },
 		{ ItemType.SCORE_LARGE, 500 },

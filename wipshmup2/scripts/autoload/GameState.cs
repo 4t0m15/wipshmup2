@@ -508,8 +508,37 @@ public partial class GameState : Node
 	public void add_lives(int amount) => AddLives(amount);
 	public void add_bombs(int amount) => AddBombs(amount);
 	public bool use_bomb() => UseBomb();
-	public void set_invincible(bool invincible) => SetInvincible(invincible);
 	public void break_streak() => BreakStreak();
 	public void trigger_game_over() => TriggerGameOver();
+
+	// GDScript-compatible property access
+	public int lives => Lives;
+	public int bombs => Bombs;
+	public int score => Score;
+	public bool player_invincible => PlayerInvincible;
+	public Vector2 player_position => PlayerPosition;
+	public bool has_shield => HasShield;
+	public int weapon_power => WeaponPower;
+	public int current_loop => CurrentLoop;
+	public int chain_count => ChainCount;
+	public int max_chain => MaxChain;
+	public bool game_over => GameOver;
+	public bool game_paused => GamePaused;
+	public int current_stage => CurrentStage;
+	public int current_wave => CurrentWave;
+	public float shot_cooldown => ShotCooldown;
+	public float player_speed => PlayerSpeed;
+	public bool is_game_active() => IsGameActive();
+	public bool can_shoot() => CanShoot();
+	public void record_shot() => RecordShot();
+	public void update_player_position(Vector2 pos) => UpdatePlayerPosition(pos);
+	public void increase_weapon_power(int amount) => IncreaseWeaponPower(amount);
+	public void activate_shield() => ActivateShield();
+	public bool consume_shield() => ConsumeShield();
+	public void set_shield(bool value) => SetShield(value);
+	public void increment_loop() => IncrementLoop();
+	public float get_game_time() => GetGameTime();
+	public float get_fire_rate_multiplier() => GetFireRateMultiplier();
+	public int calculate_stage_bonus() => CalculateStageBonus();
 }
 

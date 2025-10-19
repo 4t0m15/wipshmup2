@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "GodotLauncher": {
+      "commandName": "Project",
+      "commandLineArgs": "",
+      "workingDirectory": "..\\.."
+    }
+  }
+}
