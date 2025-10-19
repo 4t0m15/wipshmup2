@@ -1,0 +1,874 @@
+# Safety-First Philosophy - C# and .NET
+
+## Core Principle
+**NEVER CRASH**. In a bullet-hell game, a crash means the player loses their progress. Always provide safe defaults, validate inputs, and handle errors gracefully.
+
+## Null Safety and Node Validation
+
+### IsInstanceValid() - The Golden Rule
+```csharp
+// ✅ GOOD: Always validate before using nodes
+public void AttackTarget()
+{
+    if (_targetNode == null || !IsInstanceValid(_targetNode))
+    {
+        GD.PushError("[Enemy] Target node is invalid, aborting attack");
+        return;
+    }
+    
+    var bullet = EntityFactory.SpawnBullet("enemy_basic", GlobalPosition, CalculateDirection());
+    if (bullet != null)
+    {
+        bullet.Target = _targetNode;
+    }
+}
+
+// ❌ BAD: Assume node exists
+public void AttackTarget()
+{
+    var bullet = EntityFactory.SpawnBullet("enemy_basic", GlobalPosition, CalculateDirection());
+    bullet.Target = _targetNode; // CRASH if _targetNode was freed!
+}
+```
+
+### GetNodeOrNull() Over GetNode()
+```csharp
+// ✅ GOOD: Safe node retrieval
+public Player FindPlayer()
+{
+    var player = GetNodeOrNull<Player>("/root/Main/Player");
+    if (player == null)
+    {
+        GD.PushError("[EnemyAI] Player node not found at expected path");
+        return null;
+    }
+    return player;
+}
+
+// ✅ GOOD: Safe child node access
+public Sprite2D GetSprite()
+{
+    var sprite = GetNodeOrNull<Sprite2D>("Sprite2D");
+    if (sprite == null)
+    {
+        GD.PushError($"[{Name}] Sprite2D child not found");
+    }
+    return sprite;
+}
+
+// ❌ BAD: Direct GetNode() crashes if missing
+public Player FindPlayer()
+{
+    return GetNode<Player>("/root/Main/Player"); // CRASH if path changed!
+}
+```
+
+### Cached References with Validation
+```csharp
+// ✅ GOOD: Lazy-loaded cached reference with validation
+private Player _cachedPlayer;
+
+public Player GetPlayer()
+{
+    // Re-validate cached reference
+    if (_cachedPlayer == null || !IsInstanceValid(_cachedPlayer))
+    {
+        _cachedPlayer = GetTree().GetFirstNodeInGroup("player") as Player;
+        if (_cachedPlayer == null)
+        {
+            // Player doesn't exist yet or was removed
+            return null;
+        }
+    }
+    return _cachedPlayer;
+}
+
+public override void _PhysicsProcess(double delta)
+{
+    var player = GetPlayer();
+    if (player == null)
+    {
+        // No player - idle behavior
+        return;
+    }
+    
+    // Safe to use player here
+    PursueTarget(player.GlobalPosition);
+}
+
+// ❌ BAD: Cache once, never re-validate
+private Player _cachedPlayer;
+
+public override void _Ready()
+{
+    _cachedPlayer = GetNode<Player>("/root/Main/Player");
+}
+
+public override void _PhysicsProcess(double delta)
+{
+    // CRASH if player died and was removed!
+    var dir = (_cachedPlayer.Position - Position).Normalized();
+}
+```
+
+### Weak References (Advanced)
+```csharp
+// ✅ GOOD: Use WeakRef for optional references
+private WeakRef _targetWeakRef;
+
+public void SetTarget(Node target)
+{
+    _targetWeakRef = WeakRef(target);
+}
+
+public Node GetTarget()
+{
+    if (_targetWeakRef == null)
+        return null;
+    
+    var target = _targetWeakRef.GetRef() as Node;
+    if (target == null || !IsInstanceValid(target))
+    {
+        _targetWeakRef = null;
+        return null;
+    }
+    return target;
+}
+```
+
+## Array and Collection Safety
+
+### Bounds Checking
+```csharp
+// ✅ GOOD: Always check array size before access
+public Enemy GetEnemyAtIndex(int index)
+{
+    if (index < 0 || index >= _enemies.Count)
+    {
+        GD.PushError($"[EnemyManager] Index {index} out of bounds (size: {_enemies.Count})");
+        return null;
+    }
+    return _enemies[index];
+}
+
+// ✅ GOOD: Safe iteration with size check
+public void UpdateAllEnemies(double delta)
+{
+    if (_enemies.Count == 0)
+        return;
+    
+    // Iterate backwards for safe removal
+    for (int i = _enemies.Count - 1; i >= 0; i--)
+    {
+        var enemy = _enemies[i];
+        if (enemy != null && IsInstanceValid(enemy))
+        {
+            enemy.UpdateLogic(delta);
+        }
+        else
+        {
+            _enemies.RemoveAt(i);
+        }
+    }
+}
+
+// ❌ BAD: No bounds checking
+public Enemy GetEnemy(int index)
+{
+    return _enemies[index]; // CRASH if index >= Count!
+}
+```
+
+### Safe Dictionary Access
+```csharp
+// ✅ GOOD: Use TryGetValue with defaults
+public int GetEnemyHealth(int enemyId)
+{
+    return _healthMap.TryGetValue(enemyId, out int health) ? health : 0;
+}
+
+public EnemyTemplate GetTemplate(string templateId)
+{
+    if (!_templates.TryGetValue(templateId, out var template))
+    {
+        GD.PushError($"[TemplateManager] Template '{templateId}' not found, using default");
+        return _defaultTemplate;
+    }
+    return template;
+}
+
+// ✅ GOOD: Check ContainsKey before access
+public void ApplyDamage(int enemyId, int damage)
+{
+    if (!_healthMap.ContainsKey(enemyId))
+    {
+        GD.PushWarning($"[CombatSystem] Enemy {enemyId} not in health map, ignoring damage");
+        return;
+    }
+    
+    _healthMap[enemyId] = Mathf.Max(0, _healthMap[enemyId] - damage);
+}
+
+// ❌ BAD: Direct access crashes on missing key
+public int GetEnemyHealth(int enemyId)
+{
+    return _healthMap[enemyId]; // CRASH if enemyId not in map!
+}
+```
+
+### Typed Collections with Validation
+```csharp
+// ✅ GOOD: Type-safe collection with validation
+private List<Bullet> _activeBullets = new();
+
+public void AddBullet(object bullet)
+{
+    if (bullet is not Bullet bulletNode)
+    {
+        GD.PushError($"[BulletManager] Attempted to add non-Bullet object: {bullet?.GetType()}");
+        return;
+    }
+    
+    if (bulletNode == null || !IsInstanceValid(bulletNode))
+    {
+        GD.PushError("[BulletManager] Attempted to add invalid Bullet");
+        return;
+    }
+    
+    _activeBullets.Add(bulletNode);
+}
+
+// ✅ GOOD: Filter invalid entries during iteration
+public void CleanupInvalidBullets()
+{
+    _activeBullets = _activeBullets.Where(b => b != null && IsInstanceValid(b)).ToList();
+}
+```
+
+## Signal Safety
+
+### Connection Validation
+```csharp
+// ✅ GOOD: Check if already connected before connecting
+public override void _Ready()
+{
+    if (!EventBus.PlayerDied.IsConnected(OnPlayerDied))
+    {
+        EventBus.PlayerDied += OnPlayerDied;
+    }
+    
+    if (_enemy != null && !_enemy.HealthChanged.IsConnected(OnEnemyHealthChanged))
+    {
+        _enemy.HealthChanged += OnEnemyHealthChanged;
+    }
+}
+
+// ❌ BAD: Double connection creates duplicate calls
+public override void _Ready()
+{
+    EventBus.PlayerDied += OnPlayerDied;
+    // If _Ready() called twice (e.g. scene reload), signal connected twice!
+}
+```
+
+### Disconnection Safety
+```csharp
+// ✅ GOOD: Safe disconnection with validation
+public override void _ExitTree()
+{
+    if (EventBus.PlayerDied.IsConnected(OnPlayerDied))
+    {
+        EventBus.PlayerDied -= OnPlayerDied;
+    }
+    
+    if (_targetEnemy != null && IsInstanceValid(_targetEnemy))
+    {
+        if (_targetEnemy.Defeated.IsConnected(OnEnemyDefeated))
+        {
+            _targetEnemy.Defeated -= OnEnemyDefeated;
+        }
+    }
+}
+
+// ✅ GOOD: Disconnect all incoming connections
+public void DisconnectAllSignals()
+{
+    foreach (var connection in GetIncomingConnections())
+    {
+        var signal = connection.Signal;
+        if (signal.IsConnected(connection.Callable))
+        {
+            signal.Disconnect(connection.Callable);
+        }
+    }
+}
+
+// ❌ BAD: Disconnect without checking
+public override void _ExitTree()
+{
+    EventBus.PlayerDied -= OnPlayerDied; // Error if not connected!
+}
+```
+
+### Signal Handlers with Validation
+```csharp
+// ✅ GOOD: Validate signal parameters
+private void OnEnemyDefeated(int enemyId, Vector2 position, int score)
+{
+    if (enemyId < 0)
+    {
+        GD.PushError($"[ScoreSystem] Invalid enemy_id: {enemyId}");
+        return;
+    }
+    
+    if (score < 0)
+    {
+        GD.PushWarning($"[ScoreSystem] Negative score value: {score}, clamping to 0");
+        score = 0;
+    }
+    
+    GameState.AddScore(score);
+    SpawnScorePopup(position, score);
+}
+
+// ❌ BAD: Assume parameters are valid
+private void OnEnemyDefeated(int enemyId, Vector2 position, int score)
+{
+    GameState.AddScore(score); // What if score is -999999?
+}
+```
+
+## Async/Await Safety (Critical)
+
+### Re-validate After Await
+```csharp
+// ✅ GOOD: Re-check validity after every await
+public async Task DelayedAttack()
+{
+    await ToSignal(GetTree().CreateTimer(2.0), SceneTreeTimer.SignalName.Timeout);
+    
+    // Node might have been freed during wait!
+    if (!IsInstanceValid(this))
+        return;
+    
+    if (_target == null || !IsInstanceValid(_target))
+    {
+        GD.PushWarning("[Enemy] Target became invalid during attack delay");
+        return;
+    }
+    
+    FireBulletAtTarget();
+}
+
+// ✅ GOOD: Multiple await points, validate each
+public async Task BossIntroSequence()
+{
+    EventBus.EmitSignal(EventBus.SignalName.BossWarning, _bossId, 3.0f);
+    await ToSignal(GetTree().CreateTimer(3.0), SceneTreeTimer.SignalName.Timeout);
+    
+    if (!IsInstanceValid(this))
+        return;
+    
+    EnterPhase1();
+    await ToSignal(this, SignalName.Phase1PatternComplete);
+    
+    if (!IsInstanceValid(this))
+        return;
+    
+    EnterPhase2();
+}
+
+// ❌ BAD: Assume node still exists after await
+public async Task DelayedAttack()
+{
+    await ToSignal(GetTree().CreateTimer(2.0), SceneTreeTimer.SignalName.Timeout);
+    FireBulletAtTarget(); // CRASH if freed during wait!
+}
+```
+
+### Safe Signal Awaiting
+```csharp
+// ✅ GOOD: Timeout protection for awaits
+public async Task WaitForPlayerDeath()
+{
+    var timeout = GetTree().CreateTimer(10.0);
+    var result = await ToSignal(EventBus, EventBus.SignalName.PlayerDied)
+        .Or(ToSignal(timeout, SceneTreeTimer.SignalName.Timeout));
+    
+    if (!IsInstanceValid(this))
+        return;
+    
+    if (result == timeout)
+    {
+        GD.PushWarning("[Enemy] Timeout waiting for player death");
+        return;
+    }
+    
+    OnPlayerDeathConfirmed();
+}
+
+// ❌ BAD: Await without timeout (could hang forever)
+public async Task WaitForPlayerDeath()
+{
+    await ToSignal(EventBus, EventBus.SignalName.PlayerDied);
+    OnPlayerDeathConfirmed(); // What if signal never fires?
+}
+```
+
+## Error Handling and Reporting
+
+### GD.PushError() for Critical Failures
+```csharp
+// ✅ GOOD: Descriptive error messages with context
+public StageDefinition LoadStageDefinition(int stageId)
+{
+    if (stageId < 1)
+    {
+        GD.PushError($"[StageManager] Invalid stage_id: {stageId} (must be >= 1)");
+        return GetDefaultStage();
+    }
+    
+    var stagePath = $"res://config/stages/stage_{stageId:D2}.tres";
+    if (!ResourceLoader.Exists(stagePath))
+    {
+        GD.PushError($"[StageManager] Stage file not found: {stagePath}");
+        return GetDefaultStage();
+    }
+    
+    var stage = GD.Load<StageDefinition>(stagePath);
+    if (stage == null)
+    {
+        GD.PushError($"[StageManager] Failed to load stage from: {stagePath}");
+        return GetDefaultStage();
+    }
+    
+    return stage;
+}
+
+// ❌ BAD: Silent failure or vague error
+public StageDefinition LoadStageDefinition(int stageId)
+{
+    var stage = GD.Load<StageDefinition>($"res://config/stages/stage_{stageId:D2}.tres");
+    if (stage == null)
+    {
+        GD.PushError("Stage load failed"); // Which stage? Why?
+        return null; // Crash later when used!
+    }
+    return stage;
+}
+```
+
+### GD.PushWarning() for Non-Critical Issues
+```csharp
+// ✅ GOOD: Warnings for recoverable issues
+public void SpawnEnemyWave(int enemyCount)
+{
+    if (enemyCount > 100)
+    {
+        GD.PushWarning($"[Spawner] High enemy count ({enemyCount}), may impact performance");
+    }
+    
+    if (enemyCount <= 0)
+    {
+        GD.PushWarning($"[Spawner] Invalid enemy_count: {enemyCount}, skipping wave");
+        return;
+    }
+    
+    for (int i = 0; i < enemyCount; i++)
+    {
+        SpawnSingleEnemy();
+    }
+}
+
+// ❌ BAD: Use error for non-critical issue
+public void SpawnEnemyWave(int enemyCount)
+{
+    if (enemyCount > 100)
+    {
+        GD.PushError("Too many enemies!"); // Not an error, just a warning
+    }
+}
+```
+
+### Structured Error Messages
+```csharp
+// ✅ GOOD: Structured error with system name, context, and solution
+public void ApplyTemplate(EnemyTemplate template)
+{
+    if (template == null)
+    {
+        GD.PushError($"[Enemy:{Name}] apply_template called with null template. Using default template instead.");
+        template = EnemyTemplateManager.GetDefaultTemplate();
+    }
+    
+    if (template.MaxHealth <= 0)
+    {
+        GD.PushError($"[Enemy:{Name}] Template '{template.TemplateId}' has invalid health ({template.MaxHealth}). Setting to 10.");
+        template.MaxHealth = 10;
+    }
+    
+    // Apply template...
+}
+
+// Format: [System:Context] Problem description. Resolution.
+```
+
+## Safe Defaults Pattern
+
+### Configuration with Fallbacks
+```csharp
+// ✅ GOOD: Layered fallback system
+public Dictionary<string, object> LoadConfig(string path)
+{
+    // Try loading custom config
+    if (FileAccess.FileExists(path))
+    {
+        var config = ParseJsonFile(path);
+        if (config.Count > 0)
+        {
+            return ApplyDefaults(MergeConfigs(_defaultConfig, config));
+        }
+    }
+    
+    // Fall back to default config
+    GD.PushWarning($"[ConfigLoader] Using default config (file not found: {path})");
+    return new Dictionary<string, object>(_defaultConfig);
+}
+
+private Dictionary<string, object> ApplyDefaults(Dictionary<string, object> config)
+{
+    var result = new Dictionary<string, object>(config);
+    foreach (var kvp in _defaultConfig)
+    {
+        if (!result.ContainsKey(kvp.Key))
+        {
+            result[kvp.Key] = kvp.Value;
+        }
+    }
+    return result;
+}
+
+// ❌ BAD: No fallback, crash on missing config
+public Dictionary<string, object> LoadConfig(string path)
+{
+    var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
+    return Json.ParseString(file.GetAsText()); // CRASH if file missing!
+}
+```
+
+### Safe Resource Loading
+```csharp
+// ✅ GOOD: Multiple fallback layers
+public Texture2D GetEnemyTexture(string texturePath)
+{
+    // Try loading requested texture
+    if (ResourceLoader.Exists(texturePath))
+    {
+        var tex = GD.Load<Texture2D>(texturePath);
+        if (tex != null)
+            return tex;
+    }
+    
+    // Try fallback texture
+    GD.PushWarning($"[Assets] Texture not found: {texturePath}, using fallback");
+    if (_fallbackTexture != null)
+        return _fallbackTexture;
+    
+    // Emergency fallback: placeholder texture
+    GD.PushError("[Assets] Fallback texture is null! Using generated placeholder");
+    return GeneratePlaceholderTexture();
+}
+
+private Texture2D GeneratePlaceholderTexture()
+{
+    var img = Image.Create(32, 32, false, Image.Format.Rgb8);
+    img.Fill(Colors.Magenta); // Obvious placeholder
+    return ImageTexture.CreateFromImage(img);
+}
+```
+
+## Division by Zero Protection
+
+### Safe Division with Clamping
+```csharp
+// ✅ GOOD: Prevent division by zero
+public float CalculateDamageMultiplier(float distance, float maxRange)
+{
+    if (maxRange <= 0.0f)
+    {
+        GD.PushWarning($"[Combat] Invalid max_range: {maxRange:F2}, using 1.0");
+        maxRange = 1.0f;
+    }
+    
+    float normalizedDist = Mathf.Clamp(distance / maxRange, 0.0f, 1.0f);
+    return 1.0f - normalizedDist;
+}
+
+// ✅ GOOD: Check denominator before division
+public float CalculateAccuracy(int hits, int shots)
+{
+    if (shots <= 0)
+        return 0.0f; // No shots fired = 0% accuracy
+    
+    return (float)hits / shots;
+}
+
+// ❌ BAD: No zero check
+public float CalculateAccuracy(int hits, int shots)
+{
+    return (float)hits / shots; // CRASH if shots == 0!
+}
+```
+
+## Scene Tree Safety
+
+### Deferred Operations
+```csharp
+// ✅ GOOD: Deferred tree modifications
+public void OnHealthDepleted()
+{
+    CallDeferred(nameof(HandleDeath));
+}
+
+private void HandleDeath()
+{
+    // Safe to modify tree here
+    var explosion = SpawnExplosionEffect();
+    GetParent().AddChild(explosion);
+    QueueFree();
+}
+
+// ✅ GOOD: Deferred in signal handlers
+public void OnBulletHit(Node2D body)
+{
+    body.CallDeferred(nameof(ITakeDamage.TakeDamage), Damage);
+    CallDeferred(nameof(QueueFree));
+}
+
+// ❌ BAD: Immediate tree modification during physics
+public override void _PhysicsProcess(double delta)
+{
+    if (Health <= 0)
+    {
+        GetParent().AddChild(explosion); // CRASH!
+        QueueFree(); // CRASH!
+    }
+}
+```
+
+### Parent Validation
+```csharp
+// ✅ GOOD: Validate parent before operations
+public void SpawnItemDrop()
+{
+    var parent = GetParent();
+    if (parent == null || !IsInstanceValid(parent))
+    {
+        GD.PushError("[Enemy] No valid parent to spawn item into");
+        return;
+    }
+    
+    var item = EntityFactory.SpawnItem("power_up", GlobalPosition);
+    if (item != null)
+    {
+        parent.CallDeferred(nameof(Node.AddChild), item);
+    }
+}
+
+// ❌ BAD: Assume parent exists
+public void SpawnItemDrop()
+{
+    var item = CreateItem();
+    GetParent().AddChild(item); // CRASH if no parent!
+}
+```
+
+## Type Validation
+
+### Runtime Type Checks
+```csharp
+// ✅ GOOD: Explicit type validation
+public void ApplyDamageToEntity(object entity, int damage)
+{
+    if (entity == null || !IsInstanceValid(entity as Node))
+    {
+        GD.PushError("[Combat] Entity is invalid");
+        return;
+    }
+    
+    if (entity is not Node node)
+    {
+        GD.PushError($"[Combat] Entity is not a Node: {entity.GetType()}");
+        return;
+    }
+    
+    if (!node.HasMethod("take_damage"))
+    {
+        GD.PushError($"[Combat] Entity {node.Name} does not implement take_damage()");
+        return;
+    }
+    
+    node.Call("take_damage", damage);
+}
+
+// ✅ GOOD: Safe casting with validation
+public Enemy GetEnemyFromCollision(Node2D body)
+{
+    if (body == null || !IsInstanceValid(body))
+        return null;
+    
+    if (body is not Enemy enemy)
+    {
+        GD.PushWarning($"[Collision] Body {body.Name} is not an Enemy");
+        return null;
+    }
+    
+    return enemy;
+}
+```
+
+## Pooling Safety
+
+### Complete State Reset
+```csharp
+// ✅ GOOD: Thorough pooling reset
+public void ResetForPool()
+{
+    // 1. Disconnect signals (prevents memory leaks)
+    DisconnectAllSignals();
+    
+    // 2. Reset transform
+    GlobalPosition = Vector2.Zero;
+    Rotation = 0.0f;
+    Scale = Vector2.One;
+    
+    // 3. Reset physics
+    Velocity = Vector2.Zero;
+    if (this is RigidBody2D rigidBody)
+    {
+        rigidBody.LinearVelocity = Vector2.Zero;
+        rigidBody.AngularVelocity = 0.0f;
+    }
+    
+    // 4. Reset gameplay state
+    Health = MaxHealth;
+    IsAlive = true;
+    StateMachineState = State.Idle;
+    
+    // 5. Clear references (prevent leaks)
+    TargetNode = null;
+    OwnerEntity = null;
+    _cachedPlayer = null;
+    
+    // 6. Reset visual
+    Modulate = Colors.White;
+    Visible = false;
+    
+    // 7. Disable processing
+    ProcessMode = ProcessModeEnum.Disabled;
+    SetPhysicsProcess(false);
+    SetProcess(false);
+    
+    // 8. Clear timers
+    _attackCooldown = 0.0f;
+    _invulnerabilityTimer = 0.0f;
+}
+
+// ❌ BAD: Incomplete reset (stale state lingers)
+public void ResetForPool()
+{
+    Position = Vector2.Zero;
+    Visible = false;
+    // Forgot: signals, velocity, health, references, processing!
+}
+```
+
+## Defensive Programming Checklist
+
+For every function that:
+- [ ] Accesses a node → Validate with `IsInstanceValid()`
+- [ ] Accesses an array → Check bounds with `index < Count`
+- [ ] Accesses a dictionary → Use `TryGetValue(key, out value)`
+- [ ] Performs division → Check denominator != 0
+- [ ] Awaits a signal → Re-validate nodes after await
+- [ ] Modifies scene tree → Use `CallDeferred()` if in lifecycle method
+- [ ] Connects a signal → Check `IsConnected()` first
+- [ ] Accepts external data → Validate and provide safe defaults
+- [ ] Returns null → Document why and handle at call site
+- [ ] Fails critically → Use `GD.PushError()` with detailed message
+- [ ] Has recoverable issue → Use `GD.PushWarning()` with context
+
+## Error Recovery Examples
+
+### Graceful Stage Loading Failure
+```csharp
+// ✅ GOOD: Multi-layer fallback
+public void LoadStage(int stageNumber)
+{
+    var stageDef = StageTemplateManager.GetStage(stageNumber);
+    
+    if (stageDef == null)
+    {
+        GD.PushWarning($"[StageController] Stage {stageNumber} not found, looping to stage 1");
+        stageDef = StageTemplateManager.GetStage(1);
+    }
+    
+    if (stageDef == null)
+    {
+        GD.PushError("[StageController] Critical: Stage 1 missing! Generating emergency stage");
+        stageDef = CreateEmergencyStage();
+    }
+    
+    StartStage(stageDef);
+}
+
+private StageDefinition CreateEmergencyStage()
+{
+    var emergencyStage = new StageDefinition
+    {
+        StageNumber = 1,
+        StageName = "Emergency Stage",
+        Waves = new List<WaveDefinition> { CreateSimpleWave() }
+    };
+    return emergencyStage;
+}
+```
+
+### Robust Entity Spawning
+```csharp
+// ✅ GOOD: Handle spawn failures gracefully
+public List<Enemy> SpawnEnemyFormation(string templateId, int count)
+{
+    var spawnedEnemies = new List<Enemy>();
+    int failedSpawns = 0;
+    
+    for (int i = 0; i < count; i++)
+    {
+        var enemy = EntityFactory.SpawnEnemy(templateId, CalculatePosition(i), Vector2.Down);
+        
+        if (enemy == null)
+        {
+            failedSpawns++;
+            if (failedSpawns > count / 2)
+            {
+                GD.PushError("[Spawner] Failed to spawn >50% of enemies, aborting formation");
+                break;
+            }
+            continue;
+        }
+        
+        spawnedEnemies.Add(enemy);
+    }
+    
+    if (failedSpawns > 0)
+    {
+        GD.PushWarning($"[Spawner] {failedSpawns}/{count} enemy spawns failed");
+    }
+    
+    return spawnedEnemies;
+}
+```
+
+## Summary
+
+Safety is NON-NEGOTIABLE. Every node access, array index, dictionary key, and division must be validated. Use defensive programming everywhere, provide safe defaults for all failures, and NEVER crash the player's game.

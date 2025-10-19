@@ -60,7 +60,7 @@ public partial class BulletPatterns : Node
 		{
 			var bullets = tree.GetNodesInGroup("enemy_bullet");
 			float loadRatio = bullets.Count / (float)SOFT_ENEMY_BULLET_CAP;
-			// Start throttling as we approach 70% of cap; never drop below 0.25
+			// Start throttling as we approach the cap; never drop below 0.25
 			float throttle = 1.0f - Mathf.Max(0.0f, loadRatio - 0.7f) / 0.6f;
 			return Mathf.Clamp(throttle, 0.25f, 1.0f);
 		}

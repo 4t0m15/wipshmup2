@@ -1,0 +1,618 @@
+# Architecture and Systems - C# and .NET
+
+## Autoload Singleton Hierarchy
+
+### Load Order and Dependencies
+The autoloads are loaded in this specific order (defined in `project.godot`):
+
+1. **EventBus** - Global event system (no dependencies)
+2. **GameState** - Game state management (depends on EventBus)
+3. **EntityFactory** - Object pooling and spawning (depends on EventBus, GameState)
+4. **EnemyTemplateManager** - Enemy definitions (no dependencies)
+5. **BossTemplateManager** - Boss definitions (no dependencies)
+6. **StageTemplateManager** - Stage/wave definitions (depends on template managers)
+
+**CRITICAL**: This order MUST be maintained. Do not add autoloads between these.
+
+### EventBus - Global Event Hub
+
+#### Purpose
+Central publish-subscribe system for decoupled cross-system communication.
+
+#### Event Categories
+```csharp
+public partial class EventBus : Node
+{
+    // Player Events
+    [Signal] public delegate void PlayerSpawnedEventHandler(Player player);
+    [Signal] public delegate void PlayerDiedEventHandler(Vector2 position, int livesRemaining);
+    [Signal] public delegate void PlayerBombUsedEventHandler(int bombCountRemaining);
+    [Signal] public delegate void PlayerHitEventHandler(int damage, float invulnerableTime);
+    [Signal] public delegate void PlayerPowerChangedEventHandler(int newPower, int maxPower);
+
+    // Enemy Events
+    [Signal] public delegate void EnemySpawnedEventHandler(Enemy enemy, string templateId);
+    [Signal] public delegate void EnemyDefeatedEventHandler(int enemyId, Vector2 position, int scoreValue);
+    [Signal] public delegate void EnemyHitEventHandler(int enemyId, int damage, int remainingHealth);
+
+    // Boss Events
+    [Signal] public delegate void BossSpawnedEventHandler(Boss boss, string bossId);
+    [Signal] public delegate void BossPhaseChangedEventHandler(string bossId, int phaseNumber, string phaseName);
+    [Signal] public delegate void BossDefeatedEventHandler(string bossId, float completionTime, bool noMiss);
+    [Signal] public delegate void BossWarningEventHandler(string bossId, float warningDuration);
+
+    // Combat Events
+    [Signal] public delegate void BulletFiredEventHandler(Bullet bullet, Node source, string bulletType);
+    [Signal] public delegate void BulletHitEventHandler(Bullet bullet, Node target, int damage);
+    [Signal] public delegate void ItemDroppedEventHandler(Item item, Vector2 position, string itemType);
+    [Signal] public delegate void ItemCollectedEventHandler(string itemType, Variant value);
+
+    // Stage Events
+    [Signal] public delegate void StageStartedEventHandler(int stageNumber, string stageName);
+    [Signal] public delegate void StageClearedEventHandler(int stageNumber, float time, int score);
+    [Signal] public delegate void WaveStartedEventHandler(int waveNumber, int enemyCount);
+    [Signal] public delegate void WaveClearedEventHandler(int waveNumber, float time);
+
+    // Visual Events
+    [Signal] public delegate void ScreenShakeRequestedEventHandler(float intensity, float duration);
+    [Signal] public delegate void SlowMotionRequestedEventHandler(float timeScale, float duration);
+    [Signal] public delegate void FlashEffectRequestedEventHandler(Color color, float duration);
+    [Signal] public delegate void BackgroundChangeRequestedEventHandler(string backgroundId, float transitionTime);
+
+    // Audio Events
+    [Signal] public delegate void MusicChangeRequestedEventHandler(string trackId, float fadeTime);
+    [Signal] public delegate void SfxPlayRequestedEventHandler(string sfxId, Vector2 position, float volume);
+    [Signal] public delegate void MusicIntensityChangedEventHandler(float intensity);
+}
+```
+
+#### Usage Patterns
+```csharp
+// ✅ GOOD: Emit events instead of direct calls
+public void OnHealthDepleted()
+{
+    EventBus.EmitSignal(EventBus.SignalName.EnemyDefeated, _enemyId, GlobalPosition, _scoreValue);
+}
+
+// Subscribe to events in _Ready()
+public override void _Ready()
+{
+    if (!EventBus.PlayerDied.IsConnected(OnPlayerDied))
+    {
+        EventBus.PlayerDied += OnPlayerDied;
+    }
+}
+
+// Disconnect in cleanup
+public override void _ExitTree()
+{
+    if (EventBus.PlayerDied.IsConnected(OnPlayerDied))
+    {
+        EventBus.PlayerDied -= OnPlayerDied;
+    }
+}
+
+// ❌ BAD: Direct cross-system calls
+public void OnHealthDepleted()
+{
+    GetNode<ScoreManager>("/root/ScoreManager").AddScore(100); // Tight coupling!
+    GetNode<AudioManager>("/root/AudioManager").PlaySfx("explosion"); // Fragile!
+}
+```
+
+### GameState - Centralized State Management
+
+#### Purpose
+Single source of truth for player stats, game progress, and global state.
+
+#### State Variables
+```csharp
+public partial class GameState : Node
+{
+    // Player Stats (Read via getters, write via setters that emit signals)
+    private int _lives = 3;
+    private int _bombs = 3;
+    private int _score = 0;
+    private int _continuesUsed = 0;
+    private int _powerLevel = 1;
+    private int _maxPower = 4;
+
+    // Game Progress
+    private int _currentStage = 1;
+    private int _currentWave = 0;
+    private Difficulty _difficulty = Difficulty.Normal;
+    private float _rank = 0.0f; // Dynamic difficulty from 0.0 to 10.0
+
+    // Chain and Combo System
+    private int _chainCount = 0;
+    private float _chainTimer = 0.0f;
+    private float _scoreMultiplier = 1.0f;
+
+    // Game Flow Flags
+    private bool _isPaused = false;
+    private bool _isGameOver = false;
+    private bool _isBossActive = false;
+    private bool _playerIsAlive = true;
+
+    // Public Properties
+    public int Lives => _lives;
+    public int Bombs => _bombs;
+    public int Score => _score;
+    public int ContinuesUsed => _continuesUsed;
+    public int PowerLevel => _powerLevel;
+    public int MaxPower => _maxPower;
+    public int CurrentStage => _currentStage;
+    public int CurrentWave => _currentWave;
+    public Difficulty Difficulty => _difficulty;
+    public float Rank => _rank;
+    public int ChainCount => _chainCount;
+    public float ScoreMultiplier => _scoreMultiplier;
+    public bool IsPaused => _isPaused;
+    public bool IsGameOver => _isGameOver;
+    public bool IsBossActive => _isBossActive;
+    public bool PlayerIsAlive => _playerIsAlive;
+}
+```
+
+#### Access Patterns
+```csharp
+// ✅ GOOD: Read via getters
+var currentLives = GameState.Lives;
+var playerScore = GameState.Score;
+
+// ✅ GOOD: Write via setters (emits change signals)
+GameState.AddScore(100); // Emits score_changed signal
+GameState.ConsumeBomb(); // Emits bomb_used signal, updates count
+GameState.LoseLife(); // Emits life_lost signal, may trigger game over
+
+// ✅ GOOD: Query flags
+if (GameState.IsBossActive)
+{
+    AdjustSpawningLogic();
+}
+
+// ❌ BAD: Direct state duplication
+public partial class Player : Node2D
+{
+    private int _lives = 3; // Don't duplicate GameState.Lives!
+}
+
+// ❌ BAD: External modification without setters
+public void TakeDamage()
+{
+    GameState._lives -= 1; // Bypasses validation and signals!
+}
+```
+
+### EntityFactory - Object Pooling System
+
+#### Purpose
+Centralized spawning with object pooling for performance. Manages lifecycle of all dynamic entities.
+
+#### Pool Configuration
+```csharp
+public partial class EntityFactory : Node
+{
+    // Pre-configured pool limits
+    private static readonly Dictionary<string, int> PoolLimits = new()
+    {
+        // Player bullets (high frequency, small footprint)
+        ["player_bullet_basic"] = 200,
+        ["player_bullet_focused"] = 150,
+        ["player_bullet_homing"] = 50,
+        
+        // Enemy bullets (very high frequency during boss fights)
+        ["enemy_bullet_basic"] = 300,
+        ["enemy_bullet_fast"] = 200,
+        ["enemy_bullet_aimed"] = 150,
+        
+        // Enemies (moderate frequency)
+        ["enemy_popcorn"] = 50,
+        ["enemy_tank"] = 20,
+        ["enemy_shooter"] = 30,
+        
+        // Visual effects (high frequency, short lifetime)
+        ["particle_explosion_small"] = 50,
+        ["particle_explosion_large"] = 20,
+        ["particle_hit_spark"] = 100,
+        ["particle_bullet_trail"] = 200,
+        
+        // Items (low frequency)
+        ["item_power"] = 10,
+        ["item_bomb"] = 5,
+        ["item_score"] = 20,
+    };
+}
+```
+
+#### Spawn Methods
+```csharp
+// ✅ GOOD: Spawn player bullets
+public Bullet SpawnBullet(string bulletType, Vector2 position, Vector2 direction)
+{
+    var bullet = AcquireFromPool<Bullet>(bulletType);
+    if (bullet != null)
+    {
+        bullet.GlobalPosition = position;
+        bullet.Direction = direction;
+        bullet.Visible = true;
+        bullet.ProcessMode = ProcessModeEnum.Inherit;
+    }
+    return bullet;
+}
+
+// ✅ GOOD: Spawn enemies
+public Enemy SpawnEnemy(string templateId, Vector2 position, Vector2 direction)
+{
+    var enemy = AcquireFromPool<Enemy>(templateId);
+    if (enemy != null)
+    {
+        enemy.GlobalPosition = position;
+        enemy.Direction = direction;
+        enemy.Visible = true;
+        enemy.ProcessMode = ProcessModeEnum.Inherit;
+    }
+    return enemy;
+}
+
+// ✅ GOOD: Spawn with return-to-pool callback
+public GpuParticles2D SpawnEffect(string effectType, Vector2 position)
+{
+    var effect = AcquireFromPool<GpuParticles2D>(effectType);
+    if (effect != null)
+    {
+        effect.GlobalPosition = position;
+        effect.Visible = true;
+        effect.Emitting = true;
+        // Factory automatically returns to pool when finished
+    }
+    return effect;
+}
+
+// ❌ BAD: Direct instantiation bypasses pooling
+public void FireBullet()
+{
+    var bulletScene = GD.Load<PackedScene>("res://scenes/bullet.tscn");
+    var bullet = bulletScene.Instantiate();
+    GetTree().CurrentScene.AddChild(bullet);
+}
+```
+
+#### Return to Pool
+```csharp
+// ✅ GOOD: Return via factory
+public void OnBulletHit()
+{
+    EntityFactory.ReturnToPool(this, "player_bullet_basic");
+}
+
+// ✅ GOOD: Factory handles cleanup automatically
+// Bullets auto-return when leaving screen bounds
+// Enemies auto-return when health reaches zero
+
+// ⚠️ MANUAL POOLING: Only needed for custom entities
+public void ResetForPool()
+{
+    // 1. Disconnect signals
+    DisconnectAllSignals();
+    
+    // 2. Reset transform
+    GlobalPosition = Vector2.Zero;
+    Rotation = 0.0f;
+    Scale = Vector2.One;
+    
+    // 3. Reset physics
+    Velocity = Vector2.Zero;
+    
+    // 4. Reset gameplay state
+    Health = MaxHealth;
+    IsAlive = true;
+    
+    // 5. Clear references (prevent leaks)
+    TargetNode = null;
+    OwnerEntity = null;
+    _cachedPlayer = null;
+    
+    // 6. Reset visual
+    Modulate = Colors.White;
+    Visible = false;
+    
+    // 7. Disable processing
+    ProcessMode = ProcessModeEnum.Disabled;
+    SetPhysicsProcess(false);
+    SetProcess(false);
+    
+    // 8. Clear timers
+    _attackCooldown = 0.0f;
+    _invulnerabilityTimer = 0.0f;
+}
+```
+
+### Template Managers
+
+#### EnemyTemplateManager
+```csharp
+public partial class EnemyTemplateManager : Node
+{
+    private Dictionary<string, EnemyTemplate> _templates = new();
+    private EnemyTemplate _defaultTemplate;
+
+    public EnemyTemplate GetTemplate(string templateId)
+    {
+        if (string.IsNullOrEmpty(templateId))
+        {
+            GD.PushError("[EnemyTemplateManager] Cannot load template with empty ID");
+            return _defaultTemplate;
+        }
+        
+        if (!_templates.TryGetValue(templateId, out var template))
+        {
+            GD.PushError($"[EnemyTemplateManager] Template not found: '{templateId}'. Available: {string.Join(", ", _templates.Keys)}");
+            return _defaultTemplate;
+        }
+        
+        return template;
+    }
+
+    public void RegisterTemplate(EnemyTemplate template)
+    {
+        if (template == null)
+        {
+            GD.PushError("[EnemyTemplateManager] Cannot register null template");
+            return;
+        }
+        
+        _templates[template.TemplateId] = template;
+        GD.Print($"[EnemyTemplateManager] Registered template: {template.TemplateId}");
+    }
+}
+```
+
+#### BossTemplateManager
+```csharp
+public partial class BossTemplateManager : Node
+{
+    private Dictionary<string, BossTemplate> _templates = new();
+    private BossTemplate _defaultTemplate;
+
+    public BossTemplate GetTemplate(string bossId)
+    {
+        if (string.IsNullOrEmpty(bossId))
+        {
+            GD.PushError("[BossTemplateManager] Cannot load template with empty ID");
+            return _defaultTemplate;
+        }
+        
+        if (!_templates.TryGetValue(bossId, out var template))
+        {
+            GD.PushError($"[BossTemplateManager] Template not found: '{bossId}'. Available: {string.Join(", ", _templates.Keys)}");
+            return _defaultTemplate;
+        }
+        
+        return template;
+    }
+
+    public BossPhase GetNextPhase(string bossId, float healthPercentage)
+    {
+        var template = GetTemplate(bossId);
+        if (template == null)
+            return null;
+        
+        foreach (var phase in template.Phases)
+        {
+            if (healthPercentage <= phase.HealthThreshold)
+                return phase;
+        }
+        
+        return template.Phases.LastOrDefault();
+    }
+}
+```
+
+## Component-Based Enemy System
+
+### Movement Behaviors
+```csharp
+// Base movement behavior
+public partial class MovementBehavior : Node
+{
+    [Export] public float Speed { get; set; } = 100.0f;
+    [Export] public Node2D TargetNode { get; set; }
+
+    public override void _PhysicsProcess(double delta)
+    {
+        var parent = GetParent<Node2D>();
+        if (parent == null)
+            return;
+        
+        var direction = CalculateDirection(parent.GlobalPosition);
+        parent.Position += direction * Speed * (float)delta;
+    }
+
+    protected virtual Vector2 CalculateDirection(Vector2 currentPos)
+    {
+        // Override in subclasses
+        return Vector2.Down;
+    }
+}
+
+// Example: Straight movement
+public partial class StraightMovement : MovementBehavior
+{
+    [Export] public float RotationOffset { get; set; } = 0.0f;
+
+    protected override Vector2 CalculateDirection(Vector2 currentPos)
+    {
+        return Vector2.Down.Rotated(RotationOffset);
+    }
+}
+
+// Example: Homing movement
+public partial class HomingMovement : MovementBehavior
+{
+    [Export] public float TurnSpeed { get; set; } = 2.0f;
+    private Vector2 _currentDirection = Vector2.Down;
+
+    protected override Vector2 CalculateDirection(Vector2 currentPos)
+    {
+        if (TargetNode == null || !IsInstanceValid(TargetNode))
+            return Vector2.Down;
+        
+        var desiredDir = (TargetNode.GlobalPosition - currentPos).Normalized();
+        _currentDirection = _currentDirection.Lerp(desiredDir, TurnSpeed * (float)GetPhysicsProcessDeltaTime());
+        return _currentDirection;
+    }
+}
+```
+
+### Attack Behaviors
+```csharp
+// Base attack behavior
+public partial class AttackBehavior : Node
+{
+    [Export] public float Cooldown { get; set; } = 2.0f;
+    [Export] public string BulletType { get; set; } = "enemy_basic";
+    [Export] public float BulletSpeed { get; set; } = 150.0f;
+
+    private float _cooldownTimer = 0.0f;
+
+    public override void _Process(double delta)
+    {
+        _cooldownTimer -= (float)delta;
+        if (_cooldownTimer <= 0.0f)
+        {
+            ExecuteAttack();
+            _cooldownTimer = Cooldown;
+        }
+    }
+
+    protected virtual void ExecuteAttack()
+    {
+        // Override in subclasses
+    }
+}
+
+// Example: Single shot attack
+public partial class SingleShotAttack : AttackBehavior
+{
+    protected override void ExecuteAttack()
+    {
+        var parent = GetParent<Node2D>();
+        if (parent == null)
+            return;
+        
+        var bullet = EntityFactory.SpawnBullet(BulletType, parent.GlobalPosition, Vector2.Down);
+        if (bullet != null)
+        {
+            bullet.Speed = BulletSpeed;
+        }
+    }
+}
+
+// Example: Spread shot attack
+public partial class SpreadShotAttack : AttackBehavior
+{
+    [Export] public int BulletCount { get; set; } = 5;
+    [Export] public float SpreadAngle { get; set; } = 45.0f;
+
+    protected override void ExecuteAttack()
+    {
+        var parent = GetParent<Node2D>();
+        if (parent == null)
+            return;
+        
+        var angleStep = SpreadAngle / (BulletCount - 1);
+        var startAngle = -SpreadAngle / 2.0f;
+        
+        for (int i = 0; i < BulletCount; i++)
+        {
+            var angle = startAngle + angleStep * i;
+            var direction = Vector2.Down.Rotated(Mathf.DegToRad(angle));
+            
+            var bullet = EntityFactory.SpawnBullet(BulletType, parent.GlobalPosition, direction);
+            if (bullet != null)
+            {
+                bullet.Speed = BulletSpeed;
+            }
+        }
+    }
+}
+```
+
+## Integration Rules
+
+### Never Bypass Managers
+```csharp
+// ❌ FORBIDDEN: Direct scene instantiation
+var enemyScene = GD.Load<PackedScene>("res://scenes/enemy/enemy.tscn");
+var enemy = enemyScene.Instantiate();
+
+// ✅ REQUIRED: Use EntityFactory
+var enemy = EntityFactory.SpawnEnemy("popcorn_01", position, direction);
+
+// ❌ FORBIDDEN: Direct state modification
+player.Lives = 5;
+
+// ✅ REQUIRED: Use GameState setters
+GameState.SetLives(5);
+
+// ❌ FORBIDDEN: Direct cross-system calls
+GetNode<ScoreManager>("/root/ScoreManager").AddScore(100);
+
+// ✅ REQUIRED: Use EventBus
+EventBus.EmitSignal(EventBus.SignalName.EnemyDefeated, enemyId, position, 100);
+```
+
+### Event Flow Example (Complete)
+```csharp
+// 1. Enemy dies
+public void OnHealthDepleted()
+{
+    EventBus.EmitSignal(EventBus.SignalName.EnemyDefeated, _enemyId, GlobalPosition, _scoreValue);
+    EntityFactory.ReturnToPool(this, "enemy_popcorn");
+}
+
+// 2. ScoreManager listens to EventBus
+public override void _Ready()
+{
+    EventBus.EnemyDefeated += OnEnemyDefeated;
+}
+
+private void OnEnemyDefeated(int enemyId, Vector2 position, int score)
+{
+    GameState.AddScore(score);
+    CheckForItemDrop(position);
+}
+
+// 3. GameState emits score_changed
+public void AddScore(int amount)
+{
+    var oldScore = _score;
+    _score += amount;
+    EmitSignal(SignalName.ScoreChanged, _score, amount);
+}
+
+// 4. UI listens to GameState
+public override void _Ready()
+{
+    GameState.ScoreChanged += OnScoreChanged;
+}
+
+private void OnScoreChanged(int newScore, int delta)
+{
+    _scoreLabel.Text = $"SCORE: {newScore:D8}";
+    PlayScoreIncreaseAnimation();
+}
+```
+
+## Summary
+
+Follow these C# architecture patterns:
+- Use `EventBus` for all cross-system communication
+- Use `GameState` for centralized state management
+- Use `EntityFactory` for all entity spawning
+- Use component-based design for enemies
+- Use proper C# signal patterns
+- Use type-safe node access
+- Use proper async/await patterns
+- Use proper resource loading patterns

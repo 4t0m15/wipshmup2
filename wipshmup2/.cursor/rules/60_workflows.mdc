@@ -1,0 +1,936 @@
+# Workflows - C# and .NET
+
+## Step-by-Step Procedures for Common Tasks
+
+### Adding a New Enemy Type
+
+#### 1. Create Enemy Template
+```csharp
+// File: scripts/enemy/EnemyTemplate.cs
+public partial class EnemyTemplate : Resource
+{
+    [Export] public string TemplateId { get; set; } = "";
+    [Export] public string EnemyName { get; set; } = "Unknown";
+    [Export] public int MaxHealth { get; set; } = 10;
+    [Export] public int ScoreValue { get; set; } = 100;
+    [Export] public string MovementType { get; set; } = "straight";
+    [Export] public float MovementSpeed { get; set; } = 100.0f;
+    [Export] public string AttackPattern { get; set; } = "none";
+    [Export] public float AttackCooldown { get; set; } = 2.0f;
+    [Export] public Texture2D SpriteTexture { get; set; }
+    [Export] public float CollisionRadius { get; set; } = 8.0f;
+    [Export] public float ItemDropChance { get; set; } = 0.1f;
+    [Export] public string[] ItemDropTypes { get; set; } = Array.Empty<string>();
+}
+```
+
+#### 2. Create Enemy Class
+```csharp
+// File: scripts/enemy/Enemy.cs
+public partial class Enemy : Area2D
+{
+    [Signal] public delegate void HealthChangedEventHandler(int newHealth, int oldHealth);
+    [Signal] public delegate void DefeatedEventHandler(int enemyId, Vector2 position, int scoreValue);
+
+    [ExportGroup("Stats")]
+    [Export] public int MaxHealth { get; set; } = 100;
+    [Export] public int ScoreValue { get; set; } = 100;
+
+    [ExportGroup("Behavior")]
+    [Export] public string MovementPattern { get; set; } = "straight";
+    [Export] public string AttackPattern { get; set; } = "none";
+    [Export] public float AttackCooldown { get; set; } = 2.0f;
+
+    private int _health;
+    private int _enemyId;
+    private Player _cachedPlayer;
+
+    public int Health
+    {
+        get => _health;
+        set
+        {
+            int oldHealth = _health;
+            _health = Mathf.Max(0, value);
+            if (_health != oldHealth)
+            {
+                EmitSignal(SignalName.HealthChanged, _health, oldHealth);
+            }
+        }
+    }
+
+    public override void _Ready()
+    {
+        _enemyId = GetInstanceId();
+        Health = MaxHealth;
+        
+        // Connect signals
+        HealthChanged += OnHealthChanged;
+        BodyEntered += OnBodyEntered;
+        
+        // Setup collision
+        var collision = new CollisionShape2D();
+        var shape = new CircleShape2D();
+        shape.Radius = 8.0f;
+        collision.Shape = shape;
+        AddChild(collision);
+        
+        // Add to group
+        AddToGroup("enemies");
+    }
+
+    public override void _Process(double delta)
+    {
+        UpdateMovement(delta);
+        UpdateAttack(delta);
+    }
+
+    private void UpdateMovement(double delta)
+    {
+        // Movement logic based on pattern
+        switch (MovementPattern)
+        {
+            case "straight":
+                Position += Vector2.Down * 100.0f * (float)delta;
+                break;
+            case "zigzag":
+                // Implement zigzag movement
+                break;
+            // Add more patterns as needed
+        }
+    }
+
+    private void UpdateAttack(double delta)
+    {
+        if (AttackPattern == "none")
+            return;
+        
+        // Attack logic based on pattern
+        // This would integrate with AttackBehavior components
+    }
+
+    public void TakeDamage(int amount)
+    {
+        Health -= amount;
+    }
+
+    private void OnHealthChanged(int newHealth, int oldHealth)
+    {
+        if (newHealth <= 0)
+        {
+            OnHealthDepleted();
+        }
+    }
+
+    private void OnHealthDepleted()
+    {
+        EmitSignal(SignalName.Defeated, _enemyId, GlobalPosition, ScoreValue);
+        EntityFactory.ReturnToPool(this, "enemy_popcorn");
+    }
+
+    private void OnBodyEntered(Node2D body)
+    {
+        if (body is Bullet bullet && bullet.IsPlayerBullet)
+        {
+            TakeDamage(bullet.Damage);
+            bullet.QueueFree();
+        }
+    }
+
+    public void ApplyTemplate(EnemyTemplate template)
+    {
+        if (template == null)
+        {
+            GD.PushError($"[Enemy:{Name}] apply_template called with null template");
+            return;
+        }
+
+        MaxHealth = template.MaxHealth;
+        ScoreValue = template.ScoreValue;
+        MovementPattern = template.MovementType;
+        AttackPattern = template.AttackPattern;
+        AttackCooldown = template.AttackCooldown;
+        
+        Health = MaxHealth;
+    }
+
+    public void ResetForPool()
+    {
+        // Disconnect signals
+        HealthChanged -= OnHealthChanged;
+        BodyEntered -= OnBodyEntered;
+        
+        // Reset state
+        GlobalPosition = Vector2.Zero;
+        Health = MaxHealth;
+        Visible = false;
+        ProcessMode = ProcessModeEnum.Disabled;
+        
+        // Clear references
+        _cachedPlayer = null;
+    }
+}
+```
+
+#### 3. Register Template
+```csharp
+// In EnemyTemplateManager.cs
+public void RegisterEnemyTemplate(string templateId, EnemyTemplate template)
+{
+    if (string.IsNullOrEmpty(templateId))
+    {
+        GD.PushError("[EnemyTemplateManager] Cannot register template with empty ID");
+        return;
+    }
+    
+    if (template == null)
+    {
+        GD.PushError("[EnemyTemplateManager] Cannot register null template");
+        return;
+    }
+    
+    template.TemplateId = templateId;
+    _templates[templateId] = template;
+    GD.Print($"[EnemyTemplateManager] Registered template: {templateId}");
+}
+```
+
+#### 4. Add to JSON Config
+```json
+// File: config/enemies.json
+{
+    "enemies": {
+        "popcorn_03": {
+            "enemy_name": "Fast Popcorn",
+            "max_health": 15,
+            "score_value": 150,
+            "movement_type": "zigzag",
+            "movement_speed": 120.0,
+            "attack_pattern": "single_shot",
+            "attack_cooldown": 1.5,
+            "collision_radius": 8.0,
+            "item_drop_chance": 0.15,
+            "item_drop_types": ["power", "score"]
+        }
+    }
+}
+```
+
+### Adding a New Boss
+
+#### 1. Create Boss Template
+```csharp
+// File: scripts/boss/BossTemplate.cs
+public partial class BossTemplate : Resource
+{
+    [Export] public string BossId { get; set; } = "";
+    [Export] public string BossName { get; set; } = "Unknown Boss";
+    [Export] public int TotalHealth { get; set; } = 1000;
+    [Export] public BossPhase[] Phases { get; set; } = Array.Empty<BossPhase>();
+    [Export] public float WarningDuration { get; set; } = 3.0f;
+    [Export] public int DefeatScore { get; set; } = 10000;
+    [Export] public Texture2D SpriteTexture { get; set; }
+    [Export] public string MusicTrack { get; set; } = "boss_theme_01";
+}
+
+public partial class BossPhase : Resource
+{
+    [Export] public int PhaseNumber { get; set; } = 1;
+    [Export] public string PhaseName { get; set; } = "Phase 1";
+    [Export] public float HealthThreshold { get; set; } = 1.0f; // 1.0 = 100%, 0.5 = 50%
+    [Export] public string MovementPattern { get; set; } = "circle";
+    [Export] public string[] AttackPatterns { get; set; } = Array.Empty<string>();
+    [Export] public float AttackInterval { get; set; } = 2.0f;
+    [Export] public float SpeedMultiplier { get; set; } = 1.0f;
+}
+```
+
+#### 2. Create Boss Class
+```csharp
+// File: scripts/boss/Boss.cs
+public partial class Boss : Area2D
+{
+    [Signal] public delegate void PhaseChangedEventHandler(string bossId, int phaseNumber, string phaseName);
+    [Signal] public delegate void DefeatedEventHandler(string bossId, float completionTime, bool noMiss);
+
+    [ExportGroup("Stats")]
+    [Export] public int MaxHealth { get; set; } = 1000;
+    [Export] public int ScoreValue { get; set; } = 10000;
+
+    private int _health;
+    private string _bossId;
+    private int _currentPhase = 0;
+    private float _startTime;
+    private bool _noMiss = true;
+
+    public int Health
+    {
+        get => _health;
+        set
+        {
+            _health = Mathf.Max(0, value);
+            CheckPhaseTransition();
+        }
+    }
+
+    public override void _Ready()
+    {
+        _bossId = Name;
+        _startTime = Time.GetTicksMsec() / 1000.0f;
+        Health = MaxHealth;
+        
+        // Connect signals
+        BodyEntered += OnBodyEntered;
+        
+        // Setup collision
+        var collision = new CollisionShape2D();
+        var shape = new RectangleShape2D();
+        shape.Size = new Vector2(64, 64);
+        collision.Shape = shape;
+        AddChild(collision);
+        
+        // Add to group
+        AddToGroup("bosses");
+        
+        // Emit spawn event
+        EventBus.EmitSignal(EventBus.SignalName.BossSpawned, this, _bossId);
+    }
+
+    public override void _Process(double delta)
+    {
+        UpdateBossBehavior(delta);
+    }
+
+    private void UpdateBossBehavior(double delta)
+    {
+        // Boss-specific behavior
+        // This would integrate with movement and attack behaviors
+    }
+
+    private void CheckPhaseTransition()
+    {
+        float healthPercent = (float)Health / MaxHealth;
+        var template = BossTemplateManager.GetTemplate(_bossId);
+        if (template == null)
+            return;
+        
+        for (int i = 0; i < template.Phases.Length; i++)
+        {
+            var phase = template.Phases[i];
+            if (healthPercent <= phase.HealthThreshold && i > _currentPhase)
+            {
+                EnterPhase(phase);
+                break;
+            }
+        }
+    }
+
+    private void EnterPhase(BossPhase phase)
+    {
+        _currentPhase = phase.PhaseNumber;
+        
+        // Clear old behaviors
+        ClearBehaviors();
+        
+        // Apply new phase behaviors
+        var movementBehavior = CreateMovementBehavior(phase.MovementPattern);
+        if (movementBehavior != null)
+        {
+            AddChild(movementBehavior);
+        }
+        
+        foreach (var attackPattern in phase.AttackPatterns)
+        {
+            var attackBehavior = CreateAttackBehavior(attackPattern);
+            if (attackBehavior != null)
+            {
+                AddChild(attackBehavior);
+            }
+        }
+        
+        // Emit phase change event
+        EventBus.EmitSignal(EventBus.SignalName.BossPhaseChanged, _bossId, phase.PhaseNumber, phase.PhaseName);
+    }
+
+    private Node CreateMovementBehavior(string pattern)
+    {
+        // Create appropriate movement behavior based on pattern
+        return pattern switch
+        {
+            "circle" => new CircleMovementBehavior(),
+            "straight" => new StraightMovementBehavior(),
+            _ => null
+        };
+    }
+
+    private Node CreateAttackBehavior(string pattern)
+    {
+        // Create appropriate attack behavior based on pattern
+        return pattern switch
+        {
+            "spread_shot" => new SpreadShotAttack(),
+            "laser_beam" => new LaserBeamAttack(),
+            _ => null
+        };
+    }
+
+    private void ClearBehaviors()
+    {
+        // Remove all behavior components
+        var children = GetChildren().ToList();
+        foreach (var child in children)
+        {
+            if (child is MovementBehavior or AttackBehavior)
+            {
+                child.QueueFree();
+            }
+        }
+    }
+
+    public void TakeDamage(int amount)
+    {
+        Health -= amount;
+        if (Health <= 0)
+        {
+            OnDefeated();
+        }
+    }
+
+    private void OnDefeated()
+    {
+        float completionTime = Time.GetTicksMsec() / 1000.0f - _startTime;
+        EventBus.EmitSignal(EventBus.SignalName.BossDefeated, _bossId, completionTime, _noMiss);
+        EntityFactory.ReturnToPool(this, "boss");
+    }
+
+    private void OnBodyEntered(Node2D body)
+    {
+        if (body is Bullet bullet && bullet.IsPlayerBullet)
+        {
+            TakeDamage(bullet.Damage);
+            bullet.QueueFree();
+        }
+    }
+
+    public void ApplyTemplate(BossTemplate template)
+    {
+        if (template == null)
+        {
+            GD.PushError($"[Boss:{Name}] apply_template called with null template");
+            return;
+        }
+
+        MaxHealth = template.TotalHealth;
+        ScoreValue = template.DefeatScore;
+        Health = MaxHealth;
+    }
+
+    public void ResetForPool()
+    {
+        // Disconnect signals
+        BodyEntered -= OnBodyEntered;
+        
+        // Reset state
+        GlobalPosition = Vector2.Zero;
+        Health = MaxHealth;
+        _currentPhase = 0;
+        _noMiss = true;
+        Visible = false;
+        ProcessMode = ProcessModeEnum.Disabled;
+        
+        // Clear behaviors
+        ClearBehaviors();
+    }
+}
+```
+
+### Adding a New Stage
+
+#### 1. Create Stage Definition
+```csharp
+// File: scripts/stages/StageDefinition.cs
+public partial class StageDefinition : Resource
+{
+    [Export] public int StageNumber { get; set; } = 1;
+    [Export] public string StageName { get; set; } = "Stage 1";
+    [Export] public string BackgroundId { get; set; } = "space_01";
+    [Export] public string MusicTrack { get; set; } = "stage_01";
+    [Export] public WaveDefinition[] Waves { get; set; } = Array.Empty<WaveDefinition>();
+    [Export] public string BossId { get; set; } = ""; // Empty if no boss
+    [Export] public float ScrollSpeed { get; set; } = 30.0f;
+}
+
+public partial class WaveDefinition : Resource
+{
+    [Export] public int WaveNumber { get; set; } = 1;
+    [Export] public SpawnEntry[] SpawnEntries { get; set; } = Array.Empty<SpawnEntry>();
+    [Export] public float WaveDuration { get; set; } = 30.0f;
+}
+
+public partial class SpawnEntry : Resource
+{
+    [Export] public string TemplateId { get; set; } = "";
+    [Export] public float SpawnTime { get; set; } = 0.0f;
+    [Export] public Vector2 SpawnPosition { get; set; } = Vector2.Zero;
+    [Export] public string Formation { get; set; } = "single"; // single, line, v_formation, circle
+    [Export] public int FormationCount { get; set; } = 1;
+    [Export] public float FormationSpacing { get; set; } = 32.0f;
+}
+```
+
+#### 2. Create Stage Controller
+```csharp
+// File: scripts/stages/StageController.cs
+public partial class StageController : Node
+{
+    private StageDefinition _currentStage;
+    private int _currentWaveIndex = 0;
+    private float _stageStartTime;
+
+    public override void _Ready()
+    {
+        // Connect to EventBus
+        EventBus.WaveCleared += OnWaveCleared;
+        EventBus.BossDefeated += OnBossDefeated;
+    }
+
+    public void StartStage(int stageNumber)
+    {
+        var stageDef = StageTemplateManager.GetStage(stageNumber);
+        if (stageDef == null)
+        {
+            GD.PushError($"[StageController] Stage {stageNumber} not found");
+            // Loop back to stage 1 if no more stages
+            stageDef = StageTemplateManager.GetStage(1);
+        }
+        
+        _currentStage = stageDef;
+        _currentWaveIndex = 0;
+        _stageStartTime = Time.GetTicksMsec() / 1000.0f;
+        
+        // Emit stage start event
+        EventBus.EmitSignal(EventBus.SignalName.StageStarted, stageDef.StageNumber, stageDef.StageName);
+        
+        // Change background and music
+        EventBus.EmitSignal(EventBus.SignalName.BackgroundChangeRequested, stageDef.BackgroundId, 1.0f);
+        EventBus.EmitSignal(EventBus.SignalName.MusicChangeRequested, stageDef.MusicTrack, 2.0f);
+        
+        // Start first wave
+        StartNextWave();
+    }
+
+    private void StartNextWave()
+    {
+        if (_currentWaveIndex >= _currentStage.Waves.Length)
+        {
+            StartBossPhase();
+            return;
+        }
+        
+        var waveDef = _currentStage.Waves[_currentWaveIndex];
+        SpawnWaveEnemies(waveDef);
+        
+        EventBus.EmitSignal(EventBus.SignalName.WaveStarted, waveDef.WaveNumber, waveDef.SpawnEntries.Length);
+    }
+
+    private void SpawnWaveEnemies(WaveDefinition waveDef)
+    {
+        foreach (var spawnEntry in waveDef.SpawnEntries)
+        {
+            var timer = GetTree().CreateTimer(spawnEntry.SpawnTime);
+            timer.Timeout += () => SpawnEnemyFormation(spawnEntry);
+        }
+    }
+
+    private void SpawnEnemyFormation(SpawnEntry spawnEntry)
+    {
+        switch (spawnEntry.Formation)
+        {
+            case "single":
+                SpawnSingleEnemy(spawnEntry);
+                break;
+            case "line":
+                SpawnLineFormation(spawnEntry);
+                break;
+            case "v_formation":
+                SpawnVFormation(spawnEntry);
+                break;
+            case "circle":
+                SpawnCircleFormation(spawnEntry);
+                break;
+        }
+    }
+
+    private void SpawnSingleEnemy(SpawnEntry spawnEntry)
+    {
+        var enemy = EntityFactory.SpawnEnemy(spawnEntry.TemplateId, spawnEntry.SpawnPosition, Vector2.Down);
+        if (enemy != null)
+        {
+            var template = EnemyTemplateManager.GetTemplate(spawnEntry.TemplateId);
+            enemy.ApplyTemplate(template);
+        }
+    }
+
+    private void SpawnLineFormation(SpawnEntry spawnEntry)
+    {
+        float startX = spawnEntry.SpawnPosition.X - (spawnEntry.FormationCount - 1) * spawnEntry.FormationSpacing / 2.0f;
+        
+        for (int i = 0; i < spawnEntry.FormationCount; i++)
+        {
+            Vector2 position = new(startX + i * spawnEntry.FormationSpacing, spawnEntry.SpawnPosition.Y);
+            var enemy = EntityFactory.SpawnEnemy(spawnEntry.TemplateId, position, Vector2.Down);
+            if (enemy != null)
+            {
+                var template = EnemyTemplateManager.GetTemplate(spawnEntry.TemplateId);
+                enemy.ApplyTemplate(template);
+            }
+        }
+    }
+
+    private void SpawnVFormation(SpawnEntry spawnEntry)
+    {
+        // Implement V formation spawning
+        float centerX = spawnEntry.SpawnPosition.X;
+        float startY = spawnEntry.SpawnPosition.Y;
+        
+        for (int i = 0; i < spawnEntry.FormationCount; i++)
+        {
+            float offsetX = (i - spawnEntry.FormationCount / 2) * spawnEntry.FormationSpacing;
+            Vector2 position = new(centerX + offsetX, startY + Mathf.Abs(offsetX) * 0.5f);
+            var enemy = EntityFactory.SpawnEnemy(spawnEntry.TemplateId, position, Vector2.Down);
+            if (enemy != null)
+            {
+                var template = EnemyTemplateManager.GetTemplate(spawnEntry.TemplateId);
+                enemy.ApplyTemplate(template);
+            }
+        }
+    }
+
+    private void SpawnCircleFormation(SpawnEntry spawnEntry)
+    {
+        float radius = spawnEntry.FormationSpacing;
+        float angleStep = Mathf.Tau / spawnEntry.FormationCount;
+        
+        for (int i = 0; i < spawnEntry.FormationCount; i++)
+        {
+            float angle = i * angleStep;
+            Vector2 offset = new(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+            Vector2 position = spawnEntry.SpawnPosition + offset;
+            var enemy = EntityFactory.SpawnEnemy(spawnEntry.TemplateId, position, Vector2.Down);
+            if (enemy != null)
+            {
+                var template = EnemyTemplateManager.GetTemplate(spawnEntry.TemplateId);
+                enemy.ApplyTemplate(template);
+            }
+        }
+    }
+
+    private void StartBossPhase()
+    {
+        if (string.IsNullOrEmpty(_currentStage.BossId))
+        {
+            // No boss, stage complete
+            CompleteStage();
+            return;
+        }
+        
+        // Spawn boss
+        var boss = EntityFactory.SpawnBoss(_currentStage.BossId, new Vector2(160, 50));
+        if (boss != null)
+        {
+            var template = BossTemplateManager.GetTemplate(_currentStage.BossId);
+            boss.ApplyTemplate(template);
+        }
+    }
+
+    private void OnWaveCleared(int waveNumber, float time)
+    {
+        _currentWaveIndex++;
+        StartNextWave();
+    }
+
+    private void OnBossDefeated(string bossId, float completionTime, bool noMiss)
+    {
+        CompleteStage();
+    }
+
+    private void CompleteStage()
+    {
+        float stageTime = Time.GetTicksMsec() / 1000.0f - _stageStartTime;
+        EventBus.EmitSignal(EventBus.SignalName.StageCleared, _currentStage.StageNumber, stageTime, GameState.Score);
+        
+        // Start next stage after delay
+        var timer = GetTree().CreateTimer(3.0);
+        timer.Timeout += () => StartStage(_currentStage.StageNumber + 1);
+    }
+}
+```
+
+### Adding a New Bullet Type
+
+#### 1. Create Bullet Class
+```csharp
+// File: scripts/bullet/Bullet.cs
+public partial class Bullet : Area2D
+{
+    [Signal] public delegate void HitEventHandler(Bullet bullet, Node target, int damage);
+
+    [ExportGroup("Stats")]
+    [Export] public int Damage { get; set; } = 10;
+    [Export] public float Speed { get; set; } = 200.0f;
+    [Export] public float Lifetime { get; set; } = 5.0f;
+
+    [ExportGroup("Behavior")]
+    [Export] public bool IsPlayerBullet { get; set; } = false;
+    [Export] public bool IsHoming { get; set; } = false;
+    [Export] public float HomingStrength { get; set; } = 2.0f;
+
+    private Vector2 _direction = Vector2.Down;
+    private float _lifetimeTimer = 0.0f;
+    private Node2D _target;
+
+    public Vector2 Direction
+    {
+        get => _direction;
+        set => _direction = value.Normalized();
+    }
+
+    public Node2D Target
+    {
+        get => _target;
+        set => _target = value;
+    }
+
+    public override void _Ready()
+    {
+        // Setup collision
+        var collision = new CollisionShape2D();
+        var shape = new CircleShape2D();
+        shape.Radius = 2.0f;
+        collision.Shape = shape;
+        AddChild(collision);
+        
+        // Connect signals
+        BodyEntered += OnBodyEntered;
+        
+        // Add to appropriate group
+        AddToGroup(IsPlayerBullet ? "player_bullets" : "enemy_bullets");
+    }
+
+    public override void _Process(double delta)
+    {
+        UpdateMovement(delta);
+        UpdateLifetime(delta);
+    }
+
+    private void UpdateMovement(double delta)
+    {
+        if (IsHoming && _target != null && IsInstanceValid(_target))
+        {
+            // Homing behavior
+            var desiredDir = (_target.GlobalPosition - GlobalPosition).Normalized();
+            _direction = _direction.Lerp(desiredDir, HomingStrength * (float)delta);
+        }
+        
+        Position += _direction * Speed * (float)delta;
+    }
+
+    private void UpdateLifetime(double delta)
+    {
+        _lifetimeTimer += (float)delta;
+        if (_lifetimeTimer >= Lifetime)
+        {
+            ReturnToPool();
+        }
+    }
+
+    private void OnBodyEntered(Node2D body)
+    {
+        if (IsPlayerBullet && body.IsInGroup("enemies"))
+        {
+            // Player bullet hit enemy
+            EmitSignal(SignalName.Hit, this, body, Damage);
+            ReturnToPool();
+        }
+        else if (!IsPlayerBullet && body.IsInGroup("player"))
+        {
+            // Enemy bullet hit player
+            EmitSignal(SignalName.Hit, this, body, Damage);
+            ReturnToPool();
+        }
+    }
+
+    private void ReturnToPool()
+    {
+        var poolId = IsPlayerBullet ? "player_bullet_basic" : "enemy_bullet_basic";
+        EntityFactory.ReturnToPool(this, poolId);
+    }
+
+    public void ResetForPool()
+    {
+        // Disconnect signals
+        BodyEntered -= OnBodyEntered;
+        
+        // Reset state
+        GlobalPosition = Vector2.Zero;
+        _direction = Vector2.Down;
+        _lifetimeTimer = 0.0f;
+        _target = null;
+        Visible = false;
+        ProcessMode = ProcessModeEnum.Disabled;
+    }
+}
+```
+
+### Adding a New Attack Pattern
+
+#### 1. Create Attack Behavior
+```csharp
+// File: scripts/components/AttackBehavior.cs
+public partial class AttackBehavior : Node
+{
+    [Export] public float Cooldown { get; set; } = 2.0f;
+    [Export] public string BulletType { get; set; } = "enemy_basic";
+    [Export] public float BulletSpeed { get; set; } = 150.0f;
+
+    private float _cooldownTimer = 0.0f;
+
+    public override void _Process(double delta)
+    {
+        _cooldownTimer -= (float)delta;
+        if (_cooldownTimer <= 0.0f)
+        {
+            ExecuteAttack();
+            _cooldownTimer = Cooldown;
+        }
+    }
+
+    protected virtual void ExecuteAttack()
+    {
+        // Override in subclasses
+    }
+}
+
+// File: scripts/components/SpreadShotAttack.cs
+public partial class SpreadShotAttack : AttackBehavior
+{
+    [Export] public int BulletCount { get; set; } = 5;
+    [Export] public float SpreadAngle { get; set; } = 45.0f;
+
+    protected override void ExecuteAttack()
+    {
+        var parent = GetParent<Node2D>();
+        if (parent == null)
+            return;
+        
+        float angleStep = SpreadAngle / (BulletCount - 1);
+        float startAngle = -SpreadAngle / 2.0f;
+        
+        for (int i = 0; i < BulletCount; i++)
+        {
+            float angle = startAngle + angleStep * i;
+            Vector2 direction = Vector2.Down.Rotated(Mathf.DegToRad(angle));
+            
+            var bullet = EntityFactory.SpawnBullet(BulletType, parent.GlobalPosition, direction);
+            if (bullet != null)
+            {
+                bullet.Speed = BulletSpeed;
+            }
+        }
+    }
+}
+```
+
+### Adding a New Movement Pattern
+
+#### 1. Create Movement Behavior
+```csharp
+// File: scripts/components/MovementBehavior.cs
+public partial class MovementBehavior : Node
+{
+    [Export] public float Speed { get; set; } = 100.0f;
+    [Export] public Node2D TargetNode { get; set; }
+
+    public override void _PhysicsProcess(double delta)
+    {
+        var parent = GetParent<Node2D>();
+        if (parent == null)
+            return;
+        
+        Vector2 direction = CalculateDirection(parent.GlobalPosition);
+        parent.Position += direction * Speed * (float)delta;
+    }
+
+    protected virtual Vector2 CalculateDirection(Vector2 currentPos)
+    {
+        // Override in subclasses
+        return Vector2.Down;
+    }
+}
+
+// File: scripts/components/CircleMovementBehavior.cs
+public partial class CircleMovementBehavior : MovementBehavior
+{
+    [Export] public float CircleRadius { get; set; } = 50.0f;
+    [Export] public float CircleSpeed { get; set; } = 1.0f;
+
+    private float _angle = 0.0f;
+    private Vector2 _centerPosition;
+
+    public override void _Ready()
+    {
+        base._Ready();
+        var parent = GetParent<Node2D>();
+        if (parent != null)
+        {
+            _centerPosition = parent.GlobalPosition;
+        }
+    }
+
+    protected override Vector2 CalculateDirection(Vector2 currentPos)
+    {
+        _angle += CircleSpeed * (float)GetPhysicsProcessDeltaTime();
+        
+        Vector2 circlePos = _centerPosition + new Vector2(
+            Mathf.Cos(_angle) * CircleRadius,
+            Mathf.Sin(_angle) * CircleRadius
+        );
+        
+        return (circlePos - currentPos).Normalized();
+    }
+}
+```
+
+## Common Workflow Patterns
+
+### 1. Adding New Content
+1. Create the data structure (Template/Definition class)
+2. Create the behavior class
+3. Register with appropriate manager
+4. Add to JSON config
+5. Test in game
+
+### 2. Debugging Issues
+1. Check console for errors/warnings
+2. Add debug prints with system prefixes
+3. Use breakpoints in debugger
+4. Check signal connections
+5. Validate null references
+
+### 3. Performance Optimization
+1. Profile with debugger
+2. Identify hot paths
+3. Cache expensive operations
+4. Use object pooling
+5. Reduce allocations
+
+### 4. Testing New Features
+1. Test in isolation first
+2. Test with existing systems
+3. Test edge cases
+4. Test performance impact
+5. Test cleanup/pooling
+
+## Summary
+
+These workflows provide step-by-step procedures for common tasks in the C# and .NET version of the bullet-hell shmup. Follow these patterns to maintain consistency and avoid common pitfalls.

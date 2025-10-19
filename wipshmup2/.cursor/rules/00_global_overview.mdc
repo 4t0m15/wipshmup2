@@ -1,0 +1,211 @@
+# Global Overview - C# and .NET with Godot Mono
+
+## Project Overview
+
+**Genre**: Vertical-scrolling bullet-hell shoot-em-up (danmaku)  
+**Engine**: Godot 4.5 with C# and .NET 8.0  
+**Language**: C# 12.0 with Godot Mono  
+**Resolution**: 320x180 native with integer scaling  
+**Visual Style**: CRT aesthetics (scanlines, phosphor glow, dithering)  
+**Performance Target**: Stable 60 FPS with 500+ simultaneous bullets
+
+## Core Architecture Principles
+
+### 1. Event-Driven Communication
+- Use `EventBus` autoload for all cross-system communication
+- Emit signals instead of direct method calls
+- Example: `EventBus.EmitSignal(EventBus.SignalName.EnemyDefeated, id, pos, score)` instead of `ScoreManager.AddScore(100)`
+
+### 2. Component-Based Entity Design
+- Composition over inheritance for enemies and bosses
+- Attach behavior components (MovementBehavior, AttackBehavior) to entities
+- Keep base classes generic; behaviors provide specialization
+
+### 3. Data-Driven Content
+- Enemy/Boss/Stage definitions in JSON/CFG files
+- Use Template Managers (`EnemyTemplateManager`, `BossTemplateManager`, `StageTemplateManager`)
+- Gameplay values come from data, not hardcoded in scripts
+
+### 4. Object Pooling (Critical for Performance)
+- All entity spawning via `EntityFactory` autoload
+- Reuse instances (toggle visibility) instead of instantiate/free
+- Implement complete `ResetForPool()` methods (disconnect signals, clear state)
+
+### 5. Centralized State Management
+- Single source of truth via `GameState` autoload
+- Read/write player stats (lives, bombs, score) only through GameState
+- Never duplicate state in multiple scripts
+
+## C# Specific Requirements
+
+### Class Declaration
+```csharp
+using Godot;
+using System.Collections.Generic;
+
+public partial class EnemyController : Node2D
+{
+    // Class implementation
+}
+```
+
+### Signal Declarations
+```csharp
+[Signal]
+public delegate void HealthChangedEventHandler(int newHealth, int oldHealth);
+
+[Signal]
+public delegate void DefeatedEventHandler(int enemyId, Vector2 position);
+```
+
+### Export Variables
+```csharp
+[Export] public float Speed { get; set; } = 100.0f;
+[Export] public int MaxHealth { get; set; } = 100;
+[Export] public string EnemyName { get; set; } = "Enemy";
+[Export(PropertyHint.Range, "0,10")] public int Difficulty { get; set; } = 5;
+```
+
+### Node Access Patterns
+```csharp
+private Sprite2D _sprite;
+private CollisionShape2D _collision;
+
+public override void _Ready()
+{
+    _sprite = GetNode<Sprite2D>("Sprite2D");
+    _collision = GetNode<CollisionShape2D>("CollisionShape2D");
+}
+
+// Safe access
+var player = GetNodeOrNull<Player>("/root/Main/Player");
+if (player != null)
+{
+    // Use player
+}
+```
+
+## Must-Follow Patterns
+
+### Spawning Entities
+```csharp
+// ✅ CORRECT: Use EntityFactory (pooled)
+var bullet = EntityFactory.SpawnBullet("player_basic", position, direction);
+
+// ❌ WRONG: Direct instantiation (bypasses pooling)
+var bullet = bulletScene.Instantiate();
+AddChild(bullet);
+```
+
+### Cross-System Communication
+```csharp
+// ✅ CORRECT: Event-driven via EventBus
+EventBus.EmitSignal(EventBus.SignalName.EnemyDefeated, enemyId, position, scoreValue);
+
+// ❌ WRONG: Direct coupling
+GetNode<ScoreManager>("/root/ScoreManager").AddScore(100);
+```
+
+### State Management
+```csharp
+// ✅ CORRECT: Via GameState
+var lives = GameState.Lives;
+GameState.LoseLife();
+
+// ❌ WRONG: Local state duplication
+private int _playerLives = 3; // Don't duplicate GameState!
+```
+
+### Safety and Null Checks
+```csharp
+// ✅ CORRECT: Always validate nodes
+var player = GetNodeOrNull<Player>("Player");
+if (player == null || !IsInstanceValid(player))
+    return;
+
+// ❌ WRONG: Assume node exists
+var player = GetNode<Player>("Player");
+player.TakeDamage(10); // Crash if Player missing!
+```
+
+## Performance Imperatives
+
+- **No allocations in `_Process()` or `_PhysicsProcess()`**
+- Cache node references (avoid repeated `GetNode()` calls)
+- Avoid `GetTree().GetNodesInGroup()` in hot paths (cache group references)
+- Respect bullet caps and rate limits (degrade gracefully under load)
+- All bullets/enemies/particles use object pooling
+
+## Protected Areas (DO NOT MODIFY)
+
+### Critical - Never Touch Without Explicit Approval
+- `wipshmup2/shaders/*.gdshader` — CRT and bullet readability shaders
+- `project.godot` autoload order — System initialization dependencies
+- Core factory/manager public APIs — Used throughout codebase
+
+### Sensitive - Modify with Extreme Caution
+- `EntityFactory` pooling logic
+- `EventBus` signal signatures (breaking change)
+- `GameState` state variables
+- `ResetForPool()` implementations
+
+## C# Code Style Quick Reference
+
+- **Naming**: `PascalCase` for public members, `camelCase` for private fields
+- **Private Fields**: Prefix with underscore (`_cachedPlayer`, `_internalMethod()`)
+- **Indentation**: 4 spaces (consistent)
+- **Line Length**: Max 120 characters
+- **Early Returns**: Use guard clauses instead of deep nesting
+- **Comments**: Use `//` for single line, `/* */` for multi-line
+- **XML Documentation**: Use `/// <summary>` for public APIs
+
+## Pre-Edit Checklist
+
+Before making ANY code changes:
+- [ ] Read relevant manager/system code to understand existing patterns
+- [ ] Confirm you're using `EntityFactory` for all spawns
+- [ ] Confirm you're using `EventBus` for cross-system communication
+- [ ] Confirm you're using `GameState` for player stats
+- [ ] Add null checks and safe defaults
+- [ ] Respect object pooling (visibility toggle vs free)
+- [ ] Do not modify protected areas (shaders, autoloads, core interfaces)
+- [ ] Update related configs/docs if behavior changes
+- [ ] Use proper C# syntax and patterns
+- [ ] Add `using` statements as needed
+- [ ] Use `partial` keyword for all classes
+
+## When Uncertain
+
+1. Search the codebase for similar implementations (`Ctrl+Shift+F` in editor)
+2. Read the relevant `.cursor/rules/*.mdc` file for detailed guidance
+3. Follow the most common pattern found
+4. Prefer conservative, reversible changes
+5. Add guard clauses and safety checks liberally
+6. Ask for clarification only if truly blocked
+
+## Red Flags - Stop and Ask
+
+If you're about to:
+- ❌ Rewrite a shader file
+- ❌ Change autoload registration order
+- ❌ Modify `EntityFactory` public API
+- ❌ Change `EventBus` signal signatures
+- ❌ Remove existing safety checks
+- ❌ Add a new autoload singleton
+- ❌ Bypass pooling "just this once"
+- ❌ Use GDScript syntax in C# files
+- ❌ Forget `partial` keyword on classes
+
+**STOP.** These are protected areas. Request explicit approval first.
+
+## Summary
+
+This project follows strict architectural patterns for maintainability and performance:
+- **Event-driven** via EventBus
+- **Component-based** entity design
+- **Data-driven** content via templates
+- **Object pooling** for all dynamic entities
+- **Centralized state** via GameState
+- **C# and .NET** with proper Godot Mono patterns
+
+Follow existing patterns, prioritize safety over cleverness, and keep performance in mind at all times. When in doubt, read the comprehensive rules in `.cursor/rules/*.mdc`.

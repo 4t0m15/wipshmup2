@@ -1,0 +1,536 @@
+# C# and Godot 4.5 Patterns
+
+## Core C# Requirements
+
+### Class Declaration
+```csharp
+using Godot;
+using System.Collections.Generic;
+using System.Linq;
+
+public partial class EnemyController : Node2D
+{
+    // Implementation
+}
+```
+
+**CRITICAL**: All C# classes must use `partial` keyword for Godot 4.5 compatibility.
+
+### Method Signatures
+```csharp
+// ✅ CORRECT: Override virtual methods with proper signatures
+public override void _Ready()
+{
+    // Initialization
+}
+
+public override void _Process(double delta)
+{
+    // Game logic
+}
+
+public override void _PhysicsProcess(double delta)
+{
+    // Physics logic
+}
+
+public override void _Input(InputEvent @event)
+{
+    // Input handling
+}
+
+// ❌ WRONG: Missing override or wrong signature
+public void _ready() // Wrong casing, missing override
+{
+}
+
+public override void _Process(float delta) // Wrong type - should be double
+{
+}
+```
+
+### Signal Declarations and Usage
+```csharp
+// ✅ CORRECT: Signal declaration
+[Signal]
+public delegate void HealthChangedEventHandler(int newHealth, int oldHealth);
+
+[Signal]
+public delegate void DefeatedEventHandler(int enemyId, Vector2 position, int scoreValue);
+
+// ✅ CORRECT: Signal emission
+public void TakeDamage(int amount)
+{
+    int oldHealth = _health;
+    _health -= amount;
+    EmitSignal(SignalName.HealthChanged, _health, oldHealth);
+}
+
+// ✅ CORRECT: Signal connection
+public override void _Ready()
+{
+    HealthChanged += OnHealthChanged;
+    EventBus.EnemyDefeated += OnEnemyDefeated;
+}
+
+// ✅ CORRECT: Signal disconnection
+public override void _ExitTree()
+{
+    HealthChanged -= OnHealthChanged;
+    EventBus.EnemyDefeated -= OnEnemyDefeated;
+}
+
+// ❌ WRONG: String-based signal names
+EmitSignal("health_changed", _health, oldHealth); // Use SignalName enum instead
+```
+
+### Export Variables
+```csharp
+// ✅ CORRECT: Export properties with proper types
+[Export] public float Speed { get; set; } = 100.0f;
+[Export] public int MaxHealth { get; set; } = 100;
+[Export] public string EnemyName { get; set; } = "Enemy";
+[Export] public bool IsBoss { get; set; } = false;
+[Export] public Texture2D SpriteTexture { get; set; }
+[Export] public PackedScene BulletScene { get; set; }
+
+// ✅ CORRECT: Export with hints
+[Export(PropertyHint.Range, "0,1000,10")] public int Health { get; set; } = 100;
+[Export(PropertyHint.Range, "0.0,500.0,0.1")] public float Speed { get; set; } = 100.0f;
+[Export(PropertyHint.Enum, "Straight,Zigzag,Circle,Homing")] public string MovementPattern { get; set; } = "Straight";
+
+// ✅ CORRECT: Export groups
+[ExportGroup("Combat")]
+[Export] public int Damage { get; set; } = 10;
+[Export] public float AttackCooldown { get; set; } = 2.0f;
+
+[ExportGroup("Visual")]
+[Export] public Color BulletColor { get; set; } = Color.Red;
+[Export] public float Scale { get; set; } = 1.0f;
+
+// ❌ WRONG: Missing types or wrong syntax
+[Export] public var speed = 100; // Missing type
+[Export] public float speed; // Missing default value
+```
+
+### Node Access Patterns
+```csharp
+// ✅ CORRECT: Cached node references
+private Sprite2D _sprite;
+private CollisionShape2D _collision;
+private Player _cachedPlayer;
+
+public override void _Ready()
+{
+    _sprite = GetNode<Sprite2D>("Sprite2D");
+    _collision = GetNode<CollisionShape2D>("CollisionShape2D");
+    _cachedPlayer = GetNodeOrNull<Player>("/root/Main/Player");
+}
+
+// ✅ CORRECT: Safe node access with validation
+public Player GetPlayer()
+{
+    if (_cachedPlayer == null || !IsInstanceValid(_cachedPlayer))
+    {
+        _cachedPlayer = GetNodeOrNull<Player>("/root/Main/Player");
+    }
+    return _cachedPlayer;
+}
+
+// ✅ CORRECT: Type-safe node access
+var enemy = GetNode<Enemy>("Enemy");
+var bullet = GetNodeOrNull<Bullet>("Bullet");
+
+// ❌ WRONG: Unsafe node access
+var player = GetNode<Player>("Player"); // Crashes if missing
+var enemy = GetNode("Enemy") as Enemy; // Less type-safe
+```
+
+### Collections and Data Structures
+```csharp
+// ✅ CORRECT: Use List<T> for dynamic collections
+private List<Enemy> _enemies = new();
+private List<Bullet> _activeBullets = new();
+
+// ✅ CORRECT: Use Dictionary<TKey, TValue> for key-value pairs
+private Dictionary<int, int> _healthMap = new();
+private Dictionary<string, EnemyTemplate> _templates = new();
+
+// ✅ CORRECT: Use Godot.Collections.Array<T> when needed for Godot integration
+private Godot.Collections.Array<Enemy> _godotEnemies = new();
+
+// ✅ CORRECT: Collection operations
+_enemies.Add(enemy);
+_enemies.Remove(enemy);
+_enemies.RemoveAt(index);
+_enemies.Clear();
+
+// Check existence
+if (_enemies.Contains(enemy))
+{
+    // Handle
+}
+
+// Safe iteration with removal
+for (int i = _enemies.Count - 1; i >= 0; i--)
+{
+    var enemy = _enemies[i];
+    if (enemy == null || !IsInstanceValid(enemy))
+    {
+        _enemies.RemoveAt(i);
+        continue;
+    }
+    // Process enemy
+}
+
+// ❌ WRONG: Using arrays for dynamic collections
+private Enemy[] _enemies = new Enemy[100]; // Fixed size, not suitable for dynamic content
+```
+
+### String Formatting and Interpolation
+```csharp
+// ✅ CORRECT: String interpolation
+string message = $"Enemy {enemyName} has {health} health remaining";
+string path = $"res://scenes/enemy_{enemyType}.tscn";
+string scoreText = $"SCORE: {score:D8}"; // Padded to 8 digits
+
+// ✅ CORRECT: Multi-line strings
+string debugInfo = $"""
+    [Enemy Debug]
+    ID: {enemyId}
+    Health: {health}/{maxHealth}
+    Position: {globalPosition}
+    State: {stateName}
+    """;
+
+// ✅ CORRECT: String formatting with parameters
+string message = string.Format("Enemy {0} has {1} health", enemyName, health);
+
+// ❌ WRONG: String concatenation (slower, less readable)
+string message = "Enemy " + enemyName + " has " + health + " health";
+```
+
+### Math Operations
+```csharp
+// ✅ CORRECT: Use Mathf for math operations
+float angle = Mathf.Sin(time);
+float distance = Mathf.Sqrt(x * x + y * y);
+float clamped = Mathf.Clamp(value, 0.0f, 100.0f);
+float rounded = Mathf.Round(value);
+float absValue = Mathf.Abs(value);
+
+// ✅ CORRECT: Vector operations
+Vector2 direction = (targetPosition - globalPosition).Normalized();
+float distanceSquared = globalPosition.DistanceSquaredTo(targetPosition);
+Vector2 lerped = startPosition.Lerp(endPosition, t);
+
+// ✅ CORRECT: Random operations
+float randomFloat = GD.Randf();
+int randomInt = GD.Randi();
+int randomRange = GD.RandRange(0, 100);
+
+// ❌ WRONG: Using System.Math instead of Mathf
+float angle = Math.Sin(time); // Use Mathf.Sin instead
+```
+
+### Control Flow
+```csharp
+// ✅ CORRECT: Switch expressions (C# 8+)
+var result = enemyType switch
+{
+    "fighter" => SpawnFighter(),
+    "tank" => SpawnTank(),
+    "boss" => SpawnBoss(),
+    _ => SpawnDefault()
+};
+
+// ✅ CORRECT: Traditional switch
+switch (enemyType)
+{
+    case "fighter":
+        SpawnFighter();
+        break;
+    case "tank":
+        SpawnTank();
+        break;
+    case "boss":
+        SpawnBoss();
+        break;
+    default:
+        SpawnDefault();
+        break;
+}
+
+// ✅ CORRECT: Early returns (preferred)
+public void AttackTarget(Node2D target)
+{
+    if (target == null || !IsInstanceValid(target))
+        return;
+    
+    if (_attackCooldown > 0.0f)
+        return;
+    
+    if (!IsInAttackRange(target))
+        return;
+    
+    // Main logic here
+    FireBulletAt(target);
+    _attackCooldown = AttackCooldownDuration;
+}
+
+// ❌ WRONG: Deep nesting
+public void AttackTarget(Node2D target)
+{
+    if (target != null && IsInstanceValid(target))
+    {
+        if (_attackCooldown <= 0.0f)
+        {
+            if (IsInAttackRange(target))
+            {
+                FireBulletAt(target);
+                _attackCooldown = AttackCooldownDuration;
+            }
+        }
+    }
+}
+```
+
+### Loops and Iteration
+```csharp
+// ✅ CORRECT: For loops
+for (int i = 0; i < 10; i++)
+{
+    GD.Print(i);
+}
+
+// ✅ CORRECT: Foreach loops
+foreach (var enemy in _enemies)
+{
+    enemy.TakeDamage(10);
+}
+
+// ✅ CORRECT: Safe iteration with removal
+for (int i = _enemies.Count - 1; i >= 0; i--)
+{
+    var enemy = _enemies[i];
+    if (enemy == null || !IsInstanceValid(enemy))
+    {
+        _enemies.RemoveAt(i);
+        continue;
+    }
+    enemy.UpdateLogic(delta);
+}
+
+// ✅ CORRECT: LINQ operations (use sparingly for performance)
+var aliveEnemies = _enemies.Where(e => e != null && IsInstanceValid(e)).ToList();
+var bossEnemies = _enemies.Where(e => e.IsBoss).ToList();
+
+// ❌ WRONG: Modifying collection during foreach
+foreach (var enemy in _enemies)
+{
+    if (enemy.Health <= 0)
+    {
+        _enemies.Remove(enemy); // Exception!
+    }
+}
+```
+
+### Resource Loading
+```csharp
+// ✅ CORRECT: Preload resources
+private PackedScene _bulletScene = GD.Load<PackedScene>("res://scenes/bullet.tscn");
+private Texture2D _enemyTexture = GD.Load<Texture2D>("res://assets/enemy.png");
+
+// ✅ CORRECT: Load at runtime
+var scene = GD.Load<PackedScene>("res://scenes/enemy.tscn");
+var texture = GD.Load<Texture2D>("res://assets/enemy.png");
+
+// ✅ CORRECT: Type-safe instantiation
+var bullet = _bulletScene.Instantiate<Bullet>();
+AddChild(bullet);
+
+// ❌ WRONG: Unsafe loading
+var scene = Load("res://scenes/enemy.tscn"); // Missing type parameter
+```
+
+### Async/Await Patterns
+```csharp
+// ✅ CORRECT: Async method declaration
+public async Task DelayedAttack()
+{
+    await ToSignal(GetTree().CreateTimer(2.0), SceneTreeTimer.SignalName.Timeout);
+    
+    // Re-validate after await
+    if (!IsInstanceValid(this))
+        return;
+    
+    if (_target == null || !IsInstanceValid(_target))
+    {
+        GD.PushWarning("[Enemy] Target became invalid during attack delay");
+        return;
+    }
+    
+    FireBulletAtTarget();
+}
+
+// ✅ CORRECT: Signal awaiting
+public async Task WaitForPlayerDeath()
+{
+    var timeout = GetTree().CreateTimer(10.0);
+    var result = await ToSignal(EventBus, EventBus.SignalName.PlayerDied)
+        .Or(ToSignal(timeout, SceneTreeTimer.SignalName.Timeout));
+    
+    if (!IsInstanceValid(this))
+        return;
+    
+    if (result == timeout)
+    {
+        GD.PushWarning("[Enemy] Timeout waiting for player death");
+        return;
+    }
+    
+    OnPlayerDeathConfirmed();
+}
+
+// ❌ WRONG: Missing async keyword
+public Task DelayedAttack() // Missing async
+{
+    await ToSignal(GetTree().CreateTimer(2.0), SceneTreeTimer.SignalName.Timeout);
+}
+```
+
+### Error Handling and Logging
+```csharp
+// ✅ CORRECT: Use GD methods for logging
+GD.Print("Debug message");
+GD.PushWarning("Warning message");
+GD.PushError("Error message");
+
+// ✅ CORRECT: Structured error messages
+if (template == null)
+{
+    GD.PushError($"[Enemy:{Name}] apply_template called with null template. Using default template instead.");
+    template = EnemyTemplateManager.GetDefaultTemplate();
+}
+
+// ✅ CORRECT: Exception handling
+try
+{
+    var result = RiskyOperation();
+    return result;
+}
+catch (Exception ex)
+{
+    GD.PushError($"[Enemy] Operation failed: {ex.Message}");
+    return GetDefaultValue();
+}
+
+// ❌ WRONG: Using Console.WriteLine
+Console.WriteLine("Debug message"); // Use GD.Print instead
+```
+
+### Property Patterns
+```csharp
+// ✅ CORRECT: Properties with validation
+private int _health = 100;
+
+[Export]
+public int Health
+{
+    get => _health;
+    set
+    {
+        int oldHealth = _health;
+        _health = Mathf.Max(0, value);
+        if (_health != oldHealth)
+        {
+            EmitSignal(SignalName.HealthChanged, _health, oldHealth);
+        }
+    }
+}
+
+// ✅ CORRECT: Read-only properties
+public bool IsAlive => _health > 0;
+public float HealthPercentage => (float)_health / _maxHealth;
+
+// ✅ CORRECT: Computed properties
+public Vector2 DirectionToPlayer
+{
+    get
+    {
+        var player = GetPlayer();
+        if (player == null)
+            return Vector2.Down;
+        return (player.GlobalPosition - GlobalPosition).Normalized();
+    }
+}
+```
+
+### Common C# Gotchas
+
+1. **Partial class required**: All C# scripts must use `partial` keyword
+2. **SignalName enum**: Access signals via `SignalName.MySignal` not string
+3. **PropertyName enum**: Similar for property names
+4. **Callable.From()**: May need for signal connections with parameters
+5. **await**: Requires `async` method and different syntax than GDScript
+6. **null vs IsInstanceValid**: Use `IsInstanceValid()` for nodes that might be freed
+7. **File paths**: Still use forward slashes `res://` not backslashes
+8. **Case sensitivity**: C# is case-sensitive everywhere
+9. **Float literals**: Always use `f` suffix: `100.0f` not `100.0`
+10. **Delta parameter**: Use `double` not `float` for `_Process` and `_PhysicsProcess`
+
+### Performance Considerations
+
+```csharp
+// ✅ CORRECT: Cache expensive operations
+private Vector2 _cachedDirection = Vector2.Zero;
+private bool _directionDirty = true;
+
+public Vector2 GetMovementDirection()
+{
+    if (_directionDirty)
+    {
+        _cachedDirection = (_targetPosition - GlobalPosition).Normalized();
+        _directionDirty = false;
+    }
+    return _cachedDirection;
+}
+
+// ✅ CORRECT: Avoid allocations in hot paths
+private readonly List<Enemy> _tempEnemies = new(); // Reuse for temporary operations
+
+public void UpdateAllEnemies(double delta)
+{
+    _tempEnemies.Clear();
+    _tempEnemies.AddRange(_enemies.Where(e => e != null && IsInstanceValid(e)));
+    
+    foreach (var enemy in _tempEnemies)
+    {
+        enemy.UpdateLogic(delta);
+    }
+}
+
+// ❌ WRONG: Allocations in hot paths
+public void UpdateAllEnemies(double delta)
+{
+    var validEnemies = _enemies.Where(e => e != null && IsInstanceValid(e)).ToList(); // Allocation every frame!
+    foreach (var enemy in validEnemies)
+    {
+        enemy.UpdateLogic(delta);
+    }
+}
+```
+
+## Summary
+
+Follow these C# patterns religiously:
+- Use `partial` keyword for all classes
+- Use proper method signatures with `override`
+- Use `SignalName` enum for signal access
+- Use `Mathf` for math operations
+- Use `GD` methods for logging and random
+- Use `IsInstanceValid()` for node validation
+- Use string interpolation for formatting
+- Use early returns instead of deep nesting
+- Cache expensive operations
+- Avoid allocations in hot paths

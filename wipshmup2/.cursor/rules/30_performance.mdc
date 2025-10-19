@@ -1,0 +1,818 @@
+# Performance Requirements - C# and .NET
+
+## Target Metrics
+
+### Frame Rate Targets
+- **Minimum**: 60 FPS (16.67ms per frame) under all gameplay conditions
+- **Target**: 60 FPS with 500+ simultaneous bullets on screen
+- **Critical Threshold**: Never drop below 55 FPS (18.18ms per frame)
+- **Stress Test**: Maintain 60 FPS with 1000 entities (bullets + enemies + particles)
+
+### Frame Time Budget Breakdown
+```
+Total frame budget: 16.67ms
+
+Ideal allocation:
+- Physics processing: 4ms (24%)
+- Rendering: 6ms (36%)
+- Game logic: 3ms (18%)
+- Audio: 1ms (6%)
+- Overhead: 2.67ms (16%)
+```
+
+### Memory Allocation Targets
+- **No per-frame allocations** in hot paths (`_Process`, `_PhysicsProcess`)
+- **Pool pre-allocation**: All pools initialized at startup
+- **Maximum pool size**: 2000 total pooled entities
+- **Memory budget**: < 200MB total for gameplay (excluding assets)
+
+## Object Pooling System
+
+### Pool Configuration
+```csharp
+// ✅ GOOD: Pre-configured pool sizes based on profiling
+private static readonly Dictionary<string, int> PoolSizes = new()
+{
+    // Player bullets (high frequency, small footprint)
+    ["player_bullet_basic"] = 200,
+    ["player_bullet_focused"] = 150,
+    ["player_bullet_homing"] = 50,
+    
+    // Enemy bullets (very high frequency during boss fights)
+    ["enemy_bullet_basic"] = 300,
+    ["enemy_bullet_fast"] = 200,
+    ["enemy_bullet_aimed"] = 150,
+    
+    // Enemies (moderate frequency)
+    ["enemy_popcorn"] = 50,
+    ["enemy_tank"] = 20,
+    ["enemy_shooter"] = 30,
+    
+    // Visual effects (high frequency, short lifetime)
+    ["particle_explosion_small"] = 50,
+    ["particle_explosion_large"] = 20,
+    ["particle_hit_spark"] = 100,
+    ["particle_bullet_trail"] = 200,
+    
+    // Items (low frequency)
+    ["item_power"] = 10,
+    ["item_bomb"] = 5,
+    ["item_score"] = 20,
+};
+
+// ❌ BAD: Dynamic allocation with no caps
+public Bullet SpawnBullet()
+{
+    var bullet = new Bullet(); // Allocates every time!
+    AddChild(bullet);
+    return bullet;
+}
+```
+
+### Pool Lifecycle Management
+```csharp
+// ✅ GOOD: Complete pool lifecycle implementation
+public partial class BulletPool : Node
+{
+    private readonly List<Bullet> _activeBullets = new();
+    private readonly List<Bullet> _inactiveBullets = new();
+    private readonly int _poolSize = 200;
+
+    public override void _Ready()
+    {
+        // Pre-allocate entire pool at startup
+        for (int i = 0; i < _poolSize; i++)
+        {
+            var bullet = new Bullet();
+            bullet.Visible = false;
+            bullet.ProcessMode = ProcessModeEnum.Disabled;
+            AddChild(bullet);
+            _inactiveBullets.Add(bullet);
+        }
+    }
+
+    public Bullet Acquire()
+    {
+        if (_inactiveBullets.Count == 0)
+        {
+            // Pool exhausted - degrade gracefully
+            return null;
+        }
+        
+        var bullet = _inactiveBullets[_inactiveBullets.Count - 1];
+        _inactiveBullets.RemoveAt(_inactiveBullets.Count - 1);
+        _activeBullets.Add(bullet);
+        
+        // Activate bullet (no allocation)
+        bullet.Visible = true;
+        bullet.ProcessMode = ProcessModeEnum.Inherit;
+        
+        return bullet;
+    }
+
+    public void Release(Bullet bullet)
+    {
+        // Deactivate bullet (no deallocation)
+        bullet.Visible = false;
+        bullet.ProcessMode = ProcessModeEnum.Disabled;
+        bullet.Position = Vector2.Zero;
+        bullet.Velocity = Vector2.Zero;
+        
+        // Move between pools
+        _activeBullets.Remove(bullet);
+        _inactiveBullets.Add(bullet);
+    }
+
+    // ❌ BAD: Incomplete pooling with allocations
+    public void Release(Bullet bullet)
+    {
+        bullet.QueueFree(); // Defeats the purpose of pooling!
+        _activeBullets.Remove(bullet);
+    }
+}
+```
+
+### Pool Reuse Pattern
+```csharp
+// ✅ GOOD: Complete state reset for reused objects
+public void ResetForPool()
+{
+    // 1. Disconnect ALL signals (critical for avoiding leaks)
+    foreach (var connection in GetIncomingConnections())
+    {
+        var signal = connection.Signal;
+        if (signal.IsConnected(connection.Callable))
+        {
+            signal.Disconnect(connection.Callable);
+        }
+    }
+    
+    // 2. Reset position and physics
+    GlobalPosition = Vector2.Zero;
+    Velocity = Vector2.Zero;
+    Rotation = 0.0f;
+    Scale = Vector2.One;
+    
+    // 3. Reset gameplay state
+    Damage = 0;
+    Lifetime = 0.0f;
+    IsPlayerBullet = false;
+    
+    // 4. Clear references (prevent memory leaks)
+    TargetNode = null;
+    SourceNode = null;
+    
+    // 5. Reset visual state
+    Modulate = Colors.White;
+    Visible = false;
+    
+    // 6. Disable processing
+    ProcessMode = ProcessModeEnum.Disabled;
+    SetPhysicsProcess(false);
+    SetProcess(false);
+}
+
+// ❌ BAD: Incomplete reset leaves stale state
+public void ResetForPool()
+{
+    Position = Vector2.Zero;
+    // Forgot: signals, velocity, references, processing state!
+}
+```
+
+## Rate Limiting
+
+### Bullet Spawn Rate Limiting
+```csharp
+// ✅ GOOD: Rate limiter with per-second caps
+public partial class RateLimiter : Node
+{
+    [Export] public int MaxPerSecond { get; set; } = 300;
+    [Export] public int BurstAllowance { get; set; } = 50;
+
+    private int _spawnCountThisSecond = 0;
+    private float _timeAccumulator = 0.0f;
+
+    public override void _Process(double delta)
+    {
+        _timeAccumulator += (float)delta;
+        if (_timeAccumulator >= 1.0f)
+        {
+            _timeAccumulator = 0.0f;
+            _spawnCountThisSecond = 0;
+        }
+    }
+
+    public bool CanSpawn()
+    {
+        return _spawnCountThisSecond < MaxPerSecond + BurstAllowance;
+    }
+
+    public void RegisterSpawn()
+    {
+        _spawnCountThisSecond++;
+    }
+}
+
+// Usage in spawn logic
+public void FireBullet()
+{
+    if (!_rateLimiter.CanSpawn())
+    {
+        // Degrade gracefully - skip this bullet
+        return;
+    }
+    
+    var bullet = EntityFactory.SpawnBullet("enemy_basic", Position, Direction);
+    if (bullet != null)
+    {
+        _rateLimiter.RegisterSpawn();
+    }
+}
+
+// ❌ BAD: No rate limiting - performance spikes
+public void FireBulletPattern()
+{
+    for (int i = 0; i < 360; i++) // 360 bullets at once!
+    {
+        var bullet = EntityFactory.SpawnBullet(...);
+    }
+}
+```
+
+### Graceful Degradation
+```csharp
+// ✅ GOOD: Skip non-critical spawns when under load
+public void SpawnEnemyWave()
+{
+    var activeCount = GetActiveBulletCount();
+    
+    if (activeCount > 400)
+    {
+        // High load - reduce spawn rate
+        if (GD.Randf() > 0.5f)
+        {
+            return; // Skip 50% of spawns
+        }
+    }
+    
+    if (activeCount > 600)
+    {
+        // Critical load - skip all non-essential spawns
+        GD.PushWarning($"[Spawner] High bullet count ({activeCount}), skipping enemy spawn");
+        return;
+    }
+    
+    var enemy = EntityFactory.SpawnEnemy("popcorn_01", position, direction);
+}
+
+// ✅ GOOD: Reduce visual effects under load
+public void SpawnHitParticles(Vector2 position)
+{
+    if (GetActiveParticleCount() > 50)
+    {
+        return; // Skip particles when too many active
+    }
+    
+    var particles = EntityFactory.SpawnEffect("hit_spark", position);
+}
+
+// ❌ BAD: No degradation - guaranteed frame drops
+public void SpawnWave()
+{
+    for (int i = 0; i < 100; i++) // Always spawn 100, even if lagging
+    {
+        SpawnEnemy();
+    }
+}
+```
+
+## Per-Frame Performance Optimization
+
+### Cache Node References
+```csharp
+// ✅ GOOD: Cached references with lazy initialization
+private Player _cachedPlayer;
+private GameState _cachedGameState;
+
+private Player GetPlayer()
+{
+    if (_cachedPlayer == null || !IsInstanceValid(_cachedPlayer))
+    {
+        _cachedPlayer = GetTree().GetFirstNodeInGroup("player") as Player;
+    }
+    return _cachedPlayer;
+}
+
+public override void _PhysicsProcess(double delta)
+{
+    var player = GetPlayer();
+    if (player == null)
+        return;
+    
+    // Use cached reference (no tree traversal)
+    var directionToPlayer = (player.GlobalPosition - GlobalPosition).Normalized();
+    Velocity = directionToPlayer * Speed;
+}
+
+// ❌ BAD: Repeated node lookups every frame
+public override void _PhysicsProcess(double delta)
+{
+    var player = GetNode<Player>("/root/Main/Player"); // Tree traversal every frame!
+    var direction = (player.Position - Position).Normalized();
+}
+```
+
+### Avoid Allocations in Process Functions
+```csharp
+// ✅ GOOD: Reuse vectors, no allocations
+private Vector2 _directionCache = Vector2.Zero;
+private Vector2 _velocityCache = Vector2.Zero;
+
+public override void _PhysicsProcess(double delta)
+{
+    // Reuse cached vectors
+    _directionCache = (_targetPosition - GlobalPosition).Normalized();
+    _velocityCache = _directionCache * Speed;
+    GlobalPosition += _velocityCache * (float)delta;
+}
+
+// ❌ BAD: Allocates new vectors every frame
+public override void _PhysicsProcess(double delta)
+{
+    var direction = (_targetPosition - GlobalPosition).Normalized(); // Allocation
+    var velocity = direction * Speed; // Another allocation
+    GlobalPosition += velocity * (float)delta; // Another allocation
+}
+```
+
+### Batch Operations
+```csharp
+// ✅ GOOD: Batch processing with early outs
+public void UpdateAllBullets(double delta)
+{
+    // Iterate backwards to allow safe removal
+    for (int i = _activeBullets.Count - 1; i >= 0; i--)
+    {
+        var bullet = _activeBullets[i];
+        
+        // Quick validity check
+        if (bullet == null || !IsInstanceValid(bullet))
+        {
+            _activeBullets.RemoveAt(i);
+            continue;
+        }
+        
+        // Update bullet
+        bullet.Position += bullet.Velocity * (float)delta;
+        
+        // Bounds check (cheap operation first)
+        if (IsOutOfBounds(bullet.Position))
+        {
+            ReturnBulletToPool(bullet);
+            _activeBullets.RemoveAt(i);
+        }
+    }
+}
+
+// ⚠️ CAUTION: Avoid nested loops over large collections
+public void CheckAllCollisions()
+{
+    // O(n*m) - expensive with 500 bullets and 50 enemies!
+    foreach (var bullet in _bullets)
+    {
+        foreach (var enemy in _enemies)
+        {
+            if (bullet.Overlaps(enemy))
+            {
+                HandleCollision(bullet, enemy);
+            }
+        }
+    }
+}
+
+// ✅ BETTER: Use spatial partitioning or quadtree
+public void CheckAllCollisions()
+{
+    var spatialGrid = BuildSpatialGrid(_enemies, 64); // 64px cells
+    
+    foreach (var bullet in _bullets)
+    {
+        var nearbyEnemies = spatialGrid.Query(bullet.Position, bullet.CollisionRadius);
+        foreach (var enemy in nearbyEnemies)
+        {
+            if (bullet.Overlaps(enemy))
+            {
+                HandleCollision(bullet, enemy);
+            }
+        }
+    }
+}
+```
+
+### Minimize GetTree().GetNodesInGroup() Calls
+```csharp
+// ❌ VERY BAD: Calling in _Process (traverses entire tree every frame!)
+public override void _Process(double delta)
+{
+    var enemies = GetTree().GetNodesInGroup("enemies");
+    foreach (var enemy in enemies)
+    {
+        UpdateEnemy(enemy);
+    }
+}
+
+// ✅ GOOD: Cache group and update via signals
+private List<Enemy> _enemyCache = new();
+
+public override void _Ready()
+{
+    EventBus.EnemySpawned += OnEnemySpawned;
+    EventBus.EnemyDefeated += OnEnemyDefeated;
+    RefreshEnemyCache();
+}
+
+private void RefreshEnemyCache()
+{
+    _enemyCache.Clear();
+    var enemies = GetTree().GetNodesInGroup("enemies");
+    foreach (var enemy in enemies)
+    {
+        if (enemy is Enemy enemyNode)
+        {
+            _enemyCache.Add(enemyNode);
+        }
+    }
+}
+
+private void OnEnemySpawned(Enemy enemy, string templateId)
+{
+    _enemyCache.Add(enemy);
+}
+
+private void OnEnemyDefeated(int enemyId, Vector2 pos, int score)
+{
+    // Remove invalid entries on next process
+    _cacheDirty = true;
+}
+
+private bool _cacheDirty = false;
+
+public override void _Process(double delta)
+{
+    if (_cacheDirty)
+    {
+        _enemyCache = _enemyCache.Where(e => e != null && IsInstanceValid(e)).ToList();
+        _cacheDirty = false;
+    }
+    
+    foreach (var enemy in _enemyCache)
+    {
+        UpdateEnemy(enemy);
+    }
+}
+```
+
+## Math Optimization
+
+### Integer Math for Counters
+```csharp
+// ✅ GOOD: Integer operations for counts
+int bulletCount = 500;
+int halfBullets = bulletCount >> 1; // Bit shift (faster than division)
+int quarterBullets = bulletCount >> 2;
+
+// ✅ GOOD: Use explicit integer division
+int enemiesPerRow = bulletCount / rowCount; // Integer division in C#
+
+// ⚠️ CAUTION: Division returns int for int operands in C#
+int result = 10 / 2; // Returns 5 (int)
+float resultFloat = 10.0f / 2.0f; // Returns 5.0f (float)
+```
+
+### Trigonometry Optimization
+```csharp
+// ✅ GOOD: Pre-calculate trigonometric values
+private const float AngleStep = Mathf.Tau / 360.0f;
+private readonly float[] _cosTable = new float[360];
+private readonly float[] _sinTable = new float[360];
+
+public override void _Ready()
+{
+    // Build lookup tables at startup
+    for (int i = 0; i < 360; i++)
+    {
+        float angle = i * AngleStep;
+        _cosTable[i] = Mathf.Cos(angle);
+        _sinTable[i] = Mathf.Sin(angle);
+    }
+}
+
+public Vector2 GetDirectionFromAngle(int angleDegrees)
+{
+    int index = angleDegrees % 360;
+    return new Vector2(_cosTable[index], _sinTable[index]);
+}
+
+// ❌ BAD: Calculating sin/cos every frame
+public Vector2 GetDirection(float angle)
+{
+    return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)); // Expensive!
+}
+```
+
+### Vector Operations
+```csharp
+// ✅ GOOD: Avoid sqrt when possible (use squared distance)
+public bool IsInRange(Vector2 targetPos, float maxRange)
+{
+    float distSquared = GlobalPosition.DistanceSquaredTo(targetPos);
+    return distSquared <= maxRange * maxRange;
+}
+
+// ❌ BAD: Unnecessary sqrt calculation
+public bool IsInRange(Vector2 targetPos, float maxRange)
+{
+    float dist = GlobalPosition.DistanceTo(targetPos); // sqrt inside!
+    return dist <= maxRange;
+}
+
+// ✅ GOOD: Reuse normalized vectors
+private Vector2 _lastDirection = Vector2.Down;
+private bool _directionDirty = true;
+
+public Vector2 GetMovementDirection()
+{
+    if (_directionDirty)
+    {
+        _lastDirection = (_targetPosition - Position).Normalized();
+        _directionDirty = false;
+    }
+    return _lastDirection;
+}
+```
+
+## Shader Performance
+
+### Fragment Shader Optimization
+```csharp
+// ✅ GOOD: Minimize per-pixel calculations in shaders
+// shader_type canvas_item;
+
+// uniform float time : hint_range(0, 100);
+// uniform vec2 resolution;
+
+// void fragment() {
+//     // Pre-calculate constants outside loops
+//     vec2 uv = UV;
+//     float aspect = resolution.x / resolution.y;
+//     
+//     // Avoid expensive operations like pow, sin, cos in hot paths
+//     vec2 centered_uv = (uv - 0.5) * 2.0;
+//     float dist = length(centered_uv);
+//     
+//     // Simple operations only
+//     COLOR.rgb *= 1.0 - dist * 0.1;
+// }
+
+// ❌ BAD: Expensive per-pixel operations
+// void fragment() {
+//     for (int i = 0; i < 10; i++) {
+//         COLOR.rgb += texture(TEXTURE, UV + vec2(sin(TIME * float(i)))).rgb;
+//     }
+//     // This runs for EVERY pixel EVERY frame!
+// }
+```
+
+### Shader Parameter Updates
+```csharp
+// ✅ GOOD: Update shader parameters sparingly
+private float _lastShaderUpdate = 0.0f;
+private const float ShaderUpdateInterval = 0.1f; // 10 FPS for shader params
+
+public override void _Process(double delta)
+{
+    _lastShaderUpdate += (float)delta;
+    if (_lastShaderUpdate >= ShaderUpdateInterval)
+    {
+        _material.SetShaderParameter("time", Time.GetTicksMsec() * 0.001f);
+        _lastShaderUpdate = 0.0f;
+    }
+}
+
+// ❌ BAD: Update every frame (60 FPS)
+public override void _Process(double delta)
+{
+    _material.SetShaderParameter("time", Time.GetTicksMsec() * 0.001f);
+}
+```
+
+## Particle System Optimization
+
+### GPU Particles vs CPU Particles
+```csharp
+// ✅ GOOD: Use GpuParticles2D for many particles
+var explosionParticles = new GpuParticles2D();
+explosionParticles.Amount = 100; // GPU handles efficiently
+explosionParticles.OneShot = true;
+explosionParticles.Emitting = true;
+
+// ⚠️ CAUTION: Use CpuParticles2D only for <10 particles or when needing precise control
+var trailParticles = new CpuParticles2D();
+trailParticles.Amount = 5; // Small count
+
+// ❌ BAD: CpuParticles2D with high counts
+var particles = new CpuParticles2D();
+particles.Amount = 500; // Will destroy framerate!
+```
+
+### Particle Pooling
+```csharp
+// ✅ GOOD: Pool particle systems
+public async void SpawnExplosion(Vector2 pos)
+{
+    var particles = _particlePool.Acquire();
+    if (particles == null)
+    {
+        return; // Pool exhausted, skip effect
+    }
+    
+    particles.GlobalPosition = pos;
+    particles.Emitting = true;
+    particles.OneShot = true;
+    
+    // Return to pool when finished
+    await ToSignal(GetTree().CreateTimer(particles.Lifetime), SceneTreeTimer.SignalName.Timeout);
+    if (IsInstanceValid(particles))
+    {
+        particles.Emitting = false;
+        _particlePool.Release(particles);
+    }
+}
+```
+
+## Profiling and Diagnostics
+
+### Performance Monitoring
+```csharp
+// ✅ GOOD: Track frame times and entity counts
+private readonly float[] _frameTimes = new float[60];
+private int _frameTimeIndex = 0;
+
+public override void _Process(double delta)
+{
+    // Record frame time
+    _frameTimes[_frameTimeIndex] = (float)delta;
+    _frameTimeIndex = (_frameTimeIndex + 1) % _frameTimes.Length;
+    
+    // Calculate average FPS
+    float avgDelta = _frameTimes.Average();
+    float avgFps = 1.0f / avgDelta;
+    
+    if (avgFps < 55.0f)
+    {
+        GD.PushWarning($"[Performance] FPS below target: {avgFps:F1}");
+    }
+}
+
+public Dictionary<string, object> GetPerformanceStats()
+{
+    return new Dictionary<string, object>
+    {
+        ["active_bullets"] = EntityFactory.GetActiveCount("bullet"),
+        ["active_enemies"] = EntityFactory.GetActiveCount("enemy"),
+        ["active_particles"] = EntityFactory.GetActiveCount("particle"),
+        ["fps"] = Engine.GetFramesPerSecond(),
+        ["physics_time"] = Performance.GetMonitor(Performance.Monitor.TimePhysicsProcess),
+        ["process_time"] = Performance.GetMonitor(Performance.Monitor.TimeProcess),
+    };
+}
+```
+
+### Debug Visualization (Gated)
+```csharp
+// ✅ GOOD: Gate expensive debug rendering
+private const bool DebugDraw = false;
+
+public override void _Draw()
+{
+    if (!DebugDraw)
+        return;
+    
+    // Expensive debug drawing only when enabled
+    foreach (var bullet in _activeBullets)
+    {
+        DrawCircle(bullet.Position, 3.0f, Colors.Red);
+        DrawLine(bullet.Position, bullet.Position + bullet.Velocity, Colors.Yellow);
+    }
+}
+
+// ❌ BAD: Always-on debug drawing
+public override void _Draw()
+{
+    foreach (var bullet in _activeBullets) // Runs every frame in production!
+    {
+        DrawCircle(bullet.Position, 3.0f, Colors.Red);
+    }
+}
+```
+
+## Performance Checklist
+
+Before committing performance-sensitive code:
+- [ ] No allocations in `_Process()` or `_PhysicsProcess()`
+- [ ] All entities use object pooling (bullets, enemies, particles)
+- [ ] Node references are cached (no repeated `GetNode()`)
+- [ ] Groups are cached (no `GetNodesInGroup()` in hot paths)
+- [ ] Rate limiters prevent spawn spikes
+- [ ] Graceful degradation under high load
+- [ ] Integer math used for counters and indices
+- [ ] Trigonometry pre-calculated or cached
+- [ ] Distance checks use `DistanceSquaredTo()` when possible
+- [ ] Shader operations minimized per-pixel
+- [ ] Particle systems use GPU particles (>20 particles)
+- [ ] Debug code is gated behind constants
+- [ ] Profiled with 500+ bullets on screen
+- [ ] Maintains 60 FPS during stress test
+
+## Common Performance Pitfalls
+
+### 1. String Concatenation in Loops
+```csharp
+// ❌ BAD: String allocation every iteration
+public string BuildDebugString()
+{
+    string result = "";
+    for (int i = 0; i < 1000; i++)
+    {
+        result += i + " "; // Allocates new string each time!
+    }
+    return result;
+}
+
+// ✅ GOOD: Use StringBuilder or string.Join
+public string BuildDebugString()
+{
+    var parts = new List<string>();
+    for (int i = 0; i < 1000; i++)
+    {
+        parts.Add(i.ToString());
+    }
+    return string.Join(" ", parts);
+}
+```
+
+### 2. Unnecessary Collision Layer Checks
+```csharp
+// ❌ BAD: Checking every object for collision
+public override void _PhysicsProcess(double delta)
+{
+    foreach (var body in GetTree().GetNodesInGroup("all_objects"))
+    {
+        if (body.Overlaps(this))
+        {
+            HandleCollision(body);
+        }
+    }
+}
+
+// ✅ GOOD: Use collision layers and Area2D signals
+public override void _Ready()
+{
+    CollisionLayer = 1; // Player bullet layer
+    CollisionMask = 2;  // Enemy layer only
+    BodyEntered += OnBodyEntered;
+}
+
+private void OnBodyEntered(Node2D body)
+{
+    // Only called for relevant collisions
+    HandleCollision(body);
+}
+```
+
+### 3. Excessive Signal Emissions
+```csharp
+// ❌ BAD: Emitting signals every frame
+public override void _Process(double delta)
+{
+    PositionChanged?.Invoke(Position); // 60 times per second!
+}
+
+// ✅ GOOD: Emit only on significant changes
+private Vector2 _lastEmittedPos = Vector2.Zero;
+private const float EmitThreshold = 5.0f;
+
+public override void _Process(double delta)
+{
+    if (Position.DistanceSquaredTo(_lastEmittedPos) > EmitThreshold * EmitThreshold)
+    {
+        PositionChanged?.Invoke(Position);
+        _lastEmittedPos = Position;
+    }
+}
+```
+
+## Summary
+
+Performance is CRITICAL for bullet-hell gameplay. Always profile with realistic load (500+ bullets), use object pooling religiously, cache everything, and degrade gracefully under stress. When in doubt, measure first, optimize second.

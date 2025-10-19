@@ -1,0 +1,849 @@
+# Code Style and Quality - C# and .NET
+
+## Core Values
+- **Consistency**: Follow existing patterns in the codebase
+- **Clarity**: Code should be self-documenting when possible
+- **Maintainability**: Future developers (including yourself) should understand the code easily
+- **Simplicity**: Prefer simple, obvious solutions over clever tricks
+
+## File Organization
+
+### Standard File Structure
+```csharp
+using Godot;
+using System.Collections.Generic;
+using System.Linq;
+
+public partial class EnemyController : Node2D
+{
+    // 1. Documentation (if needed)
+    /// <summary>
+    /// Controls enemy behavior, including movement and attack patterns.
+    /// Integrates with EventBus for communication and EntityFactory for spawning.
+    /// </summary>
+
+    // 2. Signals (grouped logically)
+    [Signal] public delegate void HealthChangedEventHandler(int newHealth, int oldHealth);
+    [Signal] public delegate void DefeatedEventHandler(int enemyId, Vector2 position);
+    [Signal] public delegate void PhaseChangedEventHandler(int phaseNumber);
+
+    // 3. Enums
+    public enum State
+    {
+        Idle,
+        Moving,
+        Attacking,
+        Dying,
+    }
+
+    // 4. Constants
+    private const int MaxHealth = 100;
+    private const float AttackRange = 150.0f;
+    private const float MovementSpeed = 100.0f;
+
+    // 5. Export variables (grouped by category)
+    [ExportGroup("Stats")]
+    [Export] public int MaxHealth { get; set; } = 100;
+    [Export] public int Damage { get; set; } = 10;
+
+    [ExportGroup("Behavior")]
+    [Export] public string MovementPattern { get; set; } = "straight";
+    [Export] public float AttackCooldown { get; set; } = 2.0f;
+
+    // 6. Public properties
+    public int Health { get; set; } = 100;
+    public State CurrentState { get; set; } = State.Idle;
+
+    // 7. Private fields (underscore prefix)
+    private Vector2 _velocity = Vector2.Zero;
+    private Node2D _target;
+    private Player _cachedPlayer;
+
+    // 8. Built-in virtual methods (in this order)
+    public override void _Ready()
+    {
+        // Initialization
+    }
+
+    public override void _Process(double delta)
+    {
+        // Game logic
+    }
+
+    public override void _PhysicsProcess(double delta)
+    {
+        // Physics logic
+    }
+
+    public override void _Input(InputEvent @event)
+    {
+        // Input handling
+    }
+
+    // 9. Public methods
+    public void TakeDamage(int amount)
+    {
+        // Implementation
+    }
+
+    public void SetTarget(Node2D target)
+    {
+        // Implementation
+    }
+
+    // 10. Private methods (underscore prefix)
+    private void UpdateMovement(double delta)
+    {
+        // Implementation
+    }
+
+    private void HandleDeath()
+    {
+        // Implementation
+    }
+
+    // 11. Signal handlers (grouped at end)
+    private void OnHealthDepleted()
+    {
+        // Implementation
+    }
+
+    private void OnPlayerDetected(Player player)
+    {
+        // Implementation
+    }
+}
+```
+
+## Naming Conventions
+
+### Variables and Properties
+```csharp
+// ✅ GOOD: Descriptive, typed, PascalCase for public, camelCase for private
+public int PlayerHealth { get; set; } = 100;
+public float MovementSpeed { get; set; } = 150.0f;
+public bool IsInvulnerable { get; set; } = false;
+public List<Enemy> EnemyList { get; set; } = new();
+public Vector2 TargetPosition { get; set; } = Vector2.Zero;
+
+// Private fields with underscore prefix
+private int _internalState = 0;
+private Node _cachedReference;
+
+// ❌ BAD: Vague, untyped, or wrong casing
+public var hp; // What type? Player or enemy HP?
+public var spd; // Abbreviation unclear
+public List<Enemy> enemyList; // Wrong casing (camelCase for public)
+private int _publicVar; // Underscore but actually public
+```
+
+### Methods
+```csharp
+// ✅ GOOD: Verb-based, descriptive, typed
+public float CalculateDamageMultiplier(int baseDamage, float rank)
+{
+    return baseDamage * (1.0f + rank * 0.1f);
+}
+
+public Enemy SpawnEnemyAtPosition(string templateId, Vector2 position)
+{
+    return EntityFactory.SpawnEnemy(templateId, position, Vector2.Down);
+}
+
+public bool IsInAttackRange(Node2D target)
+{
+    return GlobalPosition.DistanceSquaredTo(target.GlobalPosition) < AttackRange * AttackRange;
+}
+
+// Private methods with underscore
+private void InternalUpdateLogic()
+{
+    // Implementation
+}
+
+// ❌ BAD: Vague names, no types
+public void Update() // Update what?
+{
+    // Implementation
+}
+
+public object Calc(object x, object y) // Calculate what? Returns what?
+{
+    return x; // What is this?
+}
+
+public void attackEnemy() // Wrong casing
+{
+    // Implementation
+}
+```
+
+### Constants and Enums
+```csharp
+// ✅ GOOD: SCREAMING_SNAKE_CASE for constants
+private const int MaxBullets = 500;
+private const float PlayerSpeed = 180.0f;
+private const float InvulnerabilityDuration = 3.0f;
+private const int DefaultEnemyHp = 10;
+
+// ✅ GOOD: PascalCase for enums, PascalCase for values
+public enum EnemyType
+{
+    Popcorn,
+    Tank,
+    Shooter,
+    Boss,
+}
+
+public enum MovementPattern
+{
+    StraightDown,
+    Zigzag,
+    Circle,
+    Homing,
+}
+
+// ❌ BAD: Inconsistent casing
+private const int maxBullets = 500; // Wrong casing
+private const int max_bullets = 500; // Wrong casing
+public enum enemy_type { basic, fast } // Wrong casing
+```
+
+### Classes
+```csharp
+// ✅ GOOD: PascalCase, descriptive
+public partial class PlayerController : CharacterBody2D
+public partial class EnemyTemplate : Resource
+public partial class BulletMovementBehavior : Node
+public partial class HealthComponent : Node
+
+// ❌ BAD: Wrong casing or vague
+public partial class playerController // Wrong casing
+public partial class Controller // Too generic
+public partial class EC // Cryptic abbreviation
+```
+
+## Indentation and Whitespace
+
+### Indentation Rules
+```csharp
+// ✅ GOOD: 4 spaces per indent level
+public int CalculateTotalScore()
+{
+    int baseScore = 0;
+    foreach (var enemy in DefeatedEnemies)
+    {
+        if (enemy.IsBoss)
+        {
+            baseScore += enemy.ScoreValue * 10;
+        }
+        else
+        {
+            baseScore += enemy.ScoreValue;
+        }
+    }
+    return baseScore;
+}
+
+// ❌ BAD: Inconsistent indentation
+public int CalculateTotalScore()
+{
+  int baseScore = 0; // 2 spaces
+    foreach (var enemy in DefeatedEnemies) // 4 spaces
+       if (enemy.IsBoss) // 3 spaces
+            baseScore += enemy.ScoreValue * 10; // Mixed
+}
+```
+
+### Blank Lines
+```csharp
+// ✅ GOOD: Logical grouping with blank lines
+public void InitializeEnemy()
+{
+    // Setup phase
+    LoadTemplate();
+    SetupCollision();
+    ConnectSignals();
+    
+    // Spawn phase
+    SetInitialPosition();
+    ApplyInitialVelocity();
+    
+    // Ready phase
+    ActivateAi();
+    StartAttackPattern();
+}
+
+// ❌ BAD: No logical grouping
+public void InitializeEnemy()
+{
+    LoadTemplate();
+    SetupCollision();
+    ConnectSignals();
+    SetInitialPosition();
+    ApplyInitialVelocity();
+    ActivateAi();
+    StartAttackPattern();
+}
+```
+
+### Line Length
+```csharp
+// ✅ GOOD: Keep lines under 120 characters (max 150)
+public Enemy SpawnEnemyWithTemplate(
+    string templateId,
+    Vector2 spawnPosition,
+    Vector2 initialVelocity
+)
+{
+    var enemy = EntityFactory.SpawnEnemy(templateId, spawnPosition, initialVelocity);
+    return enemy;
+}
+
+// ✅ GOOD: Break long conditions
+if (
+    IsPlayerAlive
+    && playerDistance < AttackRange
+    && attackCooldownTimer <= 0.0f
+    && !IsStunned
+)
+{
+    ExecuteAttack();
+}
+
+// ❌ BAD: Overly long lines (hard to read in editors)
+public Enemy SpawnEnemyWithTemplate(string templateId, Vector2 spawnPosition, Vector2 initialVelocity, string attackPattern, string movementPattern, int health)
+{
+    // Implementation
+}
+```
+
+## Type Annotations (Mandatory)
+
+### Variable Typing
+```csharp
+// ✅ GOOD: Explicit types everywhere
+public int PlayerScore { get; set; } = 0;
+public float MovementSpeed { get; set; } = 150.0f;
+public string EnemyName { get; set; } = "Popcorn";
+public bool IsActive { get; set; } = true;
+public Vector2 PositionOffset { get; set; } = Vector2.Zero;
+public List<Enemy> Enemies { get; set; } = new();
+public Dictionary<int, int> HealthMap { get; set; } = new();
+
+// ✅ GOOD: Type inference with var (when obvious)
+var enemy = new Enemy();
+var texture = GD.Load<Texture2D>("res://assets/enemy.png") as Texture2D;
+
+// ❌ BAD: No types (object)
+var score = 0; // Could be int or float?
+var enemies = new List<object>(); // List of what?
+var data = new Dictionary<object, object>(); // Dictionary with what keys/values?
+```
+
+### Function Typing
+```csharp
+// ✅ GOOD: Fully typed function signatures
+public int CalculateDamage(
+    int baseDamage,
+    float multiplier,
+    bool isCritical
+)
+{
+    float finalDamage = baseDamage * multiplier;
+    if (isCritical)
+    {
+        finalDamage *= 2.0f;
+    }
+    return (int)finalDamage;
+}
+
+// ✅ GOOD: Void return type explicit
+public void ApplyVisualEffect(string effectType, float duration)
+{
+    SpawnParticleEffect(effectType);
+    // Implementation
+}
+
+// ❌ BAD: Missing types
+public object CalculateDamage(object base, object mult, object crit)
+{
+    return base; // What type? What does this do?
+}
+```
+
+## Comments and Documentation
+
+### When to Comment
+```csharp
+// ✅ GOOD: Comment non-obvious logic and invariants
+public void UpdateBulletTrajectory(double delta)
+{
+    // Homing bullets adjust direction gradually towards target
+    if (BulletType == BulletType.Homing && _target != null && IsInstanceValid(_target))
+    {
+        var desiredDir = (_target.GlobalPosition - GlobalPosition).Normalized();
+        // Lerp factor ensures smooth turning rather than instant snapping
+        Direction = Direction.Lerp(desiredDir, HomingStrength * (float)delta);
+    }
+    
+    Position += Direction * Speed * (float)delta;
+}
+
+// ✅ GOOD: Document complex algorithms
+public float CalculateRankPressure()
+{
+    // Rank pressure system from Cho Ren Sha 68k:
+    // - Increases over time (time pressure)
+    // - Increases with player power (power pressure)
+    // - Decreases when taking damage (death penalty)
+    // - Capped at 10.0 for max difficulty
+    float timePressure = Mathf.Min(_playTime / 60.0f, 3.0f);
+    float powerPressure = GameState.PowerLevel * 0.5f;
+    float deathPenalty = GameState.DeathCount * -0.2f;
+    return Mathf.Clamp(timePressure + powerPressure + deathPenalty, 0.0f, 10.0f);
+}
+
+// ❌ BAD: Obvious comments (noise)
+public void SetHealth(int value)
+{
+    Health = value; // Set health to value
+}
+
+// ❌ BAD: Outdated comments
+public void SpawnEnemy()
+{
+    // TODO: Add pooling later
+    var enemy = EntityFactory.SpawnEnemy(...); // Already using pooling!
+}
+```
+
+### XML Documentation
+```csharp
+// ✅ GOOD: Class-level documentation
+/// <summary>
+/// Manages enemy spawning for waves and formations.
+/// 
+/// Integrates with EntityFactory for object pooling and StageController
+/// for wave progression. Supports formation patterns (line, V, circle).
+/// </summary>
+public partial class EnemySpawner : Node2D
+{
+    // Implementation
+}
+
+// ✅ GOOD: Complex function documentation
+/// <summary>
+/// Spawns a formation of enemies in the specified pattern.
+/// </summary>
+/// <param name="templateId">Enemy template to spawn</param>
+/// <param name="formation">Formation pattern ("line", "v_formation", "circle")</param>
+/// <param name="count">Number of enemies in formation</param>
+/// <param name="spacing">Distance between enemies in pixels</param>
+/// <returns>Array of successfully spawned enemies (may be less than count if pool exhausted)</returns>
+public List<Enemy> SpawnFormation(
+    string templateId,
+    string formation,
+    int count,
+    float spacing
+)
+{
+    // Implementation
+}
+
+// ⚠️ CAUTION: Don't over-document simple functions
+// ❌ BAD: Redundant documentation
+/// <summary>
+/// Gets the player health value.
+/// </summary>
+/// <returns>The current health as an integer.</returns>
+public int GetHealth()
+{
+    return Health; // Obvious from signature
+}
+```
+
+## Control Flow Style
+
+### Early Returns (Preferred)
+```csharp
+// ✅ GOOD: Guard clauses and early returns
+public void AttackTarget(Node2D target)
+{
+    if (target == null || !IsInstanceValid(target))
+        return;
+    
+    if (AttackCooldown > 0.0f)
+        return;
+    
+    if (!IsInAttackRange(target))
+        return;
+    
+    // Main logic here (not nested)
+    FireBulletAt(target);
+    AttackCooldown = AttackCooldownDuration;
+}
+
+// ❌ BAD: Deep nesting
+public void AttackTarget(Node2D target)
+{
+    if (target != null && IsInstanceValid(target))
+    {
+        if (AttackCooldown <= 0.0f)
+        {
+            if (IsInAttackRange(target))
+            {
+                FireBulletAt(target);
+                AttackCooldown = AttackCooldownDuration;
+            }
+        }
+    }
+}
+```
+
+### Ternary Operator (Use Sparingly)
+```csharp
+// ✅ GOOD: Simple ternary for assignment
+var damageMultiplier = isCriticalHit ? 2.0f : 1.0f;
+var color = isPlayerBullet ? Colors.Cyan : Colors.Red;
+
+// ⚠️ ACCEPTABLE: One-level nested ternary (max)
+var priority = isBoss ? 100 : (isElite ? 50 : 10);
+
+// ❌ BAD: Complex or deeply nested ternaries
+var result = isBoss ? (isEnraged ? 200 : 100) : (isElite ? (isDamaged ? 30 : 50) : 10);
+
+// ✅ BETTER: Use if-else for complex logic
+int result;
+if (isBoss)
+{
+    result = isEnraged ? 200 : 100;
+}
+else if (isElite)
+{
+    result = isDamaged ? 30 : 50;
+}
+else
+{
+    result = 10;
+}
+```
+
+### Switch Statements
+```csharp
+// ✅ GOOD: Switch for multiple discrete cases
+public void HandleEnemyState(State state)
+{
+    switch (state)
+    {
+        case State.Idle:
+            IdleBehavior();
+            break;
+        case State.Moving:
+            MovementBehavior();
+            break;
+        case State.Attacking:
+            AttackBehavior();
+            break;
+        case State.Dying:
+            DeathBehavior();
+            break;
+        default:
+            GD.PushError($"[Enemy] Unknown state: {state}");
+            break;
+    }
+}
+
+// ✅ GOOD: Switch expressions (C# 8+)
+public Color GetEnemyColor(EnemyType enemyType)
+{
+    return enemyType switch
+    {
+        EnemyType.Popcorn or EnemyType.Fast => Colors.Green,
+        EnemyType.Tank or EnemyType.Elite => Colors.Red,
+        EnemyType.Boss => Colors.Purple,
+        _ => Colors.White
+    };
+}
+```
+
+## Collection Formatting
+
+### Array and List Formatting
+```csharp
+// ✅ GOOD: Short arrays on one line
+var colors = new[] { Colors.Red, Colors.Green, Colors.Blue };
+var numbers = new[] { 1, 2, 3, 4, 5 };
+
+// ✅ GOOD: Long arrays on multiple lines (one per line)
+var enemyTemplates = new[]
+{
+    "popcorn_01",
+    "popcorn_02",
+    "tank_01",
+    "shooter_01",
+    "elite_01",
+};
+
+// ✅ GOOD: Complex array elements on separate lines
+var waveDefinitions = new[]
+{
+    new { Template = "popcorn_01", Count = 5, Formation = "line" },
+    new { Template = "tank_01", Count = 2, Formation = "v_formation" },
+};
+```
+
+### Dictionary Formatting
+```csharp
+// ✅ GOOD: Short dictionaries on one line
+var stats = new Dictionary<string, int> { ["hp"] = 100, ["atk"] = 10, ["def"] = 5 };
+
+// ✅ GOOD: Multi-line dictionaries (one key-value per line)
+var enemyConfig = new Dictionary<string, object>
+{
+    ["template_id"] = "boss_01",
+    ["max_health"] = 5000,
+    ["damage"] = 50,
+    ["movement_speed"] = 80.0f,
+    ["attack_patterns"] = new[] { "spread_shot", "laser_beam" },
+};
+
+// ✅ GOOD: Typed dictionaries
+var healthMap = new Dictionary<int, int>
+{
+    [1] = 100,
+    [2] = 150,
+    [3] = 200,
+};
+
+// ✅ GOOD: Trailing comma for multi-line (easier diffs)
+var config = new Dictionary<string, object>
+{
+    ["setting_1"] = true,
+    ["setting_2"] = false,
+    ["setting_3"] = 42, // Trailing comma
+};
+```
+
+## String Formatting and Interpolation
+
+### String Interpolation
+```csharp
+// ✅ GOOD: Use string interpolation for clarity
+string message = $"Enemy {enemyName} has {health} health remaining";
+string path = $"res://scenes/enemy_{enemyType}.tscn";
+string scoreText = $"SCORE: {score:D8}"; // Padded to 8 digits
+
+// ✅ GOOD: Multi-line strings
+string debugInfo = $"""
+    [Enemy Debug]
+    ID: {enemyId}
+    Health: {health}/{maxHealth}
+    Position: {globalPosition}
+    State: {stateName}
+    """;
+
+// ✅ GOOD: Format with field width
+string scoreText = $"SCORE: {score:D8}"; // "SCORE: 00012345"
+
+// ❌ BAD: String concatenation (slower, less readable)
+string message = "Enemy " + enemyName + " has " + health + " health";
+```
+
+## Signal Naming and Usage
+
+### Signal Names
+```csharp
+// ✅ GOOD: Past tense for events, present for requests
+[Signal] public delegate void HealthChangedEventHandler(int newHealth, int oldHealth);
+[Signal] public delegate void EnemyDefeatedEventHandler(int enemyId, Vector2 position);
+[Signal] public delegate void PhaseEnteredEventHandler(int phaseNumber);
+[Signal] public delegate void DamageTakenEventHandler(int amount, Node source);
+
+[Signal] public delegate void ShakeRequestedEventHandler(float intensity, float duration);
+[Signal] public delegate void EffectSpawnedEventHandler(Node2D effect, Vector2 position);
+
+// ❌ BAD: Vague names
+[Signal] public delegate void ChangedEventHandler(); // What changed?
+[Signal] public delegate void EventEventHandler(); // What event?
+[Signal] public delegate void OnHitEventHandler(); // Remove "On" prefix (redundant)
+```
+
+### Signal Documentation
+```csharp
+// ✅ GOOD: Document signals with their parameters
+/// <summary>
+/// Emitted when the enemy takes damage from any source.
+/// </summary>
+/// <param name="amount">Damage amount before defense calculations</param>
+/// <param name="source">The node that caused the damage (can be null)</param>
+/// <param name="isCritical">Whether this was a critical hit</param>
+[Signal] public delegate void DamageTakenEventHandler(int amount, Node source, bool isCritical);
+```
+
+## Testing and Validation Patterns
+
+### Smoke Test Functions
+```csharp
+// ✅ GOOD: Self-test functions for complex systems
+private void TestSpawning()
+{
+    if (!OS.IsDebugBuild())
+        return;
+    
+    GD.Print("[EnemySpawner] Running spawn tests...");
+    
+    // Test 1: Basic spawn
+    var enemy = EntityFactory.SpawnEnemy("popcorn_01", Vector2.Zero, Vector2.Down);
+    Debug.Assert(enemy != null, "Basic spawn failed");
+    Debug.Assert(IsInstanceValid(enemy), "Spawned enemy is invalid");
+    
+    // Test 2: Pool exhaustion
+    var enemies = new List<Enemy>();
+    for (int i = 0; i < 100; i++)
+    {
+        var e = EntityFactory.SpawnEnemy("popcorn_01", Vector2.Zero, Vector2.Down);
+        if (e != null)
+        {
+            enemies.Add(e);
+        }
+    }
+    
+    GD.Print($"[EnemySpawner] Spawned {enemies.Count} enemies before pool exhaustion");
+    
+    // Cleanup
+    foreach (var e in enemies)
+    {
+        EntityFactory.ReturnToPool(e, "popcorn_01");
+    }
+    
+    GD.Print("[EnemySpawner] Spawn tests complete");
+}
+```
+
+### Assertions (Debug Only)
+```csharp
+// ✅ GOOD: Use assertions for invariants in debug builds
+public int CalculateDamage(int baseDamage, float multiplier)
+{
+    Debug.Assert(baseDamage >= 0, "Base damage cannot be negative");
+    Debug.Assert(multiplier >= 0.0f, "Multiplier cannot be negative");
+    
+    int result = (int)(baseDamage * multiplier);
+    Debug.Assert(result >= 0, "Calculated damage is negative");
+    return result;
+}
+
+// ⚠️ CAUTION: Assertions are removed in release builds!
+// Don't rely on assertions for critical validation
+```
+
+## Linting and Quality
+
+### Common Linter Warnings to Fix
+```csharp
+// ✅ GOOD: Explicit integer division
+int half = count / 2; // Integer division in C#
+float ratio = (float)count / 2.0f; // Float division
+
+// ✅ GOOD: Unused variables prefixed with _
+public void SomeSignalHandler(int _param1, string _param2)
+{
+    // Not using parameters, prefix with _
+}
+
+// ✅ GOOD: Explicit type cast
+var enemy = body as Enemy;
+if (enemy != null)
+{
+    enemy.TakeDamage(10);
+}
+
+// ❌ BAD: Unsafe cast without check
+var enemy = body as Enemy;
+enemy.TakeDamage(10); // Crash if body is not Enemy!
+```
+
+## Code Organization Best Practices
+
+### One Class Per File
+```csharp
+// ✅ GOOD: File contains one primary class
+// File: EnemyController.cs
+public partial class EnemyController : Node2D
+{
+    // Implementation
+}
+
+// ✅ ACCEPTABLE: Small helper class in same file
+public class SpawnConfig
+{
+    public string TemplateId { get; set; }
+    public Vector2 Position { get; set; }
+    public int Count { get; set; }
+}
+
+// ❌ BAD: Multiple unrelated classes in one file
+// File: GameStuff.cs
+public partial class Enemy : Node2D { }
+public partial class Player : Node2D { }
+public partial class Bullet : Node2D { }
+```
+
+### Constants in Separate Files (When Many)
+```csharp
+// ✅ GOOD: Large constant sets in dedicated files
+// File: GameConstants.cs
+public static class GameConstants
+{
+    public const float PlayerSpeed = 180.0f;
+    public const float PlayerFocusedSpeed = 90.0f;
+    public const int PlayerMaxPower = 4;
+    public const int PlayerStartingLives = 3;
+    public const int PlayerStartingBombs = 3;
+
+    public const int BulletMaxCount = 500;
+    public const int EnemyMaxCount = 100;
+    public const int ParticleMaxCount = 200;
+}
+
+// Usage in other files
+var speed = GameConstants.PlayerSpeed;
+```
+
+## Style Checklist
+
+Before committing:
+- [ ] All variables have explicit type annotations
+- [ ] All functions have parameter and return types
+- [ ] Naming follows conventions (PascalCase public, camelCase private)
+- [ ] Private members prefixed with underscore
+- [ ] Indentation is consistent (4 spaces)
+- [ ] Lines under 120 characters (max 150)
+- [ ] Logical grouping with blank lines
+- [ ] Early returns used instead of deep nesting
+- [ ] Comments explain WHY, not WHAT
+- [ ] Signals have descriptive names and typed parameters
+- [ ] No linter warnings
+- [ ] File structure follows standard order
+- [ ] Code matches surrounding style (consistency > personal preference)
+- [ ] Use `partial` keyword for all classes
+- [ ] Use proper C# syntax and patterns
+
+## Visual Studio/VS Code Settings
+
+Recommended settings:
+```json
+{
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.rulers": [120],
+    "editor.formatOnSave": true,
+    "csharp.format.enable": true,
+    "csharp.format.organizeImports": true
+}
+```
+
+## Summary
+
+Consistent style makes code easier to read, review, and maintain. Follow these rules religiously, and when encountering existing code with different style, match the local style rather than reformatting everything. Clarity and consistency trump personal preference.

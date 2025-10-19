@@ -1,0 +1,320 @@
+# Protected and Sensitive Areas - C# and .NET
+
+## Change Control Policies
+
+### Critical - Never Touch Without Explicit Approval
+
+These areas are fundamental to the project's stability and performance. Changes require explicit approval and thorough testing.
+
+#### Shader Files
+- **Location**: `wipshmup2/shaders/*.gdshader`
+- **Reason**: CRT and bullet readability shaders are performance-critical and visually complex
+- **Risk**: Breaking visual effects, performance degradation, rendering artifacts
+- **Approval Required**: Yes - must demonstrate understanding of shader programming
+- **Testing Required**: Visual regression testing, performance profiling
+
+#### Autoload Order
+- **Location**: `project.godot` autoload section
+- **Reason**: System initialization dependencies must be maintained
+- **Risk**: Runtime crashes, initialization failures, circular dependencies
+- **Approval Required**: Yes - must justify reordering
+- **Testing Required**: Full game startup testing
+
+#### Core Factory/Manager Public APIs
+- **Locations**: 
+  - `EntityFactory` public methods
+  - `EventBus` signal signatures
+  - `GameState` public properties
+  - Template manager public interfaces
+- **Reason**: Used throughout codebase, breaking changes cascade
+- **Risk**: Compilation errors, runtime crashes, data corruption
+- **Approval Required**: Yes - must provide migration plan
+- **Testing Required**: Full codebase compilation, integration testing
+
+### Sensitive - Modify with Extreme Caution
+
+These areas can be modified but require careful consideration and testing.
+
+#### EntityFactory Pooling Logic
+- **Location**: `scripts/autoload/EntityFactory.cs`
+- **Reason**: Performance-critical, affects all entity spawning
+- **Risk**: Memory leaks, performance degradation, pool exhaustion
+- **Approval Required**: No, but requires performance testing
+- **Testing Required**: Stress testing with 500+ entities
+
+#### EventBus Signal Signatures
+- **Location**: `scripts/autoload/EventBus.cs`
+- **Reason**: Breaking change affects all signal connections
+- **Risk**: Compilation errors, runtime crashes, lost functionality
+- **Approval Required**: No, but requires full codebase update
+- **Testing Required**: Full compilation, signal connection testing
+
+#### GameState State Variables
+- **Location**: `scripts/autoload/GameState.cs`
+- **Reason**: Central state management, affects all systems
+- **Risk**: Data corruption, state inconsistencies, save/load issues
+- **Approval Required**: No, but requires state validation
+- **Testing Required**: State persistence testing, cross-system validation
+
+#### ResetForPool() Implementations
+- **Locations**: All pooled entity classes
+- **Reason**: Critical for object pooling, prevents memory leaks
+- **Risk**: Memory leaks, stale state, signal leaks
+- **Approval Required**: No, but requires thorough testing
+- **Testing Required**: Pool lifecycle testing, memory profiling
+
+## Protected File Patterns
+
+### Shader Files
+```glsl
+// File: wipshmup2/shaders/crt_effect.gdshader
+// PROTECTED - Do not modify without approval
+// This shader implements CRT scanline and phosphor glow effects
+// Performance-critical for visual style
+shader_type canvas_item;
+
+uniform float scanline_strength : hint_range(0.0, 1.0) = 0.5;
+uniform float phosphor_glow : hint_range(0.0, 1.0) = 0.3;
+uniform float dithering : hint_range(0.0, 1.0) = 0.1;
+
+// Complex CRT simulation code...
+```
+
+### Autoload Configuration
+```ini
+# File: project.godot
+# PROTECTED - Do not modify autoload order without approval
+[autoload]
+
+EventBus="*res://scripts/autoload/EventBus.cs"
+GameState="*res://scripts/autoload/GameState.cs"
+EntityFactory="*res://scripts/autoload/EntityFactory.cs"
+EnemyTemplateManager="*res://scripts/autoload/EnemyTemplateManager.cs"
+BossTemplateManager="*res://scripts/autoload/BossTemplateManager.cs"
+StageTemplateManager="*res://scripts/autoload/StageTemplateManager.cs"
+```
+
+### Core API Interfaces
+```csharp
+// File: scripts/autoload/EntityFactory.cs
+// PROTECTED - Do not modify public API without approval
+public partial class EntityFactory : Node
+{
+    // These methods are used throughout the codebase
+    public static Bullet SpawnBullet(string bulletType, Vector2 position, Vector2 direction)
+    {
+        // Implementation
+    }
+    
+    public static Enemy SpawnEnemy(string templateId, Vector2 position, Vector2 direction)
+    {
+        // Implementation
+    }
+    
+    public static void ReturnToPool(Node entity, string poolId)
+    {
+        // Implementation
+    }
+    
+    // Internal methods can be modified
+    private static T AcquireFromPool<T>(string poolId) where T : Node
+    {
+        // Implementation
+    }
+}
+```
+
+## Change Approval Process
+
+### For Critical Areas
+
+1. **Request Approval**
+   - Document the proposed change
+   - Explain why the change is necessary
+   - Provide alternative approaches considered
+   - Estimate impact and testing requirements
+
+2. **Review Process**
+   - Code review by senior developer
+   - Performance impact assessment
+   - Risk analysis
+   - Testing plan review
+
+3. **Implementation**
+   - Implement in feature branch
+   - Comprehensive testing
+   - Performance profiling
+   - Documentation updates
+
+4. **Deployment**
+   - Merge to main branch
+   - Monitor for issues
+   - Rollback plan ready
+
+### For Sensitive Areas
+
+1. **Self-Assessment**
+   - Review impact on other systems
+   - Plan testing approach
+   - Consider rollback strategy
+
+2. **Implementation**
+   - Implement with extra care
+   - Add comprehensive tests
+   - Document changes
+
+3. **Validation**
+   - Run full test suite
+   - Performance testing
+   - Integration testing
+
+## Rollback Procedures
+
+### Shader Rollback
+```bash
+# If shader changes cause visual issues
+git checkout HEAD~1 -- wipshmup2/shaders/
+# Test visual effects
+# If issues persist, rollback further
+```
+
+### Autoload Rollback
+```bash
+# If autoload changes cause startup issues
+git checkout HEAD~1 -- project.godot
+# Test game startup
+# Check for missing dependencies
+```
+
+### API Rollback
+```bash
+# If API changes cause compilation issues
+git checkout HEAD~1 -- scripts/autoload/
+# Fix compilation errors
+# Update dependent code
+```
+
+## Testing Requirements
+
+### Critical Area Testing
+- **Visual Regression**: Compare screenshots before/after
+- **Performance Profiling**: Measure frame times and memory usage
+- **Integration Testing**: Test all dependent systems
+- **Stress Testing**: Test under high load conditions
+
+### Sensitive Area Testing
+- **Unit Testing**: Test individual components
+- **Integration Testing**: Test system interactions
+- **Performance Testing**: Measure impact on performance
+- **Memory Testing**: Check for leaks and corruption
+
+## Documentation Requirements
+
+### For Critical Changes
+- **Design Document**: Explain the change and rationale
+- **API Documentation**: Update all affected interfaces
+- **Migration Guide**: How to update dependent code
+- **Performance Impact**: Document performance changes
+
+### For Sensitive Changes
+- **Change Log**: Document what was changed and why
+- **Testing Notes**: Document testing performed
+- **Known Issues**: Document any limitations or issues
+
+## Monitoring and Alerts
+
+### Performance Monitoring
+```csharp
+// Add performance monitoring to critical areas
+public partial class EntityFactory : Node
+{
+    private static int _spawnCount = 0;
+    private static float _lastSpawnTime = 0.0f;
+    
+    public static Bullet SpawnBullet(string bulletType, Vector2 position, Vector2 direction)
+    {
+        _spawnCount++;
+        _lastSpawnTime = Time.GetTicksMsec() / 1000.0f;
+        
+        // Monitor for performance issues
+        if (_spawnCount > 1000)
+        {
+            GD.PushWarning("[EntityFactory] High spawn count detected: " + _spawnCount);
+        }
+        
+        // Implementation
+    }
+}
+```
+
+### Error Monitoring
+```csharp
+// Add error monitoring to sensitive areas
+public partial class GameState : Node
+{
+    public int Lives
+    {
+        get => _lives;
+        set
+        {
+            if (value < 0)
+            {
+                GD.PushError($"[GameState] Invalid lives value: {value}");
+                return;
+            }
+            
+            int oldLives = _lives;
+            _lives = value;
+            EmitSignal(SignalName.LivesChanged, _lives, oldLives);
+        }
+    }
+}
+```
+
+## Emergency Procedures
+
+### Critical System Failure
+1. **Immediate Response**
+   - Stop all development
+   - Assess impact
+   - Notify team
+
+2. **Investigation**
+   - Check recent changes
+   - Review logs
+   - Identify root cause
+
+3. **Resolution**
+   - Rollback if necessary
+   - Fix issue
+   - Test thoroughly
+
+4. **Prevention**
+   - Update procedures
+   - Add safeguards
+   - Improve testing
+
+### Performance Degradation
+1. **Detection**
+   - Monitor frame rates
+   - Check memory usage
+   - Profile performance
+
+2. **Analysis**
+   - Identify bottlenecks
+   - Check recent changes
+   - Review resource usage
+
+3. **Resolution**
+   - Optimize code
+   - Reduce resource usage
+   - Improve algorithms
+
+4. **Validation**
+   - Test performance
+   - Monitor stability
+   - Document changes
+
+## Summary
+
+These protected and sensitive areas require special care when modifying. Always consider the impact on other systems, test thoroughly, and document changes. When in doubt, ask for approval or guidance before making changes.
