@@ -1,24 +1,22 @@
-# Campaign screen - shows message with no gameplay
 extends Node2D
 
 @onready var _message: Label = $CanvasLayer/Message
 
 var _can_exit: bool = false
 
-# Path to store which message was shown last
 const SAVE_PATH := "user://campaign_last_message.save"
 
 func _ready() -> void:
-	# Alternate between ghost town message and jumpscare each time
+	# Alternate between ghost town message and jumpscare each time so that the user sees everthing.
 	var last_was_jumpscare := _load_last_message()
 	
 	if last_was_jumpscare:
 		_show_ghost_town_message()
 		_save_last_message(false)
-	else:
+	else: 
 		_show_loading_jumpscare()
 		_save_last_message(true)
-
+		!!
 func _load_last_message() -> bool:
 	if not FileAccess.file_exists(SAVE_PATH):
 		return false  # Default to showing jumpscare first
@@ -53,7 +51,6 @@ func _show_ghost_town_message() -> void:
 	_message.text = "50000 used to live here..."
 	await get_tree().create_timer(0.6, false).timeout
 	
-	# Fade out, then show just the second part of the message with fade in
 	var fade_out := create_tween()
 	fade_out.tween_property(_message, "modulate:a", 0.0, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	await fade_out.finished
@@ -75,7 +72,6 @@ func _show_loading_jumpscare() -> void:
 	var tw := create_tween()
 	tw.tween_property(_message, "modulate:a", 1.0, 1.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	
-	# Wait a moment, then JUMPSCARE
 	await get_tree().create_timer(2.5, false).timeout
 	
 	# JUMPSCARE!
@@ -98,6 +94,7 @@ func _show_loading_jumpscare() -> void:
 	
 	await get_tree().create_timer(0.5, false).timeout
 	_can_exit = true
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Allow returning to main menu with any key press
